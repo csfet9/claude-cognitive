@@ -4,6 +4,7 @@
  */
 
 export { registerInitCommand } from "./init.js";
+export { registerInstallCommand } from "./install.js";
 export { registerServeCommand } from "./serve.js";
 export { registerStatusCommand } from "./status.js";
 export { registerLearnCommand } from "./learn.js";

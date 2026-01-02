@@ -7,6 +7,7 @@ import { cac, type CAC } from "cac";
 import { handleError } from "./utils/index.js";
 import {
   registerInitCommand,
+  registerInstallCommand,
   registerServeCommand,
   registerStatusCommand,
   registerLearnCommand,
@@ -29,6 +30,7 @@ function createCLI(): CAC {
 
   // Register commands
   registerInitCommand(cli);
+  registerInstallCommand(cli);
   registerServeCommand(cli);
   registerStatusCommand(cli);
   registerLearnCommand(cli);
