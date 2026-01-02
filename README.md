@@ -102,33 +102,7 @@ Add to `.claude/settings.json`:
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                       CLAUDE-MIND                            │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │                 CLAUDE (ORCHESTRATOR)                   │ │
-│  │  • Manages workflow, delegates to agents                │ │
-│  │  • Owns all memory operations                           │ │
-│  │  • Uses memory_recall and memory_reflect tools          │ │
-│  └────────────────────────────────────────────────────────┘ │
-│                            │                                 │
-│              ┌─────────────┴─────────────┐                  │
-│              ▼                           ▼                  │
-│  ┌─────────────────────┐    ┌─────────────────────────────┐│
-│  │     HINDSIGHT       │    │   SEMANTIC MEMORY           ││
-│  │  PostgreSQL+pgvector│    │   .claude/memory.md         ││
-│  │                     │    │                             ││
-│  │  world | experience │    │   Human-curated knowledge   ││
-│  │  opinion|observation│    │   Promoted observations     ││
-│  │                     │    │   Always loaded at start    ││
-│  │  retain | recall    │    │                             ││
-│  │  reflect            │    │                             ││
-│  └─────────────────────┘    └─────────────────────────────┘│
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-```
+![Architecture](./docs/architecture.svg)
 
 ### Two Memory Layers
 
