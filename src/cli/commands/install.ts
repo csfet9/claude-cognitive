@@ -460,6 +460,54 @@ export function registerInstallCommand(cli: CAC): void {
           printInfo(mcpConfigPath);
         }
 
+        // Inject memory instructions into CLAUDE.md
+        const claudeMdPath = join(answers.projectPath, "CLAUDE.md");
+        if (await fileExists(claudeMdPath)) {
+          const claudeMdContent = await readFile(claudeMdPath, "utf-8");
+
+          // Check if memory section already exists
+          if (!claudeMdContent.includes("## 🧠 MEMORY SYSTEM") && !claudeMdContent.includes("memory_recall")) {
+            const memorySection = `
+## 🧠 MEMORY SYSTEM
+
+This project uses **claude-cognitive** for persistent memory across sessions.
+
+### Always Use Memory Tools
+- **Before starting work:** Use \`memory_recall\` to get context about the area you're working on
+- **When asked about the project:** Use \`memory_recall\` to retrieve what you know
+- **When forming opinions:** Use \`memory_reflect\` to reason through your knowledge
+
+### Examples
+\`\`\`
+memory_recall("authentication")     # Before working on auth
+memory_recall("database schema")    # Before working on DB
+memory_reflect("What patterns does this codebase follow?")
+\`\`\`
+
+---
+`;
+            // Find first --- after the title and insert after it
+            const firstDividerIndex = claudeMdContent.indexOf("---");
+            let newContent: string;
+
+            if (firstDividerIndex !== -1) {
+              // Insert after the first ---
+              const insertPoint = firstDividerIndex + 3;
+              newContent = claudeMdContent.slice(0, insertPoint) + "\n" + memorySection + claudeMdContent.slice(insertPoint);
+            } else {
+              // No divider found, prepend to file
+              newContent = memorySection + "\n" + claudeMdContent;
+            }
+
+            await writeFile(claudeMdPath, newContent);
+            printSuccess("Injected memory instructions into CLAUDE.md");
+          } else {
+            printInfo("CLAUDE.md already has memory instructions");
+          }
+        } else {
+          printInfo("No CLAUDE.md found (skipping memory instructions)");
+        }
+
         // Initialize Mind
         print("");
         print(color("Connecting to Hindsight...", "dim"));
