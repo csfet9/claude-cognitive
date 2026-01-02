@@ -392,6 +392,103 @@ Returns: `Promise<ReflectResult>`
 
 ---
 
+#### `learn(options?)`
+
+Bootstrap memory from an existing codebase. Solves the **cold start problem** when adopting claude-mind on a mature project.
+
+```typescript
+const result = await mind.learn({
+  depth: 'full',
+  includeGitHistory: true
+});
+
+console.log(result.summary);
+// "Learned 47 world facts, formed 12 opinions with avg confidence 0.72"
+```
+
+**LearnOptions:**
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `depth` | `'quick' \| 'standard' \| 'full'` | `'standard'` | How thoroughly to analyze |
+| `includeGitHistory` | boolean | `true` | Extract insights from git log |
+| `maxCommits` | number | `100` | Max commits to analyze |
+| `includeDependencies` | boolean | `true` | Analyze package.json/dependencies |
+
+**Depth Levels:**
+
+| Depth | What It Analyzes | Use Case |
+|-------|------------------|----------|
+| `quick` | README, CLAUDE.md, package.json, file structure | Fast bootstrap, small projects |
+| `standard` | + Key source files, configs, git history (last 50 commits) | Most projects |
+| `full` | + All source files, full git history, dependency analysis | Large/complex codebases |
+
+**What learn() Extracts:**
+
+| Category | Examples | Stored As |
+|----------|----------|-----------|
+| **Structure** | Module boundaries, file organization | `world` facts |
+| **Stack** | Frameworks, libraries, tools | `world` facts |
+| **Patterns** | Naming conventions, architecture style | `world` + `opinions` |
+| **History** | Key commits, major changes, contributors | `world` facts |
+| **Decisions** | README notes, comments, CLAUDE.md content | `world` facts |
+
+**Process:**
+
+```
+learn()
+  → Scan codebase structure (Glob patterns)
+  → Read key files (README, configs, CLAUDE.md)
+  → Analyze patterns (naming, imports, architecture)
+  → Parse git history (if enabled)
+  → retain() extracted facts as 'world' memories
+  → reflect() on patterns → form initial 'opinions'
+  → Return summary with confidence scores
+```
+
+**LearnResult:**
+
+```typescript
+interface LearnResult {
+  summary: string;                    // Human-readable summary
+  worldFacts: number;                 // Count of world facts stored
+  opinions: Opinion[];                // Initial opinions formed
+  entities: Entity[];                 // Entities discovered
+  filesAnalyzed: number;              // Files processed
+  duration: number;                   // Time taken (ms)
+}
+```
+
+**Disposition Effects:**
+
+The bank's disposition affects initial opinion confidence:
+- High `skepticism` → Lower confidence scores until validated
+- High `literalism` → More precise, narrow facts
+- Low `empathy` → Focus on technical facts only
+
+**Example Usage:**
+
+```typescript
+// First time setup on existing project
+const mind = new Mind({ projectPath: '/path/to/project' });
+await mind.init();
+
+// Check if bank is empty
+const bank = await mind.getBank();
+if (bank.memoryCount === 0) {
+  console.log('New project, learning codebase...');
+  const result = await mind.learn({ depth: 'full' });
+  console.log(result.summary);
+}
+
+// Now Claude starts with knowledge
+const context = await mind.onSessionStart();
+```
+
+Returns: `Promise<LearnResult>`
+
+---
+
 ### Direct Access Methods
 
 #### `recall(query, options?)`
@@ -832,6 +929,8 @@ Processed session transcript:
 claude-mind init               # Initialize for project
 claude-mind serve              # Start MCP server
 claude-mind status             # Show connection and bank stats
+claude-mind learn              # Bootstrap memory from codebase (cold start)
+claude-mind learn --depth full # Full analysis with all git history
 claude-mind recall "query"     # Manual recall
 claude-mind reflect "query"    # Manual reflect
 claude-mind semantic           # Show semantic memory

@@ -166,6 +166,7 @@ The Mind class supports this pattern:
 - [ ] Create Mind class with orchestrator support
 - [ ] onSessionStart() implementation
 - [ ] onSessionEnd() with transcript processing
+- [ ] learn() for codebase bootstrapping (cold start solution)
 - [ ] Create base agent templates
 - [ ] Agent template structure (`.claude/agents/`)
 - [ ] Event emission for hooks
@@ -245,6 +246,9 @@ class Mind extends EventEmitter {
   async onSessionStart(): Promise<string>           // Returns context to inject
   async onSessionEnd(transcript?: string): Promise<ReflectResult>
 
+  // Codebase learning (cold start)
+  async learn(options?: LearnOptions): Promise<LearnResult>
+
   // Memory operations (for orchestrator use)
   async recall(query: string, options?: RecallOptions): Promise<Memory[]>
   async reflect(query: string): Promise<ReflectResult>
@@ -252,6 +256,22 @@ class Mind extends EventEmitter {
   // Agent support
   getAgentTemplates(): AgentTemplate[]
   getAgentContext(agentType: string, task: string): Promise<string>
+}
+
+interface LearnOptions {
+  depth?: 'quick' | 'standard' | 'full'
+  includeGitHistory?: boolean
+  maxCommits?: number
+  includeDependencies?: boolean
+}
+
+interface LearnResult {
+  summary: string
+  worldFacts: number
+  opinions: Opinion[]
+  entities: Entity[]
+  filesAnalyzed: number
+  duration: number
 }
 
 interface MindOptions {
@@ -287,6 +307,7 @@ mind.on('error', (error: Error) => {})
 
 - Session start returns formatted context with semantic + recalled memories
 - Session end processes transcript and extracts memories
+- learn() bootstraps memory from existing codebase (cold start solution)
 - Agent templates available for explorer, architect, reviewer
 - Custom agents supported via `.claude/agents/`
 - Memory operations only available to orchestrator (not agents)
@@ -467,6 +488,8 @@ claude-mind process-session --transcript /path/to/transcript.json
 claude-mind init               # Initialize for project (creates bank, .claudemindrc)
 claude-mind serve              # Start MCP server
 claude-mind status             # Show connection and stats
+claude-mind learn              # Bootstrap memory from codebase (cold start)
+claude-mind learn --depth full # Full analysis with all git history
 claude-mind recall "query"     # Manual recall
 claude-mind reflect "query"    # Manual reflect
 claude-mind semantic           # Show semantic memory
