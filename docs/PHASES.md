@@ -585,7 +585,7 @@ claude-mind config             # Show/edit configuration
 - [x] Error scenario testing
 - [x] Performance profiling (see docs/PERFORMANCE.md)
 - [x] Documentation review
-- [ ] Example project (optional)
+- [x] Example project (see examples/todo-app/)
 
 ### Test Categories
 

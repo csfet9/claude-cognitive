@@ -25,6 +25,8 @@ claude-mind status
 
 See the [Setup Guide](./docs/SETUP.md) for complete Claude Code integration instructions.
 
+For a complete example, see the [todo-app example](./examples/todo-app/).
+
 ---
 
 ## The Vision
@@ -223,22 +225,33 @@ The `.claude/memory.md` file serves as:
 
 ```
 claude-mind/
-├── CLAUDE.md                    # Project instructions for Claude Code
-├── README.md                    # This file
-├── package.json                 # Project configuration
-└── docs/
-    ├── ARCHITECTURE.md          # Technical design deep-dive
-    ├── PHASES.md                # Implementation roadmap
-    └── API.md                   # API reference
+├── src/                         # Source code
+│   ├── client.ts                # Hindsight API client
+│   ├── mind.ts                  # Mind orchestrator
+│   ├── semantic.ts              # Semantic memory layer
+│   └── mcp/                     # MCP server
+├── docs/
+│   ├── SETUP.md                 # Setup guide
+│   ├── ARCHITECTURE.md          # Technical design
+│   ├── PHASES.md                # Implementation phases
+│   ├── PERFORMANCE.md           # Performance benchmarks
+│   └── API.md                   # API reference
+├── examples/
+│   └── todo-app/                # Example project
+└── tests/                       # Test suite
 ```
 
 ---
 
 ## Status
 
-**Phase 4: Claude Code Integration** - Complete. Ready for use.
+**All phases complete.** Ready for use.
 
-See [docs/PHASES.md](./docs/PHASES.md) for the implementation roadmap.
+- 475 tests passing with 82% coverage
+- All performance targets met
+- Full documentation available
+
+See [docs/PHASES.md](./docs/PHASES.md) for the implementation details.
 
 ---
 

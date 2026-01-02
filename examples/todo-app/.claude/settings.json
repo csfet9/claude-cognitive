@@ -1,0 +1,32 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-mind inject-context --project ."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-mind process-session --project . --transcript $TRANSCRIPT"
+          }
+        ]
+      }
+    ]
+  },
+  "mcpServers": {
+    "claude-mind": {
+      "command": "claude-mind",
+      "args": ["serve", "--project", "."]
+    }
+  }
+}
