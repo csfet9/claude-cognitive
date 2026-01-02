@@ -583,7 +583,7 @@ claude-mind config             # Show/edit configuration
 - [x] Integration tests with Hindsight
 - [x] End-to-end session tests
 - [x] Error scenario testing
-- [ ] Performance profiling (optional)
+- [x] Performance profiling (see docs/PERFORMANCE.md)
 - [x] Documentation review
 - [ ] Example project (optional)
 
