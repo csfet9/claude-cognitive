@@ -18,6 +18,11 @@ import { HindsightClient } from "./client.js";
 import { loadConfig } from "./config.js";
 import { HindsightError } from "./errors.js";
 import { TypedEventEmitter } from "./events.js";
+import {
+  PromotionManager,
+  DEFAULT_PROMOTION_THRESHOLD,
+} from "./promotion.js";
+import { SemanticMemory } from "./semantic.js";
 import type {
   Bank,
   Disposition,
@@ -97,6 +102,10 @@ export class Mind extends TypedEventEmitter {
 
   // Agent templates (loaded in init())
   private customAgents: AgentTemplate[] = [];
+
+  // Semantic memory (loaded in init())
+  private semantic: SemanticMemory | null = null;
+  private promotionManager: PromotionManager | null = null;
 
   /**
    * Create a new Mind instance.
@@ -196,6 +205,26 @@ export class Mind extends TypedEventEmitter {
     // Load custom agents from .claude/agents/
     this.customAgents = await loadCustomAgents(this.projectPath);
 
+    // Load semantic memory
+    this.semantic = new SemanticMemory(this.projectPath, this.semanticPath);
+    try {
+      await this.semantic.load();
+    } catch (error) {
+      // Semantic memory is optional - emit error but continue
+      this.emit(
+        "error",
+        error instanceof Error ? error : new Error(String(error)),
+      );
+    }
+
+    // Initialize promotion manager
+    if (this.semantic.isLoaded()) {
+      this.promotionManager = new PromotionManager(this.semantic, this, {
+        threshold: DEFAULT_PROMOTION_THRESHOLD,
+      });
+      this.promotionManager.startListening();
+    }
+
     // Mark initialized
     this.initialized = true;
 
@@ -279,9 +308,13 @@ export class Mind extends TypedEventEmitter {
 
     const contextParts: string[] = [];
 
-    // TODO: Phase 3 - Load semantic memory
-    // const semanticContext = await this.loadSemanticMemory();
-    // if (semanticContext) contextParts.push(semanticContext);
+    // Load semantic memory context
+    if (this.semantic?.isLoaded()) {
+      const semanticContext = this.semantic.toContext();
+      if (semanticContext.trim().length > 0) {
+        contextParts.push(semanticContext);
+      }
+    }
 
     // Recall recent experiences (if not degraded)
     if (!this.degraded && this.client) {
@@ -339,6 +372,11 @@ export class Mind extends TypedEventEmitter {
       } catch (error) {
         this.handleError(error, "onSessionEnd reflect");
       }
+    }
+
+    // Clear promotion cache for next session
+    if (this.promotionManager) {
+      this.promotionManager.clearCache();
     }
 
     // Reset session state
@@ -678,6 +716,24 @@ ${template.outputFormat}
    */
   getSemanticPath(): string {
     return this.semanticPath;
+  }
+
+  /**
+   * Get the SemanticMemory instance.
+   *
+   * @returns SemanticMemory or null if not initialized
+   */
+  getSemanticMemory(): SemanticMemory | null {
+    return this.semantic;
+  }
+
+  /**
+   * Get the PromotionManager instance.
+   *
+   * @returns PromotionManager or null if not initialized
+   */
+  getPromotionManager(): PromotionManager | null {
+    return this.promotionManager;
   }
 
   /**

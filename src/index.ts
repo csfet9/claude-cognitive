@@ -38,7 +38,20 @@ export { Mind } from "./mind.js";
 
 // Event system
 export { TypedEventEmitter } from "./events.js";
-export type { MindEventMap, MindEventName } from "./events.js";
+export type { MindEventMap, MindEventName, Observation } from "./events.js";
+
+// Semantic memory
+export { SemanticMemory, DEFAULT_TEMPLATE } from "./semantic.js";
+export type { SemanticMemoryOptions, ParseResult } from "./semantic.js";
+
+// Promotion
+export {
+  PromotionManager,
+  DEFAULT_PROMOTION_THRESHOLD,
+  opinionToObservation,
+  shouldPromote,
+} from "./promotion.js";
+export type { PromotionOptions, PromotionResult } from "./promotion.js";
 
 // Learn operation
 export { learn } from "./learn/index.js";
