@@ -45,6 +45,11 @@ const DEFAULT_DISPOSITION: Disposition = {
   empathy: 3,
 };
 
+/** First-person perspective prefix for bank background */
+const FIRST_PERSON_PREFIX =
+  "I am Claude, an AI assistant. I speak in first person (I believe, I noticed, I learned). " +
+  "When forming opinions, I say 'I believe...' not 'User believes...'. ";
+
 // ============================================
 // Mind Class
 // ============================================
@@ -272,15 +277,15 @@ export class Mind extends TypedEventEmitter {
       await this.client.getBank(this.bankId);
     } catch (error) {
       if (HindsightError.isHindsightError(error) && error.isBankNotFound) {
-        // Bank doesn't exist, create it
-        const bankOptions: { bankId: string; disposition: Disposition; background?: string } = {
+        // Bank doesn't exist, create it with first-person perspective
+        const background = this.background
+          ? FIRST_PERSON_PREFIX + this.background
+          : FIRST_PERSON_PREFIX.trim();
+        await this.client.createBank({
           bankId: this.bankId,
           disposition: this.disposition,
-        };
-        if (this.background) {
-          bankOptions.background = this.background;
-        }
-        await this.client.createBank(bankOptions);
+          background,
+        });
       } else {
         throw error;
       }
