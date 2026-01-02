@@ -5,3 +5,7 @@ coverage/
 .env
 .env.local
 dist/
+
+# Local project config (created by claude-mind init/install)
+.claudemindrc
+.claude/memory.md
