@@ -31,6 +31,7 @@ npm run type-check              # tsc --noEmit
 claude-cognitive serve          # start MCP server
 claude-cognitive status         # check connection
 claude-cognitive learn          # bootstrap from codebase
+claude-cognitive sync           # regenerate memory.md from Hindsight
 ```
 
 ## Architecture

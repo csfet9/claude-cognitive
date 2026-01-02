@@ -14,3 +14,4 @@ export { registerSemanticCommand } from "./semantic.js";
 export { registerConfigCommand } from "./config.js";
 export { registerUpdateBankCommand } from "./update-bank.js";
 export { registerUninstallCommand } from "./uninstall.js";
+export { registerSyncCommand } from "./sync.js";
