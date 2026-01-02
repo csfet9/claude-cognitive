@@ -217,6 +217,19 @@ export class HindsightClient {
     );
   }
 
+  /**
+   * Delete a memory bank and all its memories.
+   *
+   * @param bankId - Bank identifier
+   * @throws {HindsightError} If bank doesn't exist
+   */
+  async deleteBank(bankId: string): Promise<void> {
+    await this.request<void>(
+      "DELETE",
+      `/v1/default/banks/${encodeURIComponent(bankId)}`,
+    );
+  }
+
   // ============================================
   // Core Operations
   // ============================================
