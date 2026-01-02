@@ -1,85 +1,344 @@
 # API Reference
 
-Public API for claude-mind.
+Full API documentation for claude-mind with Hindsight integration.
 
 ---
 
 ## Quick Start
 
-```javascript
+```typescript
 import { Mind } from 'claude-mind';
 
 const mind = new Mind({
   projectPath: process.cwd(),
-  hindsight: { host: 'localhost', port: 8888 }
+  disposition: { skepticism: 4, literalism: 4, empathy: 2 },
+  background: 'Developer assistant for a React Native app'
 });
 
 await mind.init();
 
-// Session start - get context
+// Session start - get context with relevant memories
 const context = await mind.onSessionStart();
 
-// During work - search memories
-const memories = await mind.search('authentication flow');
-
-// Context change - get triggered memories
-const triggered = await mind.onContextChange({
+// During work - recall on context changes
+const memories = await mind.onContextChange({
   currentFile: 'src/auth/login.ts',
-  userMessage: 'fix the login redirect'
+  userMessage: 'fix the login redirect',
+  entities: ['AuthProvider', 'login']
 });
 
-// Session end - consolidate
-await mind.onSessionEnd(sessionTranscript);
+// Direct recall
+const authMemories = await mind.recall('authentication flow', {
+  factType: 'experience',
+  budget: 'mid'
+});
+
+// Session end - reflect and store observations
+const reflection = await mind.onSessionEnd(sessionTranscript);
 ```
 
 ---
 
-## Mind Class
+## HindsightClient
 
-Main entry point.
+Low-level client for Hindsight API.
 
 ### Constructor
 
-```javascript
-new Mind(options)
+```typescript
+new HindsightClient(options: HindsightClientOptions)
 ```
 
 **Options:**
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `projectPath` | string | `process.cwd()` | Project root |
-| `hindsight.host` | string | `'localhost'` | Hindsight server |
-| `hindsight.port` | number | `8888` | Hindsight port |
-| `hindsight.bankId` | string | Project name | Memory bank ID |
+| `host` | string | `'localhost'` | Hindsight server hostname |
+| `port` | number | `8888` | Hindsight server port |
+| `apiKey` | string | - | Optional API key |
 
-### Methods
+### Bank Management
 
-#### `init()`
+#### `createBank(options)`
 
-Initialize connection to Hindsight and load semantic memory.
+Create a new memory bank with disposition.
 
-```javascript
-await mind.init();
+```typescript
+await client.createBank({
+  bankId: 'my-project',
+  disposition: {
+    skepticism: 4,   // 1-5: trusting → questions claims
+    literalism: 4,   // 1-5: flexible → precise interpretation
+    empathy: 2       // 1-5: fact-focused → considers emotions
+  },
+  background: 'I am a developer assistant for a React Native app...'
+});
+```
+
+**BankOptions:**
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `bankId` | string | Yes | Unique identifier for the bank |
+| `disposition.skepticism` | 1-5 | Yes | How much to question claims |
+| `disposition.literalism` | 1-5 | Yes | How precisely to interpret |
+| `disposition.empathy` | 1-5 | Yes | How much to consider emotional context |
+| `background` | string | No | Natural language identity/background |
+
+Returns: `Promise<void>`
+
+---
+
+#### `getBank(bankId)`
+
+Get bank information.
+
+```typescript
+const bank = await client.getBank('my-project');
+// { bankId, disposition, background, createdAt, memoryCount }
+```
+
+Returns: `Promise<Bank>`
+
+---
+
+#### `updateDisposition(bankId, disposition)`
+
+Update bank disposition traits.
+
+```typescript
+await client.updateDisposition('my-project', {
+  skepticism: 5,
+  literalism: 3,
+  empathy: 4
+});
 ```
 
 Returns: `Promise<void>`
 
-Throws: `Error` if Hindsight unavailable (but continues with local-only mode)
+---
+
+### Core Operations
+
+#### `retain(bankId, content, context?)`
+
+Store content with automatic 5-dimension extraction.
+
+```typescript
+const memoryIds = await client.retain(
+  'my-project',
+  'Fixed the auth redirect by moving AuthProvider to wrap the root layout in _layout.tsx',
+  'User was experiencing infinite redirects after login'
+);
+```
+
+Hindsight automatically extracts:
+
+| Dimension | Description | Example |
+|-----------|-------------|---------|
+| **what** | Complete description of what happened | "Fixed auth redirect by moving AuthProvider" |
+| **when** | Temporal context | "January 2, 2025 afternoon session" |
+| **where** | File paths, locations | "src/app/_layout.tsx at line 15" |
+| **who** | Entities involved | "AuthProvider, React Context, Supabase" |
+| **why** | Motivation and reasoning | "User stuck on infinite redirect loop" |
+
+Additionally, retain() automatically:
+- Classifies into fact_type (world, experience, opinion, observation)
+- Extracts and resolves entities
+- Identifies causal relationships (causes, enables, prevents)
+- Creates temporal and semantic links to existing memories
+- Tracks entity co-occurrences
+
+Returns: `Promise<string[]>` - IDs of created memories
+
+---
+
+#### `recall(bankId, query, options?)`
+
+4-way parallel retrieval with fusion and reranking.
+
+```typescript
+const memories = await client.recall('my-project', 'How does auth work?', {
+  budget: 'mid',
+  factType: 'all',
+  maxTokens: 4096,
+  includeEntities: true
+});
+```
+
+**RecallOptions:**
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `budget` | `'low' \| 'mid' \| 'high'` | `'mid'` | Search thoroughness |
+| `factType` | `'world' \| 'experience' \| 'opinion' \| 'observation' \| 'all'` | `'all'` | Filter by memory type |
+| `maxTokens` | number | - | Max tokens in response |
+| `includeEntities` | boolean | `false` | Include entity metadata |
+
+**Budget Levels:**
+
+| Budget | Tokens | Graph Hops | Best For |
+|--------|--------|------------|----------|
+| `low` | ~2048 | 1 | Quick lookups, focused answers |
+| `mid` | ~4096 | 2 | Most queries (default) |
+| `high` | ~8192 | 3+ | Comprehensive research |
+
+**Retrieval Strategies (all run in parallel):**
+
+| Strategy | Method | Best For |
+|----------|--------|----------|
+| Semantic | Vector similarity (pgvector) | Conceptual matches |
+| BM25 | Full-text keyword search | Exact names, terms |
+| Graph | Entity traversal (MPFP/BFS) | Indirect relationships |
+| Temporal | Time-range + semantic | Historical queries |
+
+Results are fused using Reciprocal Rank Fusion (RRF), then reranked with a neural cross-encoder.
+
+Returns: `Promise<Memory[]>`
+
+---
+
+#### `reflect(bankId, query, context?)`
+
+Reason about accumulated knowledge through disposition lens.
+
+```typescript
+const result = await client.reflect(
+  'my-project',
+  'What patterns have I noticed about auth changes in this codebase?'
+);
+
+console.log(result.text);
+// "Based on my experience, auth changes in this codebase often require
+//  corresponding navigation updates. I've seen this pattern multiple times..."
+
+console.log(result.opinions);
+// [{ opinion: "Auth changes require nav updates", confidence: 0.85 }]
+```
+
+**ReflectResult:**
+
+```typescript
+interface ReflectResult {
+  text: string;                    // Natural language answer
+  opinions: Opinion[];             // Extracted opinions with confidence
+  basedOn: {
+    world: Memory[];               // World facts used
+    experience: Memory[];          // Experiences used
+    opinion: Memory[];             // Prior opinions used
+  };
+}
+
+interface Opinion {
+  opinion: string;                 // First-person opinion statement
+  confidence: number;              // 0.0 to 1.0
+}
+```
+
+Reflect process:
+1. Recalls relevant memories (world, experience, opinion)
+2. Loads bank disposition (skepticism, literalism, empathy)
+3. LLM reasons through disposition lens
+4. Extracts new opinions with confidence scores
+5. Stores opinions asynchronously (influences future reflects)
+6. Returns reasoned response with citations
+
+Returns: `Promise<ReflectResult>`
+
+---
+
+### Utilities
+
+#### `health()`
+
+Check Hindsight connection.
+
+```typescript
+const status = await client.health();
+// { healthy: true, version: '1.0.0', banks: 5 }
+```
+
+Returns: `Promise<HealthStatus>`
+
+---
+
+#### `recent(bankId, days?)`
+
+Get recent memories.
+
+```typescript
+const recent = await client.recent('my-project', 7);
+```
+
+Returns: `Promise<Memory[]>`
+
+---
+
+#### `forget(bankId, memoryId)`
+
+Remove a specific memory.
+
+```typescript
+await client.forget('my-project', 'mem-abc123');
+```
+
+Returns: `Promise<void>`
+
+---
+
+## Mind Class
+
+High-level orchestrator for session lifecycle.
+
+### Constructor
+
+```typescript
+new Mind(options: MindOptions)
+```
+
+**MindOptions:**
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `projectPath` | string | `process.cwd()` | Project root directory |
+| `bankId` | string | Project name | Memory bank identifier |
+| `hindsight.host` | string | `'localhost'` | Hindsight server |
+| `hindsight.port` | number | `8888` | Hindsight port |
+| `disposition` | Disposition | `{3,3,3}` | Bank personality traits |
+| `background` | string | - | Natural language identity |
+
+### Lifecycle Methods
+
+#### `init()`
+
+Initialize connection and create bank if needed.
+
+```typescript
+await mind.init();
+```
+
+- Connects to Hindsight server
+- Creates bank with disposition if not exists
+- Loads semantic memory from `.claude/memory.md`
+- Emits `ready` event
+
+Returns: `Promise<void>`
 
 ---
 
 #### `onSessionStart()`
 
-Called at session start. Returns semantic memory as context.
+Called at session start. Returns context to inject.
 
-```javascript
+```typescript
 const context = await mind.onSessionStart();
-console.log(context);
-// "Project: my-app\nStack: React Native, Expo, Supabase\n..."
+// Returns formatted context combining:
+// - Semantic memory (.claude/memory.md)
+// - Recent experiences
+// - Relevant opinions
 ```
 
-Returns: `Promise<string>` - Context to inject
+Returns: `Promise<string>`
 
 ---
 
@@ -87,258 +346,563 @@ Returns: `Promise<string>` - Context to inject
 
 Called when context changes. Returns triggered memories.
 
-```javascript
+```typescript
 const memories = await mind.onContextChange({
   currentFile: 'src/auth/login.ts',
   userMessage: 'the login is not redirecting',
-  lastError: 'undefined is not a function'
+  lastError: 'Cannot read property of undefined',
+  entities: ['AuthProvider', 'useSession']
 });
 ```
 
-**Context Object:**
+**Context:**
 
 | Property | Type | Description |
 |----------|------|-------------|
 | `currentFile` | string | Current file path |
-| `userMessage` | string | User's last message |
-| `lastError` | string | Last error message |
+| `userMessage` | string | User's message |
+| `lastError` | string | Last error encountered |
+| `entities` | string[] | Mentioned entities |
 
-Returns: `Promise<Memory[]>` - Relevant memories
+Returns: `Promise<Memory[]>`
 
 ---
 
-#### `onSessionEnd(transcript)`
+#### `onSessionEnd(transcript?)`
 
-Called at session end. Consolidates and cleans up.
+Called at session end. Reflects on session and stores observations.
 
-```javascript
-await mind.onSessionEnd(sessionTranscript);
+```typescript
+const result = await mind.onSessionEnd(sessionTranscript);
+
+console.log(result.text);
+// Summary of session insights
+
+console.log(result.opinions);
+// [{ opinion: "...", confidence: 0.9 }]
 ```
 
-Returns: `Promise<{ consolidated: number, forgotten: number }>`
+Process:
+1. Calls reflect() to form observations about the session
+2. Stores new experiences (what Claude did)
+3. Updates entity relationships
+4. Flags high-confidence observations for promotion
+
+Returns: `Promise<ReflectResult>`
 
 ---
 
-#### `store(fact, type)`
+### Direct Access Methods
 
-Explicitly store a fact (usually called internally by consolidation).
+#### `recall(query, options?)`
 
-```javascript
-await mind.store(
-  'Auth tokens refresh automatically via Supabase client',
-  'DISCOVERY'
-);
-```
+Direct recall without context tracking.
 
-**Types:** `'DECISION'` | `'DISCOVERY'` | `'LOCATION'`
-
-Returns: `Promise<{ id: string, stored: boolean }>`
-
----
-
-#### `search(query, options?)`
-
-Search episodic memory.
-
-```javascript
-const results = await mind.search('token refresh', {
-  type: 'DISCOVERY',
-  limit: 5
+```typescript
+const memories = await mind.recall('authentication flow', {
+  factType: 'experience',
+  budget: 'high'
 });
 ```
 
-**Options:**
-
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `type` | string | - | Filter by fact type |
-| `limit` | number | `10` | Max results |
-
 Returns: `Promise<Memory[]>`
 
 ---
 
-#### `recent(days?)`
+#### `reflect(query)`
 
-Get recent memories.
+Direct reflect without session context.
 
-```javascript
-const recent = await mind.recent(7);
+```typescript
+const result = await mind.reflect('What do I know about this codebase patterns?');
 ```
 
-Returns: `Promise<Memory[]>`
+Returns: `Promise<ReflectResult>`
 
 ---
 
-#### `remove(id)`
+#### `retain(content, context?)`
 
-Remove a specific memory.
+Direct retain for explicit memory storage.
 
-```javascript
-await mind.remove('abc123');
+```typescript
+await mind.retain(
+  'Discovered that AuthProvider must wrap root layout for redirects to work',
+  'After debugging redirect loop for 30 minutes'
+);
 ```
 
 Returns: `Promise<void>`
 
 ---
 
-#### `cleanup()`
+## SemanticMemory Class
 
-Run cleanup (decay and forget weak memories).
+Manages local `.claude/memory.md` file.
 
-```javascript
-const result = await mind.cleanup();
-// { forgotten: 5, promoted: 2 }
+### Constructor
+
+```typescript
+new SemanticMemory(projectPath: string)
 ```
 
-Returns: `Promise<{ forgotten: number, promoted: number }>`
+### Methods
+
+#### `load()`
+
+Load and parse `.claude/memory.md`.
+
+```typescript
+const semantic = new SemanticMemory('/path/to/project');
+await semantic.load();
+```
+
+Returns: `Promise<void>`
 
 ---
 
-## Memory Object
+#### `save()`
+
+Save changes to `.claude/memory.md`.
+
+```typescript
+await semantic.save();
+```
+
+Returns: `Promise<void>`
+
+---
+
+#### `get(section)`
+
+Get content of a section.
+
+```typescript
+const stack = semantic.get('Tech Stack');
+// "- React Native with Expo\n- Supabase for auth"
+```
+
+Returns: `string | undefined`
+
+---
+
+#### `set(section, content)`
+
+Set entire section content.
+
+```typescript
+semantic.set('Tech Stack', '- React Native 0.73\n- Expo SDK 51');
+```
+
+---
+
+#### `append(section, item)`
+
+Append item to section.
+
+```typescript
+semantic.append('Key Decisions', '- Chose Zustand over Redux for simplicity');
+```
+
+---
+
+#### `toContext()`
+
+Format as context string for injection.
+
+```typescript
+const context = semantic.toContext();
+// "## Tech Stack\n- React Native...\n\n## Key Decisions\n..."
+```
+
+Returns: `string`
+
+---
+
+#### `promoteObservation(observation)`
+
+Promote a high-confidence observation to semantic memory.
+
+```typescript
+await semantic.promoteObservation({
+  text: 'Auth changes often require corresponding navigation updates',
+  confidence: 0.92,
+  source: 'reflect-session-2025-01-02'
+});
+```
+
+Adds to Observations section with promotion date.
+
+Returns: `Promise<void>`
+
+---
+
+## Memory Types
+
+### Memory
 
 ```typescript
 interface Memory {
   id: string;
-  content: string;
-  type: 'DECISION' | 'DISCOVERY' | 'LOCATION';
-  importance: number;           // 0.0 - 1.0
-  strength: number;             // 0.0 - 1.0 (current)
-  createdAt: string;            // ISO date
-  lastAccessedAt: string;       // ISO date
-  accessCount: number;
-  associations: string[];       // Keywords
+  text: string;
+  factType: 'world' | 'experience' | 'opinion' | 'observation';
+  context?: string;
+
+  // 5-dimension extraction
+  what?: string;
+  when?: string;
+  where?: string;
+  who?: string[];
+  why?: string;
+
+  // Metadata
+  createdAt: string;
+  occurredStart?: string;
+  occurredEnd?: string;
+
+  // For opinions
+  confidence?: number;
+
+  // Entity links
+  entities?: Entity[];
+
+  // Causal links
+  causes?: string[];
+  causedBy?: string[];
+  enables?: string[];
+  prevents?: string[];
 }
 ```
 
----
+### Disposition
 
-## SemanticMemory Class
-
-Manages `.claude/memory.md`.
-
-```javascript
-import { SemanticMemory } from 'claude-mind';
-
-const semantic = new SemanticMemory('.claude/memory.md');
-await semantic.load();
-
-// Get section
-const stack = semantic.get('Tech Stack');
-
-// Update section
-semantic.set('Tech Stack', '- React Native 0.73\n- Expo SDK 50');
-
-// Append to section
-semantic.append('Key Decisions', '- Chose Zustand over Redux');
-
-// Save changes
-await semantic.save();
-
-// Get as context string
-const context = semantic.toContext();
+```typescript
+interface Disposition {
+  skepticism: 1 | 2 | 3 | 4 | 5;  // trusting → questions claims
+  literalism: 1 | 2 | 3 | 4 | 5;  // flexible → precise
+  empathy: 1 | 2 | 3 | 4 | 5;     // fact-focused → emotional
+}
 ```
 
----
+### Entity
 
-## EpisodicMemory Class
-
-Manages Hindsight storage.
-
-```javascript
-import { EpisodicMemory, HindsightClient } from 'claude-mind';
-
-const client = new HindsightClient({ host: 'localhost', port: 8888 });
-const episodic = new EpisodicMemory(client, 'my-project');
-
-// Store (validates type, blocks meta-content)
-await episodic.store('Chose X because Y', 'DECISION');
-
-// Search
-const results = await episodic.search('authentication');
-
-// Recent
-const recent = await episodic.recent(7);
-
-// Remove
-await episodic.remove('abc123');
-```
-
----
-
-## Consolidator Class
-
-Session-end processing.
-
-```javascript
-import { Consolidator } from 'claude-mind';
-
-const consolidator = new Consolidator(episodicMemory);
-
-// Process session transcript
-const result = await consolidator.consolidate(transcript);
-// { extracted: 10, stored: 3 }
-```
-
----
-
-## CLI
-
-```bash
-# Check status
-claude-mind status
-
-# Search memories
-claude-mind search "authentication"
-
-# Recent memories
-claude-mind recent --days 7
-
-# Manual cleanup
-claude-mind cleanup
-
-# Remove specific memory
-claude-mind forget <id>
-
-# Show semantic memory
-claude-mind semantic
-
-# Edit semantic memory
-claude-mind semantic --edit
+```typescript
+interface Entity {
+  id: string;
+  name: string;
+  aliases: string[];
+  type: 'person' | 'component' | 'file' | 'concept';
+  coOccurrences: { entityId: string; count: number }[];
+}
 ```
 
 ---
 
 ## Events
 
-```javascript
+```typescript
 const mind = new Mind(options);
 
-mind.on('memory:stored', (memory) => {
-  console.log('Stored:', memory.content);
+mind.on('ready', () => {
+  console.log('Mind initialized');
 });
 
-mind.on('memory:triggered', (memories) => {
-  console.log('Triggered:', memories.length);
+mind.on('memory:recalled', (memories: Memory[]) => {
+  console.log('Recalled:', memories.length, 'memories');
 });
 
-mind.on('memory:forgotten', (ids) => {
-  console.log('Forgotten:', ids.length);
+mind.on('memory:retained', (content: string) => {
+  console.log('Retained:', content);
 });
 
-mind.on('error', (error) => {
+mind.on('opinion:formed', (opinion: Opinion) => {
+  console.log('Opinion:', opinion.opinion, `(${opinion.confidence})`);
+});
+
+mind.on('observation:promoted', (observation: Observation) => {
+  console.log('Promoted to semantic:', observation.text);
+});
+
+mind.on('error', (error: Error) => {
   console.error('Error:', error.message);
 });
 ```
 
 ---
 
-## Error Codes
+## MCP Server
+
+claude-mind runs as an MCP (Model Context Protocol) server, providing tools that Claude can use during sessions.
+
+### Starting the Server
+
+```bash
+claude-mind serve --project /path/to/project
+```
+
+The server communicates via stdio and implements the MCP protocol.
+
+### Available Tools
+
+#### memory_recall
+
+Search project memories for relevant context.
+
+```typescript
+{
+  name: "memory_recall",
+  description: "Search project memories for relevant context. Use when you want to remember something from previous sessions or find information about the project.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      query: {
+        type: "string",
+        description: "What to search for in memory"
+      },
+      type: {
+        type: "string",
+        enum: ["world", "experience", "opinion", "all"],
+        default: "all",
+        description: "Type of memory to search"
+      },
+      budget: {
+        type: "string",
+        enum: ["low", "mid", "high"],
+        default: "mid",
+        description: "Search thoroughness (affects latency)"
+      }
+    },
+    required: ["query"]
+  }
+}
+```
+
+**Example usage by Claude:**
+```
+I need to find how authentication was implemented before.
+→ memory_recall({ query: "authentication implementation" })
+
+What do I know about this component?
+→ memory_recall({ query: "UserProfile component", type: "experience" })
+```
+
+**Response format:**
+```typescript
+{
+  memories: Memory[],
+  totalFound: number,
+  queryTime: number
+}
+```
+
+---
+
+#### memory_reflect
+
+Reason about accumulated knowledge and form opinions.
+
+```typescript
+{
+  name: "memory_reflect",
+  description: "Reason about what you know and form opinions based on accumulated experience. Use when you want to think about patterns, make judgments, or synthesize insights.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      query: {
+        type: "string",
+        description: "What to think about or reason through"
+      }
+    },
+    required: ["query"]
+  }
+}
+```
+
+**Example usage by Claude:**
+```
+What patterns have I noticed about error handling in this codebase?
+→ memory_reflect({ query: "error handling patterns in this codebase" })
+
+Based on my experience, what should I consider when modifying auth?
+→ memory_reflect({ query: "considerations when modifying authentication" })
+```
+
+**Response format:**
+```typescript
+{
+  text: string,                    // Reasoned response
+  opinions: Opinion[],             // New opinions formed
+  basedOn: {
+    world: Memory[],
+    experience: Memory[],
+    opinion: Memory[]
+  }
+}
+```
+
+---
+
+### Claude Code Configuration
+
+To enable claude-mind as an MCP server in Claude Code:
+
+```javascript
+// .claude/settings.json
+{
+  "mcpServers": {
+    "claude-mind": {
+      "command": "claude-mind",
+      "args": ["serve", "--project", "."]
+    }
+  }
+}
+```
+
+### When Claude Uses These Tools
+
+Claude will use these tools when beneficial:
+
+| Situation | Tool | Example |
+|-----------|------|---------|
+| Trying to remember past work | `memory_recall` | "How did we solve this before?" |
+| Looking for project conventions | `memory_recall` | "What's the error handling pattern?" |
+| Synthesizing learnings | `memory_reflect` | "What have I learned about this codebase?" |
+| Making judgments | `memory_reflect` | "Should I use approach A or B?" |
+
+Claude is **not required** to use these tools - they're available when helpful.
+
+---
+
+## Hook Commands
+
+Commands designed to be called by Claude Code hooks.
+
+### inject-context
+
+Called at session start to inject memory context.
+
+```bash
+claude-mind inject-context [--project <path>]
+```
+
+**Output:** Formatted markdown context for injection
+
+```markdown
+## Project Memory
+
+### Semantic Knowledge
+- React Native with Expo SDK 51
+- Auth uses Supabase magic links
+
+### Recent Context
+- Yesterday: Fixed auth redirect in _layout.tsx
+- Opinion: This codebase prefers explicit error handling (0.85)
+```
+
+---
+
+### process-session
+
+Called at session end to process the transcript.
+
+```bash
+claude-mind process-session --transcript <path>
+```
+
+**Process:**
+1. Parses transcript JSON
+2. Sends to Hindsight retain() for extraction
+3. Calls reflect() for observations
+4. Flags high-confidence opinions for promotion
+
+**Output:** Summary of processing
+
+```
+Processed session transcript:
+- Extracted 5 memories (3 experience, 2 world)
+- Formed 2 observations
+- 1 opinion flagged for promotion (confidence: 0.92)
+```
+
+---
+
+## CLI Commands
+
+```bash
+claude-mind init               # Initialize for project
+claude-mind serve              # Start MCP server
+claude-mind status             # Show connection and bank stats
+claude-mind recall "query"     # Manual recall
+claude-mind reflect "query"    # Manual reflect
+claude-mind semantic           # Show semantic memory
+claude-mind semantic --edit    # Edit semantic memory
+claude-mind config             # Show/edit configuration
+claude-mind bank               # Show bank disposition
+```
+
+---
+
+## Configuration
+
+Configuration via `.claudemindrc` or `package.json` "claudemind" key:
+
+```javascript
+{
+  "hindsight": {
+    "host": "localhost",
+    "port": 8888
+  },
+  "bankId": "my-project",
+  "disposition": {
+    "skepticism": 4,
+    "literalism": 4,
+    "empathy": 2
+  },
+  "background": "Developer assistant for React Native app using Expo and Supabase",
+  "semantic": {
+    "path": ".claude/memory.md"
+  }
+}
+```
+
+---
+
+## Error Handling
+
+```typescript
+try {
+  await mind.init();
+} catch (error) {
+  if (error.code === 'HINDSIGHT_UNAVAILABLE') {
+    // Falls back to semantic-only mode
+    console.log('Running in local-only mode');
+  }
+}
+```
+
+**Error Codes:**
 
 | Code | Description |
 |------|-------------|
-| `HINDSIGHT_UNAVAILABLE` | Cannot connect to Hindsight |
-| `INVALID_FACT_TYPE` | Type not DECISION/DISCOVERY/LOCATION |
-| `META_CONTENT_BLOCKED` | Fact contains meta-content |
-| `SEMANTIC_FILE_MISSING` | .claude/memory.md not found |
+| `HINDSIGHT_UNAVAILABLE` | Cannot connect to Hindsight server |
+| `BANK_NOT_FOUND` | Bank ID doesn't exist |
+| `INVALID_DISPOSITION` | Disposition values not 1-5 |
+| `SEMANTIC_FILE_MISSING` | .claude/memory.md not found (created on init) |
 | `SEMANTIC_PARSE_ERROR` | Cannot parse memory.md |
+
+---
+
+## Graceful Degradation
+
+When Hindsight is unavailable:
+
+| Operation | Behavior |
+|-----------|----------|
+| `onSessionStart()` | Returns semantic memory only |
+| `onContextChange()` | Returns empty array |
+| `recall()` | Returns empty array |
+| `reflect()` | Returns error (requires Hindsight) |
+| `retain()` | Queued for later (if enabled) |
+| `onSessionEnd()` | Skips reflect, logs warning |
+
+Semantic memory always works (local file).
