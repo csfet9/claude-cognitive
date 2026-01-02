@@ -1,6 +1,6 @@
 # Configuration Reference
 
-Complete configuration options for claude-mind.
+Complete configuration options for claude-cognitive.
 
 ---
 
@@ -147,15 +147,15 @@ Full integration configuration:
         "hooks": [
           {
             "type": "command",
-            "command": "claude-mind inject-context"
+            "command": "claude-cognitive inject-context"
           }
         ]
       }
     ]
   },
   "mcpServers": {
-    "claude-mind": {
-      "command": "claude-mind",
+    "claude-cognitive": {
+      "command": "claude-cognitive",
       "args": ["serve", "--project", "."]
     }
   }
@@ -165,7 +165,7 @@ Full integration configuration:
 ### MCP Server Options
 
 ```bash
-claude-mind serve [options]
+claude-cognitive serve [options]
 ```
 
 | Option | Default | Description |
@@ -263,7 +263,7 @@ Custom timeouts for different operations:
 Check loaded configuration:
 
 ```bash
-claude-mind config
+claude-cognitive config
 ```
 
 Output:

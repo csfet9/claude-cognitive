@@ -1,10 +1,10 @@
-# claude-mind
+# claude-cognitive
 
 Persistent memory for Claude Code, powered by [Hindsight](https://github.com/vectorize-io/hindsight).
 
 **LLM thinks. Hindsight remembers. Together = mind.**
 
-Claude's context clears after each session. claude-mind gives Claude persistent memory across sessions - it remembers what it learned, what it did, and forms opinions about your codebase over time.
+Claude's context clears after each session. claude-cognitive gives Claude persistent memory across sessions - it remembers what it learned, what it did, and forms opinions about your codebase over time.
 
 ---
 
@@ -12,17 +12,17 @@ Claude's context clears after each session. claude-mind gives Claude persistent 
 
 ```bash
 # Install
-npm install -g claude-mind
+npm install -g claude-cognitive
 
 # Initialize in your project
 cd /path/to/your/project
-claude-mind init
+claude-cognitive init
 
 # Bootstrap memory from existing codebase
-claude-mind learn
+claude-cognitive learn
 
 # Check status
-claude-mind status
+claude-cognitive status
 ```
 
 ### Configure Claude Code
@@ -38,15 +38,15 @@ Add to `.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "claude-mind inject-context"
+            "command": "claude-cognitive inject-context"
           }
         ]
       }
     ]
   },
   "mcpServers": {
-    "claude-mind": {
-      "command": "claude-mind",
+    "claude-cognitive": {
+      "command": "claude-cognitive",
       "args": ["serve", "--project", "."]
     }
   }
@@ -119,15 +119,15 @@ Claude: "What patterns have I noticed about error handling?"
 ## CLI Commands
 
 ```bash
-claude-mind init                   # Initialize for project
-claude-mind serve                  # Start MCP server
-claude-mind status                 # Show connection status
-claude-mind learn                  # Bootstrap from codebase
-claude-mind learn --depth full     # Full analysis with git history
-claude-mind recall "query"         # Search memories
-claude-mind reflect "query"        # Reason about knowledge
-claude-mind semantic               # Show semantic memory
-claude-mind config                 # Show configuration
+claude-cognitive init                   # Initialize for project
+claude-cognitive serve                  # Start MCP server
+claude-cognitive status                 # Show connection status
+claude-cognitive learn                  # Bootstrap from codebase
+claude-cognitive learn --depth full     # Full analysis with git history
+claude-cognitive recall "query"         # Search memories
+claude-cognitive reflect "query"        # Reason about knowledge
+claude-cognitive semantic               # Show semantic memory
+claude-cognitive config                 # Show configuration
 ```
 
 ---
@@ -195,7 +195,7 @@ This file is always loaded at session start and takes precedence over Hindsight 
 
 ## Graceful Degradation
 
-When Hindsight is unavailable, claude-mind continues working with semantic memory only:
+When Hindsight is unavailable, claude-cognitive continues working with semantic memory only:
 
 | Operation | With Hindsight | Without Hindsight |
 |-----------|----------------|-------------------|
@@ -209,7 +209,7 @@ When Hindsight is unavailable, claude-mind continues working with semantic memor
 ## API Usage
 
 ```typescript
-import { Mind } from 'claude-mind';
+import { Mind } from 'claude-cognitive';
 
 const mind = new Mind({
   projectPath: process.cwd(),
@@ -241,7 +241,7 @@ const result = await mind.learn({ depth: 'full' });
 - **Node.js 18+**
 - **[Hindsight](https://github.com/vectorize-io/hindsight)** server running (for full functionality)
 
-Without Hindsight, claude-mind works in degraded mode with semantic memory only.
+Without Hindsight, claude-cognitive works in degraded mode with semantic memory only.
 
 ---
 

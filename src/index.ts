@@ -1,11 +1,11 @@
 /**
- * claude-mind - Memory integration layer for Claude Code with Hindsight.
+ * claude-cognitive - Memory integration layer for Claude Code with Hindsight.
  *
  * LLM thinks. Hindsight remembers. Together = mind.
  *
  * @example
  * ```typescript
- * import { HindsightClient, loadConfig } from 'claude-mind';
+ * import { HindsightClient, loadConfig } from 'claude-cognitive';
  *
  * // Load configuration from .claudemindrc or defaults
  * const config = await loadConfig();

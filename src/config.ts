@@ -1,5 +1,5 @@
 /**
- * Configuration loading for claude-mind.
+ * Configuration loading for claude-cognitive.
  * @module config
  */
 

@@ -1,6 +1,6 @@
 # Core Concepts
 
-Understanding claude-mind's memory architecture and how it integrates with Hindsight.
+Understanding claude-cognitive's memory architecture and how it integrates with Hindsight.
 
 ---
 

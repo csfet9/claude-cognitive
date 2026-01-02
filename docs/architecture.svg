@@ -21,8 +21,8 @@
   <rect width="800" height="500" fill="#0F172A" rx="16"/>
 
   <!-- Title -->
-  <text x="400" y="45" text-anchor="middle" fill="#F8FAFC" font-family="system-ui, sans-serif" font-size="28" font-weight="bold">claude-mind</text>
-  <text x="400" y="72" text-anchor="middle" fill="#64748B" font-family="system-ui, sans-serif" font-size="14">LLM thinks. Hindsight remembers. Together = mind.</text>
+  <text x="400" y="45" text-anchor="middle" fill="#F8FAFC" font-family="system-ui, sans-serif" font-size="28" font-weight="bold">claude-cognitive</text>
+  <text x="400" y="72" text-anchor="middle" fill="#64748B" font-family="system-ui, sans-serif" font-size="14">LLM thinks. Hindsight remembers. Together = cognitive.</text>
 
   <!-- Claude Orchestrator Box -->
   <rect x="100" y="100" width="600" height="120" rx="12" fill="url(#claudeGrad)" filter="url(#shadow)"/>

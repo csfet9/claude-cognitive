@@ -1,5 +1,5 @@
 /**
- * Observation promotion logic for claude-mind.
+ * Observation promotion logic for claude-cognitive.
  * Handles auto-promotion of high-confidence observations to semantic memory.
  * @module promotion
  */

@@ -15,7 +15,7 @@ describe("source analyzer", () => {
 
   beforeEach(async () => {
     const suffix = randomBytes(8).toString("hex");
-    tempDir = join(tmpdir(), `claude-mind-source-test-${suffix}`);
+    tempDir = join(tmpdir(), `claude-cognitive-source-test-${suffix}`);
     await mkdir(tempDir, { recursive: true });
   });
 

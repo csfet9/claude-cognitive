@@ -1,5 +1,5 @@
 /**
- * Type definitions for claude-mind Hindsight client.
+ * Type definitions for claude-cognitive Hindsight client.
  * @module types
  */
 
@@ -267,7 +267,7 @@ export interface HindsightClientOptions {
 // Configuration Types
 // ============================================
 
-/** Full configuration schema for claude-mind */
+/** Full configuration schema for claude-cognitive */
 export interface ClaudeMindConfig {
   /** Hindsight server connection settings */
   hindsight: {

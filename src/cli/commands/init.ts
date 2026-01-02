@@ -1,5 +1,5 @@
 /**
- * CLI init command - initialize claude-mind for a project.
+ * CLI init command - initialize claude-cognitive for a project.
  * @module cli/commands/init
  */
 
@@ -33,7 +33,7 @@ interface InitResult {
  */
 export function registerInitCommand(cli: CAC): void {
   cli
-    .command("init", "Initialize claude-mind for the current project")
+    .command("init", "Initialize claude-cognitive for the current project")
     .option("--project <path>", "Project directory (default: current directory)")
     .option("--bank-id <id>", "Memory bank ID (default: derived from project name)")
     .option("--force", "Overwrite existing configuration")
@@ -146,7 +146,7 @@ export function registerInitCommand(cli: CAC): void {
       output(
         result,
         (r) =>
-          `Initialized claude-mind:\n  Config: ${r.rcPath}\n  Semantic: ${r.semanticPath}\n  Bank: ${r.bankId || "(not created)"}`,
+          `Initialized claude-cognitive:\n  Config: ${r.rcPath}\n  Semantic: ${r.semanticPath}\n  Bank: ${r.bankId || "(not created)"}`,
         options,
       );
     });

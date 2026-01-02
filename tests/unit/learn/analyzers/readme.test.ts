@@ -15,7 +15,7 @@ describe("readme analyzer", () => {
 
   beforeEach(async () => {
     const suffix = randomBytes(8).toString("hex");
-    tempDir = join(tmpdir(), `claude-mind-readme-test-${suffix}`);
+    tempDir = join(tmpdir(), `claude-cognitive-readme-test-${suffix}`);
     await mkdir(tempDir, { recursive: true });
   });
 

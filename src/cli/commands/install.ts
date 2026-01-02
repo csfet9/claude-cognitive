@@ -1,5 +1,5 @@
 /**
- * CLI install command - interactive installer for claude-mind.
+ * CLI install command - interactive installer for claude-cognitive.
  * @module cli/commands/install
  */
 
@@ -43,7 +43,7 @@ function print(text: string): void {
 function printHeader(): void {
   print("");
   print(color("╔═══════════════════════════════════════════╗", "cyan"));
-  print(color("║        claude-mind interactive setup      ║", "cyan"));
+  print(color("║        claude-cognitive interactive setup      ║", "cyan"));
   print(color("╚═══════════════════════════════════════════╝", "cyan"));
   print("");
   print(color("LLM thinks. Hindsight remembers. Together = mind.", "dim"));
@@ -185,23 +185,23 @@ async function readMcpConfig(
 }
 
 /**
- * Get the command to run claude-mind serve.
+ * Get the command to run claude-cognitive serve.
  * Detects if globally installed or uses local path.
  */
 async function getServeCommand(): Promise<{ command: string; args: string[] }> {
-  // Check if claude-mind is globally installed
+  // Check if claude-cognitive is globally installed
   try {
     const { execSync } = await import("node:child_process");
-    execSync("which claude-mind", { stdio: "ignore" });
+    execSync("which claude-cognitive", { stdio: "ignore" });
     return {
-      command: "claude-mind",
+      command: "claude-cognitive",
       args: ["serve"],
     };
   } catch {
     // Use npx as fallback, or direct node path
     return {
       command: "npx",
-      args: ["claude-mind", "serve"],
+      args: ["claude-cognitive", "serve"],
     };
   }
 }
@@ -211,7 +211,7 @@ async function getServeCommand(): Promise<{ command: string; args: string[] }> {
  */
 export function registerInstallCommand(cli: CAC): void {
   cli
-    .command("install", "Interactive installer for claude-mind")
+    .command("install", "Interactive installer for claude-cognitive")
     .option("--project <path>", "Project directory (skips prompt)")
     .action(async (options: { project?: string }) => {
       const prompt = createPrompt();
@@ -257,7 +257,7 @@ export function registerInstallCommand(cli: CAC): void {
         printStep(2, 5, "Disposition (personality traits)");
         print(
           color(
-            "  These traits shape how claude-mind reasons about your project.",
+            "  These traits shape how claude-cognitive reasons about your project.",
             "dim",
           ),
         );
@@ -415,7 +415,7 @@ export function registerInstallCommand(cli: CAC): void {
             const projectConfig = (projects[answers.projectPath] as Record<string, unknown>) || {};
             const mcpServers = (projectConfig.mcpServers as Record<string, unknown>) || {};
 
-            mcpServers["claude-mind"] = {
+            mcpServers["claude-cognitive"] = {
               command: serveCmd.command,
               args: [...serveCmd.args, "--project", answers.projectPath],
             };
@@ -438,7 +438,7 @@ export function registerInstallCommand(cli: CAC): void {
             // Project config: .mcp.json in project root
             const mcpServers = (existing.mcpServers as Record<string, unknown>) || {};
 
-            mcpServers["claude-mind"] = {
+            mcpServers["claude-cognitive"] = {
               command: serveCmd.command,
               args: serveCmd.args,
             };
@@ -494,7 +494,7 @@ export function registerInstallCommand(cli: CAC): void {
                 "yellow",
               ),
             );
-            printInfo("Start Hindsight and run 'claude-mind learn' later");
+            printInfo("Start Hindsight and run 'claude-cognitive learn' later");
           }
         } catch (error) {
           print(
@@ -519,7 +519,7 @@ export function registerInstallCommand(cli: CAC): void {
         if (!hindsightConnected) {
           print(
             color(
-              "  3. Start Hindsight and run: claude-mind learn",
+              "  3. Start Hindsight and run: claude-cognitive learn",
               "dim",
             ),
           );

@@ -18,7 +18,7 @@ describe("structure analyzer", () => {
 
   beforeEach(async () => {
     const suffix = randomBytes(8).toString("hex");
-    tempDir = join(tmpdir(), `claude-mind-struct-test-${suffix}`);
+    tempDir = join(tmpdir(), `claude-cognitive-struct-test-${suffix}`);
     await mkdir(tempDir, { recursive: true });
   });
 

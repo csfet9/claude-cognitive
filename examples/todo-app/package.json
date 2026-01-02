@@ -1,7 +1,7 @@
 {
   "name": "todo-app-example",
   "version": "1.0.0",
-  "description": "Example todo app demonstrating claude-mind integration",
+  "description": "Example todo app demonstrating claude-cognitive integration",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {

@@ -1,5 +1,5 @@
 /**
- * Event system for claude-mind Mind class.
+ * Event system for claude-cognitive Mind class.
  * @module events
  */
 

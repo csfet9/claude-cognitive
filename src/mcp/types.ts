@@ -42,7 +42,7 @@ export interface McpServerOptions {
   transport?: McpTransportType;
   /** HTTP transport configuration (only used when transport is "http") */
   http?: HttpTransportConfig;
-  /** Server name for MCP identification (default: "claude-mind") */
+  /** Server name for MCP identification (default: "claude-cognitive") */
   name?: string;
   /** Server version (default: from package.json) */
   version?: string;

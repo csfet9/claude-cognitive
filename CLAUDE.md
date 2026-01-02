@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-claude-mind is a memory integration layer between Claude Code and [Hindsight](https://github.com/vectorize-io/hindsight).
+claude-cognitive is a memory integration layer between Claude Code and [Hindsight](https://github.com/vectorize-io/hindsight).
 
 **LLM thinks. Hindsight remembers. Together = mind.**
 
@@ -28,16 +28,16 @@ npx prettier --write .
 npx prettier --check .
 
 # CLI
-claude-mind serve    # start MCP server
-claude-mind status   # check connection
-claude-mind recall   # search memories
+claude-cognitive serve    # start MCP server
+claude-cognitive status   # check connection
+claude-cognitive recall   # search memories
 ```
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────┐
-│            CLAUDE-MIND                  │
+│            CLAUDE-COGNITIVE                  │
 ├─────────────────────────────────────────┤
 │  ┌─────────────────────────────────┐   │
 │  │   CLAUDE (ORCHESTRATOR)         │   │

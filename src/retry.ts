@@ -1,5 +1,5 @@
 /**
- * Retry logic with exponential backoff for claude-mind.
+ * Retry logic with exponential backoff for claude-cognitive.
  * @module retry
  */
 

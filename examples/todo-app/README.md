@@ -1,6 +1,6 @@
-# Example: Todo App with claude-mind
+# Example: Todo App with claude-cognitive
 
-This example demonstrates how to integrate claude-mind into a TypeScript project.
+This example demonstrates how to integrate claude-cognitive into a TypeScript project.
 
 ## Project Overview
 
@@ -11,21 +11,21 @@ A simple todo application that uses:
 
 ## Setup
 
-### 1. Install claude-mind
+### 1. Install claude-cognitive
 
 ```bash
 # Install globally
-npm install -g claude-mind
+npm install -g claude-cognitive
 
 # Or use npx
-npx claude-mind --help
+npx claude-cognitive --help
 ```
 
-### 2. Initialize claude-mind
+### 2. Initialize claude-cognitive
 
 ```bash
 cd examples/todo-app
-claude-mind init
+claude-cognitive init
 ```
 
 This creates:
@@ -37,7 +37,7 @@ This creates:
 Run the learn command to analyze the codebase:
 
 ```bash
-claude-mind learn --depth standard
+claude-cognitive learn --depth standard
 ```
 
 This extracts facts about:
@@ -59,7 +59,7 @@ Add to your Claude Code settings:
         "hooks": [
           {
             "type": "command",
-            "command": "claude-mind inject-context --project ."
+            "command": "claude-cognitive inject-context --project ."
           }
         ]
       }
@@ -70,15 +70,15 @@ Add to your Claude Code settings:
         "hooks": [
           {
             "type": "command",
-            "command": "claude-mind process-session --project . --transcript $TRANSCRIPT"
+            "command": "claude-cognitive process-session --project . --transcript $TRANSCRIPT"
           }
         ]
       }
     ]
   },
   "mcpServers": {
-    "claude-mind": {
-      "command": "claude-mind",
+    "claude-cognitive": {
+      "command": "claude-cognitive",
       "args": ["serve", "--project", "."]
     }
   }
@@ -89,7 +89,7 @@ Add to your Claude Code settings:
 
 ```
 todo-app/
-├── .claudemindrc           # claude-mind configuration
+├── .claudemindrc           # claude-cognitive configuration
 ├── .claude/
 │   ├── memory.md           # Semantic memory
 │   └── settings.json       # Claude Code settings
@@ -173,22 +173,22 @@ When you close the session, the process-session hook:
 
 ```bash
 # Show status
-claude-mind status
+claude-cognitive status
 
 # Search memories
-claude-mind recall "database schema"
+claude-cognitive recall "database schema"
 
 # Reason about patterns
-claude-mind reflect "What patterns does this codebase use?"
+claude-cognitive reflect "What patterns does this codebase use?"
 
 # Show semantic memory
-claude-mind semantic
+claude-cognitive semantic
 
 # Show configuration
-claude-mind config
+claude-cognitive config
 
 # Start MCP server
-claude-mind serve
+claude-cognitive serve
 ```
 
 ## Configuration Options

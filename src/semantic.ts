@@ -1,5 +1,5 @@
 /**
- * Semantic memory management for claude-mind.
+ * Semantic memory management for claude-cognitive.
  * Manages the .claude/memory.md file with section-based storage.
  * @module semantic
  */

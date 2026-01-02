@@ -1,5 +1,5 @@
 /**
- * Error handling for claude-mind Hindsight client.
+ * Error handling for claude-cognitive Hindsight client.
  * @module errors
  */
 

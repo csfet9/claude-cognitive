@@ -1,5 +1,5 @@
 /**
- * Mind class - the orchestrator for claude-mind.
+ * Mind class - the orchestrator for claude-cognitive.
  * @module mind
  */
 
@@ -474,7 +474,7 @@ export class Mind extends TypedEventEmitter {
   /**
    * Bootstrap memory from an existing codebase.
    *
-   * This solves the **cold start problem** when adopting claude-mind
+   * This solves the **cold start problem** when adopting claude-cognitive
    * on a mature project.
    *
    * @param options - Learn options (depth, git history, etc.)

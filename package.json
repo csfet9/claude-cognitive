@@ -1,12 +1,12 @@
 {
-  "name": "claude-mind",
+  "name": "claude-cognitive",
   "version": "0.1.0",
-  "description": "Human-inspired memory system for Claude Code, powered by Hindsight. LLM thinks. Hindsight remembers. Together = mind.",
+  "description": "Persistent memory for Claude Code, powered by Hindsight. LLM thinks. Hindsight remembers. Together = cognitive.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "claude-mind": "./bin/claude-mind.js"
+    "claude-cognitive": "./bin/claude-cognitive.js"
   },
   "exports": {
     ".": {
@@ -21,6 +21,7 @@
   "keywords": [
     "claude",
     "claude-code",
+    "cognitive",
     "memory",
     "hindsight",
     "ai",

@@ -19,7 +19,7 @@ describe("agent loader", () => {
 
   beforeEach(async () => {
     const suffix = randomBytes(8).toString("hex");
-    tempDir = join(tmpdir(), `claude-mind-agent-test-${suffix}`);
+    tempDir = join(tmpdir(), `claude-cognitive-agent-test-${suffix}`);
     await mkdir(tempDir, { recursive: true });
   });
 

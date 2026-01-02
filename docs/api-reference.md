@@ -1,13 +1,13 @@
 # API Reference
 
-Full API documentation for claude-mind with Hindsight integration.
+Full API documentation for claude-cognitive with Hindsight integration.
 
 ---
 
 ## Quick Start
 
 ```typescript
-import { Mind } from "claude-mind";
+import { Mind } from "claude-cognitive";
 
 const mind = new Mind({
   projectPath: process.cwd(),
@@ -399,7 +399,7 @@ Returns: `Promise<ReflectResult>`
 
 #### `learn(options?)`
 
-Bootstrap memory from an existing codebase. Solves the **cold start problem** when adopting claude-mind on a mature project.
+Bootstrap memory from an existing codebase. Solves the **cold start problem** when adopting claude-cognitive on a mature project.
 
 ```typescript
 const result = await mind.learn({
@@ -737,12 +737,12 @@ mind.on("error", (error: Error) => {
 
 ## MCP Server
 
-claude-mind runs as an MCP (Model Context Protocol) server, providing tools that Claude can use during sessions.
+claude-cognitive runs as an MCP (Model Context Protocol) server, providing tools that Claude can use during sessions.
 
 ### Starting the Server
 
 ```bash
-claude-mind serve --project /path/to/project
+claude-cognitive serve --project /path/to/project
 ```
 
 The server communicates via stdio and implements the MCP protocol.
@@ -853,14 +853,14 @@ Based on my experience, what should I consider when modifying auth?
 
 ### Claude Code Configuration
 
-To enable claude-mind as an MCP server in Claude Code:
+To enable claude-cognitive as an MCP server in Claude Code:
 
 ```javascript
 // .claude/settings.json
 {
   "mcpServers": {
-    "claude-mind": {
-      "command": "claude-mind",
+    "claude-cognitive": {
+      "command": "claude-cognitive",
       "args": ["serve", "--project", "."]
     }
   }
@@ -891,7 +891,7 @@ Commands designed to be called by Claude Code hooks.
 Called at session start to inject memory context.
 
 ```bash
-claude-mind inject-context [--project <path>]
+claude-cognitive inject-context [--project <path>]
 ```
 
 **Output:** Formatted markdown context for injection
@@ -917,7 +917,7 @@ claude-mind inject-context [--project <path>]
 Called at session end to process the transcript.
 
 ```bash
-claude-mind process-session --transcript <path>
+claude-cognitive process-session --transcript <path>
 ```
 
 **Process:**
@@ -941,17 +941,17 @@ Processed session transcript:
 ## CLI Commands
 
 ```bash
-claude-mind init               # Initialize for project
-claude-mind serve              # Start MCP server
-claude-mind status             # Show connection and bank stats
-claude-mind learn              # Bootstrap memory from codebase (cold start)
-claude-mind learn --depth full # Full analysis with all git history
-claude-mind recall "query"     # Manual recall
-claude-mind reflect "query"    # Manual reflect
-claude-mind semantic           # Show semantic memory
-claude-mind semantic --edit    # Edit semantic memory
-claude-mind config             # Show/edit configuration
-claude-mind bank               # Show bank disposition
+claude-cognitive init               # Initialize for project
+claude-cognitive serve              # Start MCP server
+claude-cognitive status             # Show connection and bank stats
+claude-cognitive learn              # Bootstrap memory from codebase (cold start)
+claude-cognitive learn --depth full # Full analysis with all git history
+claude-cognitive recall "query"     # Manual recall
+claude-cognitive reflect "query"    # Manual reflect
+claude-cognitive semantic           # Show semantic memory
+claude-cognitive semantic --edit    # Edit semantic memory
+claude-cognitive config             # Show/edit configuration
+claude-cognitive bank               # Show bank disposition
 ```
 
 ---

@@ -37,7 +37,7 @@ async function main() {
 
   // Create temp directory for tests
   const suffix = randomBytes(8).toString("hex");
-  const tempDir = join(tmpdir(), `claude-mind-bench-${suffix}`);
+  const tempDir = join(tmpdir(), `claude-cognitive-bench-${suffix}`);
   await mkdir(tempDir, { recursive: true });
   await mkdir(join(tempDir, ".claude"), { recursive: true });
 

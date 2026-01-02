@@ -15,7 +15,7 @@ describe("SemanticMemory", () => {
 
   beforeEach(async () => {
     // Create a unique temp directory for each test
-    testDir = join(tmpdir(), `claude-mind-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    testDir = join(tmpdir(), `claude-cognitive-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
     await mkdir(testDir, { recursive: true });
     semanticPath = ".claude/memory.md";
   });

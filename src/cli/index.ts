@@ -1,5 +1,5 @@
 /**
- * CLI entry point for claude-mind.
+ * CLI entry point for claude-cognitive.
  * @module cli
  */
 
@@ -26,7 +26,7 @@ const VERSION = "0.1.0";
  * Create and configure the CLI.
  */
 function createCLI(): CAC {
-  const cli = cac("claude-mind");
+  const cli = cac("claude-cognitive");
 
   // Register commands
   registerInitCommand(cli);

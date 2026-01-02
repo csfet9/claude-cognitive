@@ -17,7 +17,7 @@ export async function createTempDir(): Promise<{
   cleanup: () => Promise<void>;
 }> {
   const suffix = randomBytes(8).toString("hex");
-  const path = join(tmpdir(), `claude-mind-test-${suffix}`);
+  const path = join(tmpdir(), `claude-cognitive-test-${suffix}`);
   await mkdir(path, { recursive: true });
 
   return {

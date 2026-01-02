@@ -2,7 +2,7 @@
  * Todo App - Entry Point
  *
  * A simple REST API for managing todos.
- * Demonstrates claude-mind integration.
+ * Demonstrates claude-cognitive integration.
  */
 
 import express from "express";

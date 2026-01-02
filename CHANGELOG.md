@@ -22,15 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `learn()` - Bootstrap memory from existing codebase
 
 - **CLI Commands**
-  - `claude-mind init` - Initialize project configuration
-  - `claude-mind install` - Interactive setup wizard
-  - `claude-mind serve` - Start MCP server (STDIO transport)
-  - `claude-mind status` - Show connection and bank status
-  - `claude-mind learn` - Bootstrap from codebase (quick/standard/full)
-  - `claude-mind recall` - Search memories
-  - `claude-mind reflect` - Reason about knowledge
-  - `claude-mind semantic` - View semantic memory
-  - `claude-mind config` - Show configuration
+  - `claude-cognitive init` - Initialize project configuration
+  - `claude-cognitive install` - Interactive setup wizard
+  - `claude-cognitive serve` - Start MCP server (STDIO transport)
+  - `claude-cognitive status` - Show connection and bank status
+  - `claude-cognitive learn` - Bootstrap from codebase (quick/standard/full)
+  - `claude-cognitive recall` - Search memories
+  - `claude-cognitive reflect` - Reason about knowledge
+  - `claude-cognitive semantic` - View semantic memory
+  - `claude-cognitive config` - Show configuration
 
 - **MCP Server**
   - `memory_recall` tool - Search project memories
@@ -59,4 +59,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Unit, integration, and E2E tests
   - Performance benchmarks
 
-[0.1.0]: https://github.com/csfet9/claude-mind/releases/tag/v0.1.0
+[0.1.0]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.1.0

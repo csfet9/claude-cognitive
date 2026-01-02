@@ -1,6 +1,6 @@
 # Getting Started
 
-Complete guide to installing and configuring claude-mind with Claude Code.
+Complete guide to installing and configuring claude-cognitive with Claude Code.
 
 ---
 
@@ -28,20 +28,20 @@ Complete guide to installing and configuring claude-mind with Claude Code.
 ### Global (Recommended)
 
 ```bash
-npm install -g claude-mind
+npm install -g claude-cognitive
 ```
 
 ### Local
 
 ```bash
-npm install claude-mind
+npm install claude-cognitive
 ```
 
 ### From Source
 
 ```bash
-git clone https://github.com/sfetanclaudiu/claude-mind
-cd claude-mind
+git clone https://github.com/sfetanclaudiu/claude-cognitive
+cd claude-cognitive
 npm install
 npm run build
 npm link
@@ -50,8 +50,8 @@ npm link
 ### Verify
 
 ```bash
-claude-mind --version
-claude-mind --help
+claude-cognitive --version
+claude-cognitive --help
 ```
 
 ---
@@ -62,7 +62,7 @@ claude-mind --help
 
 ```bash
 cd /path/to/your/project
-claude-mind init
+claude-cognitive init
 ```
 
 This creates:
@@ -72,8 +72,8 @@ This creates:
 
 Options:
 ```bash
-claude-mind init --bank-id my-custom-bank
-claude-mind init --force  # Overwrite existing config
+claude-cognitive init --bank-id my-custom-bank
+claude-cognitive init --force  # Overwrite existing config
 ```
 
 ### 2. Bootstrap Memory (Recommended)
@@ -82,13 +82,13 @@ For existing projects, bootstrap memory from your codebase:
 
 ```bash
 # Quick (README, package.json, structure)
-claude-mind learn
+claude-cognitive learn
 
 # Standard (+ source code patterns)
-claude-mind learn --depth standard
+claude-cognitive learn --depth standard
 
 # Full (all source files, git history)
-claude-mind learn --depth full
+claude-cognitive learn --depth full
 ```
 
 ### 3. Configure Claude Code
@@ -104,15 +104,15 @@ Add to `.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "claude-mind inject-context"
+            "command": "claude-cognitive inject-context"
           }
         ]
       }
     ]
   },
   "mcpServers": {
-    "claude-mind": {
-      "command": "claude-mind",
+    "claude-cognitive": {
+      "command": "claude-cognitive",
       "args": ["serve", "--project", "."]
     }
   }
@@ -128,7 +128,7 @@ For global configuration, use `~/.claude/settings.json`.
 ### Check Status
 
 ```bash
-claude-mind status
+claude-cognitive status
 ```
 
 Expected output:
@@ -144,11 +144,11 @@ Degraded: No
 
 ```bash
 # Start server
-claude-mind serve
+claude-cognitive serve
 
 # Test commands
-claude-mind recall "test query"
-claude-mind reflect "what patterns exist"
+claude-cognitive recall "test query"
+claude-cognitive reflect "what patterns exist"
 ```
 
 ### Verify in Claude Code
@@ -171,16 +171,16 @@ claude-mind reflect "what patterns exist"
    curl http://localhost:8888/health
    ```
 2. Check host/port in `.claudemindrc`
-3. Run `claude-mind status` for diagnostics
+3. Run `claude-cognitive status` for diagnostics
 
-**Note**: claude-mind continues working in degraded mode using only semantic memory.
+**Note**: claude-cognitive continues working in degraded mode using only semantic memory.
 
 ### MCP Server Not Found
 
 **Symptom**: Claude Code doesn't show memory tools
 
 **Solutions**:
-1. Verify installation: `which claude-mind`
+1. Verify installation: `which claude-cognitive`
 2. Check `.claude/settings.json` syntax
 3. Restart Claude Code after configuration changes
 
@@ -191,7 +191,7 @@ claude-mind reflect "what patterns exist"
 **Solutions**:
 1. Validate JSON syntax in `.claudemindrc`
 2. Check file permissions
-3. Run `claude-mind config` to see loaded configuration
+3. Run `claude-cognitive config` to see loaded configuration
 4. Environment variables override file config
 
 ---
@@ -201,14 +201,14 @@ claude-mind reflect "what patterns exist"
 ### CLI Commands
 
 ```bash
-claude-mind init               # Initialize project
-claude-mind serve              # Start MCP server
-claude-mind status             # Show connection status
-claude-mind learn              # Bootstrap from codebase
-claude-mind recall "query"     # Search memories
-claude-mind reflect "query"    # Reason about knowledge
-claude-mind semantic           # Show semantic memory
-claude-mind config             # Show configuration
+claude-cognitive init               # Initialize project
+claude-cognitive serve              # Start MCP server
+claude-cognitive status             # Show connection status
+claude-cognitive learn              # Bootstrap from codebase
+claude-cognitive recall "query"     # Search memories
+claude-cognitive reflect "query"    # Reason about knowledge
+claude-cognitive semantic           # Show semantic memory
+claude-cognitive config             # Show configuration
 ```
 
 ### Key Files

@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "claude-mind inject-context --project ."
+            "command": "claude-cognitive inject-context --project ."
           }
         ]
       }
@@ -17,15 +17,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "claude-mind process-session --project . --transcript $TRANSCRIPT"
+            "command": "claude-cognitive process-session --project . --transcript $TRANSCRIPT"
           }
         ]
       }
     ]
   },
   "mcpServers": {
-    "claude-mind": {
-      "command": "claude-mind",
+    "claude-cognitive": {
+      "command": "claude-cognitive",
       "args": ["serve", "--project", "."]
     }
   }

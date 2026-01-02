@@ -17,7 +17,7 @@ describe("config", () => {
   beforeEach(async () => {
     // Create a unique temp directory
     const suffix = randomBytes(8).toString("hex");
-    tempDir = join(tmpdir(), `claude-mind-config-test-${suffix}`);
+    tempDir = join(tmpdir(), `claude-cognitive-config-test-${suffix}`);
     await mkdir(tempDir, { recursive: true });
 
     // Clear relevant env vars

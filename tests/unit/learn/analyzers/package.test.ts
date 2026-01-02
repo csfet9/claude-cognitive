@@ -19,7 +19,7 @@ describe("package analyzer", () => {
 
   beforeEach(async () => {
     const suffix = randomBytes(8).toString("hex");
-    tempDir = join(tmpdir(), `claude-mind-pkg-test-${suffix}`);
+    tempDir = join(tmpdir(), `claude-cognitive-pkg-test-${suffix}`);
     await mkdir(tempDir, { recursive: true });
   });
 

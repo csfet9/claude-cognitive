@@ -1,5 +1,5 @@
 /**
- * MCP (Model Context Protocol) server for claude-mind.
+ * MCP (Model Context Protocol) server for claude-cognitive.
  * @module mcp
  */
 
@@ -42,8 +42,8 @@ import type { McpServerOptions } from "./types.js";
  *
  * @example
  * ```typescript
- * import { createMcpServer } from 'claude-mind/mcp';
- * import { Mind } from 'claude-mind';
+ * import { createMcpServer } from 'claude-cognitive/mcp';
+ * import { Mind } from 'claude-cognitive';
  *
  * const mind = new Mind({ projectPath: process.cwd() });
  * await mind.init();

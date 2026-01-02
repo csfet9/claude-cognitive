@@ -28,7 +28,7 @@ const DEFAULT_OPTIONS: Required<LearnOptions> = {
  * Bootstrap memory from an existing codebase.
  *
  * This operation analyzes the project and stores facts in Hindsight,
- * solving the cold start problem when adopting claude-mind.
+ * solving the cold start problem when adopting claude-cognitive.
  *
  * @param client - HindsightClient instance
  * @param bankId - Memory bank ID

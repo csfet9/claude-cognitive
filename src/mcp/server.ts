@@ -1,5 +1,5 @@
 /**
- * MCP server implementation for claude-mind.
+ * MCP server implementation for claude-cognitive.
  * @module mcp/server
  */
 
@@ -27,7 +27,7 @@ import type {
 
 /** Default server configuration */
 const DEFAULTS = {
-  name: "claude-mind",
+  name: "claude-cognitive",
   version: "0.1.0",
   httpPort: 3000,
   httpHost: "127.0.0.1",

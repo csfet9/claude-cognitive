@@ -45,7 +45,7 @@ export function registerSemanticCommand(cli: CAC): void {
           throw new CLIError(
             "Section name required when using --set.",
             ExitCode.CONFIG_ERROR,
-            "Usage: claude-mind semantic 'Section Name' --set 'content'",
+            "Usage: claude-cognitive semantic 'Section Name' --set 'content'",
           );
         }
 

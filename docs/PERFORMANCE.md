@@ -1,6 +1,6 @@
 # Performance Profile
 
-Performance benchmarks and optimization guidelines for claude-mind.
+Performance benchmarks and optimization guidelines for claude-cognitive.
 
 ## Target Metrics
 
@@ -145,7 +145,7 @@ For production use, consider:
 3. **Degraded mode detection**: Monitor Hindsight availability
 
 ```typescript
-import { Mind } from 'claude-mind';
+import { Mind } from 'claude-cognitive';
 
 const mind = new Mind({ projectPath: '.' });
 mind.on('degraded:change', (isDegraded) => {
