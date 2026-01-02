@@ -35,20 +35,20 @@ Together, they form a **mind** with continuity across sessions.
 
 ### Three Core Operations
 
-| Operation | What Hindsight Does |
-|-----------|---------------------|
-| **Retain** | Stores experiences, extracting 5 dimensions: what, when, where, who, why. Builds entity graphs and causal relationships automatically. |
-| **Recall** | 4-way parallel retrieval: semantic similarity + keyword matching + graph traversal + temporal filtering. Results fused and reranked. |
-| **Reflect** | Reasons about accumulated knowledge through the bank's disposition. Forms opinions with confidence scores. Generates observations. |
+| Operation   | What Hindsight Does                                                                                                                    |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Retain**  | Stores experiences, extracting 5 dimensions: what, when, where, who, why. Builds entity graphs and causal relationships automatically. |
+| **Recall**  | 4-way parallel retrieval: semantic similarity + keyword matching + graph traversal + temporal filtering. Results fused and reranked.   |
+| **Reflect** | Reasons about accumulated knowledge through the bank's disposition. Forms opinions with confidence scores. Generates observations.     |
 
 ### Four Memory Networks
 
-| Type | Purpose | Example |
-|------|---------|---------|
-| `world` | Facts about the codebase and external world | "Auth uses Supabase magic links" |
-| `experience` | What Claude did (first-person) | "I fixed the redirect by moving AuthProvider to root" |
-| `opinion` | Beliefs with confidence scores (0.0-1.0) | "This codebase prefers explicit error handling" (0.85) |
-| `observation` | Synthesized cross-session insights | "Auth changes often require corresponding navigation updates" |
+| Type          | Purpose                                     | Example                                                       |
+| ------------- | ------------------------------------------- | ------------------------------------------------------------- |
+| `world`       | Facts about the codebase and external world | "Auth uses Supabase magic links"                              |
+| `experience`  | What Claude did (first-person)              | "I fixed the redirect by moving AuthProvider to root"         |
+| `opinion`     | Beliefs with confidence scores (0.0-1.0)    | "This codebase prefers explicit error handling" (0.85)        |
+| `observation` | Synthesized cross-session insights          | "Auth changes often require corresponding navigation updates" |
 
 ### Bank Disposition
 
@@ -109,10 +109,10 @@ Each project gets a memory bank with personality traits that shape how `reflect(
 
 ### Two Memory Layers
 
-| Layer | Storage | Purpose |
-|-------|---------|---------|
+| Layer         | Storage               | Purpose                                                             |
+| ------------- | --------------------- | ------------------------------------------------------------------- |
 | **Hindsight** | PostgreSQL + pgvector | All memories with entity graphs, 4-way retrieval, opinion formation |
-| **Semantic** | `.claude/memory.md` | Human-curated project knowledge, promoted observations |
+| **Semantic**  | `.claude/memory.md`   | Human-curated project knowledge, promoted observations              |
 
 ---
 
@@ -134,21 +134,21 @@ Claude operates as a **project manager**, delegating to specialized agents rathe
 
 ### Why This Pattern?
 
-| Aspect | Benefit |
-|--------|---------|
+| Aspect                 | Benefit                                                |
+| ---------------------- | ------------------------------------------------------ |
 | **Centralized memory** | Only orchestrator accesses memory, agents stay focused |
-| **Automatic capture** | Session transcript captures all agent outputs |
-| **Context efficiency** | Agents don't carry memory overhead |
-| **Quality control** | Orchestrator decides what context agents need |
+| **Automatic capture**  | Session transcript captures all agent outputs          |
+| **Context efficiency** | Agents don't carry memory overhead                     |
+| **Quality control**    | Orchestrator decides what context agents need          |
 
 ### Agent Types
 
-| Agent | Purpose |
-|-------|---------|
-| **code-explorer** | Analyze codebase, discover patterns, trace features |
-| **code-architect** | Design solutions, create implementation blueprints |
-| **code-reviewer** | Review quality, find issues, assess implementation |
-| **custom agents** | Project-specific specialists (defined in `.claude/agents/`) |
+| Agent              | Purpose                                                     |
+| ------------------ | ----------------------------------------------------------- |
+| **code-explorer**  | Analyze codebase, discover patterns, trace features         |
+| **code-architect** | Design solutions, create implementation blueprints          |
+| **code-reviewer**  | Review quality, find issues, assess implementation          |
+| **custom agents**  | Project-specific specialists (defined in `.claude/agents/`) |
 
 ---
 
@@ -163,21 +163,25 @@ Claude operates as a **project manager**, delegating to specialized agents rathe
 ## Semantic Memory
 
 The `.claude/memory.md` file serves as:
+
 - **Human-curated truth**: Project-specific knowledge maintained by developers
 - **Promoted observations**: High-confidence insights from Hindsight's reflect operation
 - **Always loaded**: Injected into Claude's context at every session start
 
 ```markdown
 ## Tech Stack
+
 - React Native with Expo
 - Supabase for auth and database
 - NativeWind for styling
 
 ## Key Decisions
+
 - Magic link auth chosen over passwords for better mobile UX
 - Zustand for state management (simpler than Redux for this scale)
 
 ## Critical Paths
+
 - Auth flow: src/lib/supabase.ts → src/providers/AuthProvider.tsx
 ```
 

@@ -62,40 +62,40 @@ npm run serve        # start MCP server
 
 ### Two Memory Layers
 
-| Layer | Storage | Purpose |
-|-------|---------|---------|
+| Layer     | Storage               | Purpose                                          |
+| --------- | --------------------- | ------------------------------------------------ |
 | Hindsight | PostgreSQL + pgvector | All memories with entity graphs, 4-way retrieval |
-| Semantic | `.claude/memory.md` | Human-curated knowledge, promoted observations |
+| Semantic  | `.claude/memory.md`   | Human-curated knowledge, promoted observations   |
 
 ## Hindsight Concepts
 
 ### Memory Networks
 
-| Type | Purpose | Example |
-|------|---------|---------|
-| `world` | Facts about external world | "Auth uses Supabase magic links" |
-| `experience` | Claude's first-person experiences | "I fixed the redirect by moving Provider to root" |
-| `opinion` | Beliefs with confidence (0.0-1.0) | "This codebase prefers explicit patterns" (0.85) |
-| `observation` | Synthesized insights | "Auth changes often require navigation updates" |
+| Type          | Purpose                           | Example                                           |
+| ------------- | --------------------------------- | ------------------------------------------------- |
+| `world`       | Facts about external world        | "Auth uses Supabase magic links"                  |
+| `experience`  | Claude's first-person experiences | "I fixed the redirect by moving Provider to root" |
+| `opinion`     | Beliefs with confidence (0.0-1.0) | "This codebase prefers explicit patterns" (0.85)  |
+| `observation` | Synthesized insights              | "Auth changes often require navigation updates"   |
 
 ### Core Operations
 
-| Operation | What It Does |
-|-----------|--------------|
-| `retain()` | Stores content, extracting 5 dimensions: what, when, where, who, why |
-| `recall()` | 4-way retrieval: semantic + BM25 + graph + temporal, fused with RRF |
-| `reflect()` | Reasons through disposition lens, forms opinions with confidence |
-| `learn()` | Bootstrap memory from existing codebase (solves cold start problem) |
+| Operation   | What It Does                                                         |
+| ----------- | -------------------------------------------------------------------- |
+| `retain()`  | Stores content, extracting 5 dimensions: what, when, where, who, why |
+| `recall()`  | 4-way retrieval: semantic + BM25 + graph + temporal, fused with RRF  |
+| `reflect()` | Reasons through disposition lens, forms opinions with confidence     |
+| `learn()`   | Bootstrap memory from existing codebase (solves cold start problem)  |
 
 ### Disposition Traits
 
 Each memory bank has personality traits that influence `reflect()`:
 
-| Trait | Low (1) | High (5) |
-|-------|---------|----------|
-| Skepticism | Trusting | Questions claims |
-| Literalism | Flexible interpretation | Precise/literal |
-| Empathy | Fact-focused | Considers emotional context |
+| Trait      | Low (1)                 | High (5)                    |
+| ---------- | ----------------------- | --------------------------- |
+| Skepticism | Trusting                | Questions claims            |
+| Literalism | Flexible interpretation | Precise/literal             |
+| Empathy    | Fact-focused            | Considers emotional context |
 
 ## Orchestrator Role
 
@@ -123,12 +123,12 @@ Claude operates as a **project manager**, not a developer writing code directly.
 
 ### Agent Types
 
-| Agent | Purpose | When to Use |
-|-------|---------|-------------|
-| **code-explorer** | Analyze codebase, discover patterns | Before implementing, to understand code |
+| Agent              | Purpose                             | When to Use                             |
+| ------------------ | ----------------------------------- | --------------------------------------- |
+| **code-explorer**  | Analyze codebase, discover patterns | Before implementing, to understand code |
 | **code-architect** | Design solutions, create blueprints | Before major changes, for system design |
-| **code-reviewer** | Review quality, find issues | After changes, for quality assurance |
-| **custom agents** | Project-specific needs | Defined in `.claude/agents/` |
+| **code-reviewer**  | Review quality, find issues         | After changes, for quality assurance    |
+| **custom agents**  | Project-specific needs              | Defined in `.claude/agents/`            |
 
 ## Design Principles
 
@@ -144,6 +144,7 @@ Claude operates as a **project manager**, not a developer writing code directly.
 Currently in Phase 0: Documentation. See [docs/PHASES.md](docs/PHASES.md) for roadmap.
 
 Planned file structure:
+
 ```
 src/
 ├── index.ts           # Main exports

@@ -7,12 +7,12 @@ Full API documentation for claude-mind with Hindsight integration.
 ## Quick Start
 
 ```typescript
-import { Mind } from 'claude-mind';
+import { Mind } from "claude-mind";
 
 const mind = new Mind({
   projectPath: process.cwd(),
   disposition: { skepticism: 4, literalism: 4, empathy: 2 },
-  background: 'Developer assistant for a React Native app'
+  background: "Developer assistant for a React Native app",
 });
 
 await mind.init();
@@ -22,15 +22,15 @@ const context = await mind.onSessionStart();
 
 // During work - recall on context changes
 const memories = await mind.onContextChange({
-  currentFile: 'src/auth/login.ts',
-  userMessage: 'fix the login redirect',
-  entities: ['AuthProvider', 'login']
+  currentFile: "src/auth/login.ts",
+  userMessage: "fix the login redirect",
+  entities: ["AuthProvider", "login"],
 });
 
 // Direct recall
-const authMemories = await mind.recall('authentication flow', {
-  factType: 'experience',
-  budget: 'mid'
+const authMemories = await mind.recall("authentication flow", {
+  factType: "experience",
+  budget: "mid",
 });
 
 // Session end - reflect and store observations
@@ -51,11 +51,11 @@ new HindsightClient(options: HindsightClientOptions)
 
 **Options:**
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `host` | string | `'localhost'` | Hindsight server hostname |
-| `port` | number | `8888` | Hindsight server port |
-| `apiKey` | string | - | Optional API key |
+| Property | Type   | Default       | Description               |
+| -------- | ------ | ------------- | ------------------------- |
+| `host`   | string | `'localhost'` | Hindsight server hostname |
+| `port`   | number | `8888`        | Hindsight server port     |
+| `apiKey` | string | -             | Optional API key          |
 
 ### Bank Management
 
@@ -65,25 +65,25 @@ Create a new memory bank with disposition.
 
 ```typescript
 await client.createBank({
-  bankId: 'my-project',
+  bankId: "my-project",
   disposition: {
-    skepticism: 4,   // 1-5: trusting → questions claims
-    literalism: 4,   // 1-5: flexible → precise interpretation
-    empathy: 2       // 1-5: fact-focused → considers emotions
+    skepticism: 4, // 1-5: trusting → questions claims
+    literalism: 4, // 1-5: flexible → precise interpretation
+    empathy: 2, // 1-5: fact-focused → considers emotions
   },
-  background: 'I am a developer assistant for a React Native app...'
+  background: "I am a developer assistant for a React Native app...",
 });
 ```
 
 **BankOptions:**
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `bankId` | string | Yes | Unique identifier for the bank |
-| `disposition.skepticism` | 1-5 | Yes | How much to question claims |
-| `disposition.literalism` | 1-5 | Yes | How precisely to interpret |
-| `disposition.empathy` | 1-5 | Yes | How much to consider emotional context |
-| `background` | string | No | Natural language identity/background |
+| Property                 | Type   | Required | Description                            |
+| ------------------------ | ------ | -------- | -------------------------------------- |
+| `bankId`                 | string | Yes      | Unique identifier for the bank         |
+| `disposition.skepticism` | 1-5    | Yes      | How much to question claims            |
+| `disposition.literalism` | 1-5    | Yes      | How precisely to interpret             |
+| `disposition.empathy`    | 1-5    | Yes      | How much to consider emotional context |
+| `background`             | string | No       | Natural language identity/background   |
 
 Returns: `Promise<void>`
 
@@ -94,7 +94,7 @@ Returns: `Promise<void>`
 Get bank information.
 
 ```typescript
-const bank = await client.getBank('my-project');
+const bank = await client.getBank("my-project");
 // { bankId, disposition, background, createdAt, memoryCount }
 ```
 
@@ -107,10 +107,10 @@ Returns: `Promise<Bank>`
 Update bank disposition traits.
 
 ```typescript
-await client.updateDisposition('my-project', {
+await client.updateDisposition("my-project", {
   skepticism: 5,
   literalism: 3,
-  empathy: 4
+  empathy: 4,
 });
 ```
 
@@ -126,23 +126,24 @@ Store content with automatic 5-dimension extraction.
 
 ```typescript
 const memoryIds = await client.retain(
-  'my-project',
-  'Fixed the auth redirect by moving AuthProvider to wrap the root layout in _layout.tsx',
-  'User was experiencing infinite redirects after login'
+  "my-project",
+  "Fixed the auth redirect by moving AuthProvider to wrap the root layout in _layout.tsx",
+  "User was experiencing infinite redirects after login",
 );
 ```
 
 Hindsight automatically extracts:
 
-| Dimension | Description | Example |
-|-----------|-------------|---------|
-| **what** | Complete description of what happened | "Fixed auth redirect by moving AuthProvider" |
-| **when** | Temporal context | "January 2, 2025 afternoon session" |
-| **where** | File paths, locations | "src/app/_layout.tsx at line 15" |
-| **who** | Entities involved | "AuthProvider, React Context, Supabase" |
-| **why** | Motivation and reasoning | "User stuck on infinite redirect loop" |
+| Dimension | Description                           | Example                                      |
+| --------- | ------------------------------------- | -------------------------------------------- |
+| **what**  | Complete description of what happened | "Fixed auth redirect by moving AuthProvider" |
+| **when**  | Temporal context                      | "January 2, 2025 afternoon session"          |
+| **where** | File paths, locations                 | "src/app/\_layout.tsx at line 15"            |
+| **who**   | Entities involved                     | "AuthProvider, React Context, Supabase"      |
+| **why**   | Motivation and reasoning              | "User stuck on infinite redirect loop"       |
 
 Additionally, retain() automatically:
+
 - Classifies into fact_type (world, experience, opinion, observation)
 - Extracts and resolves entities
 - Identifies causal relationships (causes, enables, prevents)
@@ -158,39 +159,39 @@ Returns: `Promise<string[]>` - IDs of created memories
 4-way parallel retrieval with fusion and reranking.
 
 ```typescript
-const memories = await client.recall('my-project', 'How does auth work?', {
-  budget: 'mid',
-  factType: 'all',
+const memories = await client.recall("my-project", "How does auth work?", {
+  budget: "mid",
+  factType: "all",
   maxTokens: 4096,
-  includeEntities: true
+  includeEntities: true,
 });
 ```
 
 **RecallOptions:**
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `budget` | `'low' \| 'mid' \| 'high'` | `'mid'` | Search thoroughness |
-| `factType` | `'world' \| 'experience' \| 'opinion' \| 'observation' \| 'all'` | `'all'` | Filter by memory type |
-| `maxTokens` | number | - | Max tokens in response |
-| `includeEntities` | boolean | `false` | Include entity metadata |
+| Property          | Type                                                             | Default | Description             |
+| ----------------- | ---------------------------------------------------------------- | ------- | ----------------------- |
+| `budget`          | `'low' \| 'mid' \| 'high'`                                       | `'mid'` | Search thoroughness     |
+| `factType`        | `'world' \| 'experience' \| 'opinion' \| 'observation' \| 'all'` | `'all'` | Filter by memory type   |
+| `maxTokens`       | number                                                           | -       | Max tokens in response  |
+| `includeEntities` | boolean                                                          | `false` | Include entity metadata |
 
 **Budget Levels:**
 
-| Budget | Tokens | Graph Hops | Best For |
-|--------|--------|------------|----------|
-| `low` | ~2048 | 1 | Quick lookups, focused answers |
-| `mid` | ~4096 | 2 | Most queries (default) |
-| `high` | ~8192 | 3+ | Comprehensive research |
+| Budget | Tokens | Graph Hops | Best For                       |
+| ------ | ------ | ---------- | ------------------------------ |
+| `low`  | ~2048  | 1          | Quick lookups, focused answers |
+| `mid`  | ~4096  | 2          | Most queries (default)         |
+| `high` | ~8192  | 3+         | Comprehensive research         |
 
 **Retrieval Strategies (all run in parallel):**
 
-| Strategy | Method | Best For |
-|----------|--------|----------|
-| Semantic | Vector similarity (pgvector) | Conceptual matches |
-| BM25 | Full-text keyword search | Exact names, terms |
-| Graph | Entity traversal (MPFP/BFS) | Indirect relationships |
-| Temporal | Time-range + semantic | Historical queries |
+| Strategy | Method                       | Best For               |
+| -------- | ---------------------------- | ---------------------- |
+| Semantic | Vector similarity (pgvector) | Conceptual matches     |
+| BM25     | Full-text keyword search     | Exact names, terms     |
+| Graph    | Entity traversal (MPFP/BFS)  | Indirect relationships |
+| Temporal | Time-range + semantic        | Historical queries     |
 
 Results are fused using Reciprocal Rank Fusion (RRF), then reranked with a neural cross-encoder.
 
@@ -204,8 +205,8 @@ Reason about accumulated knowledge through disposition lens.
 
 ```typescript
 const result = await client.reflect(
-  'my-project',
-  'What patterns have I noticed about auth changes in this codebase?'
+  "my-project",
+  "What patterns have I noticed about auth changes in this codebase?",
 );
 
 console.log(result.text);
@@ -220,22 +221,23 @@ console.log(result.opinions);
 
 ```typescript
 interface ReflectResult {
-  text: string;                    // Natural language answer
-  opinions: Opinion[];             // Extracted opinions with confidence
+  text: string; // Natural language answer
+  opinions: Opinion[]; // Extracted opinions with confidence
   basedOn: {
-    world: Memory[];               // World facts used
-    experience: Memory[];          // Experiences used
-    opinion: Memory[];             // Prior opinions used
+    world: Memory[]; // World facts used
+    experience: Memory[]; // Experiences used
+    opinion: Memory[]; // Prior opinions used
   };
 }
 
 interface Opinion {
-  opinion: string;                 // First-person opinion statement
-  confidence: number;              // 0.0 to 1.0
+  opinion: string; // First-person opinion statement
+  confidence: number; // 0.0 to 1.0
 }
 ```
 
 Reflect process:
+
 1. Recalls relevant memories (world, experience, opinion)
 2. Loads bank disposition (skepticism, literalism, empathy)
 3. LLM reasons through disposition lens
@@ -267,7 +269,7 @@ Returns: `Promise<HealthStatus>`
 Get recent memories.
 
 ```typescript
-const recent = await client.recent('my-project', 7);
+const recent = await client.recent("my-project", 7);
 ```
 
 Returns: `Promise<Memory[]>`
@@ -279,7 +281,7 @@ Returns: `Promise<Memory[]>`
 Remove a specific memory.
 
 ```typescript
-await client.forget('my-project', 'mem-abc123');
+await client.forget("my-project", "mem-abc123");
 ```
 
 Returns: `Promise<void>`
@@ -298,14 +300,14 @@ new Mind(options: MindOptions)
 
 **MindOptions:**
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `projectPath` | string | `process.cwd()` | Project root directory |
-| `bankId` | string | Project name | Memory bank identifier |
-| `hindsight.host` | string | `'localhost'` | Hindsight server |
-| `hindsight.port` | number | `8888` | Hindsight port |
-| `disposition` | Disposition | `{3,3,3}` | Bank personality traits |
-| `background` | string | - | Natural language identity |
+| Property         | Type        | Default         | Description               |
+| ---------------- | ----------- | --------------- | ------------------------- |
+| `projectPath`    | string      | `process.cwd()` | Project root directory    |
+| `bankId`         | string      | Project name    | Memory bank identifier    |
+| `hindsight.host` | string      | `'localhost'`   | Hindsight server          |
+| `hindsight.port` | number      | `8888`          | Hindsight port            |
+| `disposition`    | Disposition | `{3,3,3}`       | Bank personality traits   |
+| `background`     | string      | -               | Natural language identity |
 
 ### Lifecycle Methods
 
@@ -348,21 +350,21 @@ Called when context changes. Returns triggered memories.
 
 ```typescript
 const memories = await mind.onContextChange({
-  currentFile: 'src/auth/login.ts',
-  userMessage: 'the login is not redirecting',
-  lastError: 'Cannot read property of undefined',
-  entities: ['AuthProvider', 'useSession']
+  currentFile: "src/auth/login.ts",
+  userMessage: "the login is not redirecting",
+  lastError: "Cannot read property of undefined",
+  entities: ["AuthProvider", "useSession"],
 });
 ```
 
 **Context:**
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `currentFile` | string | Current file path |
-| `userMessage` | string | User's message |
-| `lastError` | string | Last error encountered |
-| `entities` | string[] | Mentioned entities |
+| Property      | Type     | Description            |
+| ------------- | -------- | ---------------------- |
+| `currentFile` | string   | Current file path      |
+| `userMessage` | string   | User's message         |
+| `lastError`   | string   | Last error encountered |
+| `entities`    | string[] | Mentioned entities     |
 
 Returns: `Promise<Memory[]>`
 
@@ -383,6 +385,7 @@ console.log(result.opinions);
 ```
 
 Process:
+
 1. Calls reflect() to form observations about the session
 2. Stores new experiences (what Claude did)
 3. Updates entity relationships
@@ -398,8 +401,8 @@ Bootstrap memory from an existing codebase. Solves the **cold start problem** wh
 
 ```typescript
 const result = await mind.learn({
-  depth: 'full',
-  includeGitHistory: true
+  depth: "full",
+  includeGitHistory: true,
 });
 
 console.log(result.summary);
@@ -408,30 +411,30 @@ console.log(result.summary);
 
 **LearnOptions:**
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `depth` | `'quick' \| 'standard' \| 'full'` | `'standard'` | How thoroughly to analyze |
-| `includeGitHistory` | boolean | `true` | Extract insights from git log |
-| `maxCommits` | number | `100` | Max commits to analyze |
-| `includeDependencies` | boolean | `true` | Analyze package.json/dependencies |
+| Property              | Type                              | Default      | Description                       |
+| --------------------- | --------------------------------- | ------------ | --------------------------------- |
+| `depth`               | `'quick' \| 'standard' \| 'full'` | `'standard'` | How thoroughly to analyze         |
+| `includeGitHistory`   | boolean                           | `true`       | Extract insights from git log     |
+| `maxCommits`          | number                            | `100`        | Max commits to analyze            |
+| `includeDependencies` | boolean                           | `true`       | Analyze package.json/dependencies |
 
 **Depth Levels:**
 
-| Depth | What It Analyzes | Use Case |
-|-------|------------------|----------|
-| `quick` | README, CLAUDE.md, package.json, file structure | Fast bootstrap, small projects |
-| `standard` | + Key source files, configs, git history (last 50 commits) | Most projects |
-| `full` | + All source files, full git history, dependency analysis | Large/complex codebases |
+| Depth      | What It Analyzes                                           | Use Case                       |
+| ---------- | ---------------------------------------------------------- | ------------------------------ |
+| `quick`    | README, CLAUDE.md, package.json, file structure            | Fast bootstrap, small projects |
+| `standard` | + Key source files, configs, git history (last 50 commits) | Most projects                  |
+| `full`     | + All source files, full git history, dependency analysis  | Large/complex codebases        |
 
 **What learn() Extracts:**
 
-| Category | Examples | Stored As |
-|----------|----------|-----------|
-| **Structure** | Module boundaries, file organization | `world` facts |
-| **Stack** | Frameworks, libraries, tools | `world` facts |
-| **Patterns** | Naming conventions, architecture style | `world` + `opinions` |
-| **History** | Key commits, major changes, contributors | `world` facts |
-| **Decisions** | README notes, comments, CLAUDE.md content | `world` facts |
+| Category      | Examples                                  | Stored As            |
+| ------------- | ----------------------------------------- | -------------------- |
+| **Structure** | Module boundaries, file organization      | `world` facts        |
+| **Stack**     | Frameworks, libraries, tools              | `world` facts        |
+| **Patterns**  | Naming conventions, architecture style    | `world` + `opinions` |
+| **History**   | Key commits, major changes, contributors  | `world` facts        |
+| **Decisions** | README notes, comments, CLAUDE.md content | `world` facts        |
 
 **Process:**
 
@@ -450,18 +453,19 @@ learn()
 
 ```typescript
 interface LearnResult {
-  summary: string;                    // Human-readable summary
-  worldFacts: number;                 // Count of world facts stored
-  opinions: Opinion[];                // Initial opinions formed
-  entities: Entity[];                 // Entities discovered
-  filesAnalyzed: number;              // Files processed
-  duration: number;                   // Time taken (ms)
+  summary: string; // Human-readable summary
+  worldFacts: number; // Count of world facts stored
+  opinions: Opinion[]; // Initial opinions formed
+  entities: Entity[]; // Entities discovered
+  filesAnalyzed: number; // Files processed
+  duration: number; // Time taken (ms)
 }
 ```
 
 **Disposition Effects:**
 
 The bank's disposition affects initial opinion confidence:
+
 - High `skepticism` → Lower confidence scores until validated
 - High `literalism` → More precise, narrow facts
 - Low `empathy` → Focus on technical facts only
@@ -470,14 +474,14 @@ The bank's disposition affects initial opinion confidence:
 
 ```typescript
 // First time setup on existing project
-const mind = new Mind({ projectPath: '/path/to/project' });
+const mind = new Mind({ projectPath: "/path/to/project" });
 await mind.init();
 
 // Check if bank is empty
 const bank = await mind.getBank();
 if (bank.memoryCount === 0) {
-  console.log('New project, learning codebase...');
-  const result = await mind.learn({ depth: 'full' });
+  console.log("New project, learning codebase...");
+  const result = await mind.learn({ depth: "full" });
   console.log(result.summary);
 }
 
@@ -496,9 +500,9 @@ Returns: `Promise<LearnResult>`
 Direct recall without context tracking.
 
 ```typescript
-const memories = await mind.recall('authentication flow', {
-  factType: 'experience',
-  budget: 'high'
+const memories = await mind.recall("authentication flow", {
+  factType: "experience",
+  budget: "high",
 });
 ```
 
@@ -511,7 +515,9 @@ Returns: `Promise<Memory[]>`
 Direct reflect without session context.
 
 ```typescript
-const result = await mind.reflect('What do I know about this codebase patterns?');
+const result = await mind.reflect(
+  "What do I know about this codebase patterns?",
+);
 ```
 
 Returns: `Promise<ReflectResult>`
@@ -524,8 +530,8 @@ Direct retain for explicit memory storage.
 
 ```typescript
 await mind.retain(
-  'Discovered that AuthProvider must wrap root layout for redirects to work',
-  'After debugging redirect loop for 30 minutes'
+  "Discovered that AuthProvider must wrap root layout for redirects to work",
+  "After debugging redirect loop for 30 minutes",
 );
 ```
 
@@ -550,7 +556,7 @@ new SemanticMemory(projectPath: string)
 Load and parse `.claude/memory.md`.
 
 ```typescript
-const semantic = new SemanticMemory('/path/to/project');
+const semantic = new SemanticMemory("/path/to/project");
 await semantic.load();
 ```
 
@@ -575,7 +581,7 @@ Returns: `Promise<void>`
 Get content of a section.
 
 ```typescript
-const stack = semantic.get('Tech Stack');
+const stack = semantic.get("Tech Stack");
 // "- React Native with Expo\n- Supabase for auth"
 ```
 
@@ -588,7 +594,7 @@ Returns: `string | undefined`
 Set entire section content.
 
 ```typescript
-semantic.set('Tech Stack', '- React Native 0.73\n- Expo SDK 51');
+semantic.set("Tech Stack", "- React Native 0.73\n- Expo SDK 51");
 ```
 
 ---
@@ -598,7 +604,7 @@ semantic.set('Tech Stack', '- React Native 0.73\n- Expo SDK 51');
 Append item to section.
 
 ```typescript
-semantic.append('Key Decisions', '- Chose Zustand over Redux for simplicity');
+semantic.append("Key Decisions", "- Chose Zustand over Redux for simplicity");
 ```
 
 ---
@@ -622,9 +628,9 @@ Promote a high-confidence observation to semantic memory.
 
 ```typescript
 await semantic.promoteObservation({
-  text: 'Auth changes often require corresponding navigation updates',
+  text: "Auth changes often require corresponding navigation updates",
   confidence: 0.92,
-  source: 'reflect-session-2025-01-02'
+  source: "reflect-session-2025-01-02",
 });
 ```
 
@@ -642,7 +648,7 @@ Returns: `Promise<void>`
 interface Memory {
   id: string;
   text: string;
-  factType: 'world' | 'experience' | 'opinion' | 'observation';
+  factType: "world" | "experience" | "opinion" | "observation";
   context?: string;
 
   // 5-dimension extraction
@@ -675,9 +681,9 @@ interface Memory {
 
 ```typescript
 interface Disposition {
-  skepticism: 1 | 2 | 3 | 4 | 5;  // trusting → questions claims
-  literalism: 1 | 2 | 3 | 4 | 5;  // flexible → precise
-  empathy: 1 | 2 | 3 | 4 | 5;     // fact-focused → emotional
+  skepticism: 1 | 2 | 3 | 4 | 5; // trusting → questions claims
+  literalism: 1 | 2 | 3 | 4 | 5; // flexible → precise
+  empathy: 1 | 2 | 3 | 4 | 5; // fact-focused → emotional
 }
 ```
 
@@ -688,7 +694,7 @@ interface Entity {
   id: string;
   name: string;
   aliases: string[];
-  type: 'person' | 'component' | 'file' | 'concept';
+  type: "person" | "component" | "file" | "concept";
   coOccurrences: { entityId: string; count: number }[];
 }
 ```
@@ -700,28 +706,28 @@ interface Entity {
 ```typescript
 const mind = new Mind(options);
 
-mind.on('ready', () => {
-  console.log('Mind initialized');
+mind.on("ready", () => {
+  console.log("Mind initialized");
 });
 
-mind.on('memory:recalled', (memories: Memory[]) => {
-  console.log('Recalled:', memories.length, 'memories');
+mind.on("memory:recalled", (memories: Memory[]) => {
+  console.log("Recalled:", memories.length, "memories");
 });
 
-mind.on('memory:retained', (content: string) => {
-  console.log('Retained:', content);
+mind.on("memory:retained", (content: string) => {
+  console.log("Retained:", content);
 });
 
-mind.on('opinion:formed', (opinion: Opinion) => {
-  console.log('Opinion:', opinion.opinion, `(${opinion.confidence})`);
+mind.on("opinion:formed", (opinion: Opinion) => {
+  console.log("Opinion:", opinion.opinion, `(${opinion.confidence})`);
 });
 
-mind.on('observation:promoted', (observation: Observation) => {
-  console.log('Promoted to semantic:', observation.text);
+mind.on("observation:promoted", (observation: Observation) => {
+  console.log("Promoted to semantic:", observation.text);
 });
 
-mind.on('error', (error: Error) => {
-  console.error('Error:', error.message);
+mind.on("error", (error: Error) => {
+  console.error("Error:", error.message);
 });
 ```
 
@@ -775,6 +781,7 @@ Search project memories for relevant context.
 ```
 
 **Example usage by Claude:**
+
 ```
 I need to find how authentication was implemented before.
 → memory_recall({ query: "authentication implementation" })
@@ -784,6 +791,7 @@ What do I know about this component?
 ```
 
 **Response format:**
+
 ```typescript
 {
   memories: Memory[],
@@ -816,6 +824,7 @@ Reason about accumulated knowledge and form opinions.
 ```
 
 **Example usage by Claude:**
+
 ```
 What patterns have I noticed about error handling in this codebase?
 → memory_reflect({ query: "error handling patterns in this codebase" })
@@ -825,6 +834,7 @@ Based on my experience, what should I consider when modifying auth?
 ```
 
 **Response format:**
+
 ```typescript
 {
   text: string,                    // Reasoned response
@@ -859,12 +869,12 @@ To enable claude-mind as an MCP server in Claude Code:
 
 Claude will use these tools when beneficial:
 
-| Situation | Tool | Example |
-|-----------|------|---------|
-| Trying to remember past work | `memory_recall` | "How did we solve this before?" |
-| Looking for project conventions | `memory_recall` | "What's the error handling pattern?" |
-| Synthesizing learnings | `memory_reflect` | "What have I learned about this codebase?" |
-| Making judgments | `memory_reflect` | "Should I use approach A or B?" |
+| Situation                       | Tool             | Example                                    |
+| ------------------------------- | ---------------- | ------------------------------------------ |
+| Trying to remember past work    | `memory_recall`  | "How did we solve this before?"            |
+| Looking for project conventions | `memory_recall`  | "What's the error handling pattern?"       |
+| Synthesizing learnings          | `memory_reflect` | "What have I learned about this codebase?" |
+| Making judgments                | `memory_reflect` | "Should I use approach A or B?"            |
 
 Claude is **not required** to use these tools - they're available when helpful.
 
@@ -888,11 +898,13 @@ claude-mind inject-context [--project <path>]
 ## Project Memory
 
 ### Semantic Knowledge
+
 - React Native with Expo SDK 51
 - Auth uses Supabase magic links
 
 ### Recent Context
-- Yesterday: Fixed auth redirect in _layout.tsx
+
+- Yesterday: Fixed auth redirect in \_layout.tsx
 - Opinion: This codebase prefers explicit error handling (0.85)
 ```
 
@@ -907,6 +919,7 @@ claude-mind process-session --transcript <path>
 ```
 
 **Process:**
+
 1. Parses transcript JSON
 2. Sends to Hindsight retain() for extraction
 3. Calls reflect() for observations
@@ -972,22 +985,22 @@ Configuration via `.claudemindrc` or `package.json` "claudemind" key:
 try {
   await mind.init();
 } catch (error) {
-  if (error.code === 'HINDSIGHT_UNAVAILABLE') {
+  if (error.code === "HINDSIGHT_UNAVAILABLE") {
     // Falls back to semantic-only mode
-    console.log('Running in local-only mode');
+    console.log("Running in local-only mode");
   }
 }
 ```
 
 **Error Codes:**
 
-| Code | Description |
-|------|-------------|
-| `HINDSIGHT_UNAVAILABLE` | Cannot connect to Hindsight server |
-| `BANK_NOT_FOUND` | Bank ID doesn't exist |
-| `INVALID_DISPOSITION` | Disposition values not 1-5 |
+| Code                    | Description                                   |
+| ----------------------- | --------------------------------------------- |
+| `HINDSIGHT_UNAVAILABLE` | Cannot connect to Hindsight server            |
+| `BANK_NOT_FOUND`        | Bank ID doesn't exist                         |
+| `INVALID_DISPOSITION`   | Disposition values not 1-5                    |
 | `SEMANTIC_FILE_MISSING` | .claude/memory.md not found (created on init) |
-| `SEMANTIC_PARSE_ERROR` | Cannot parse memory.md |
+| `SEMANTIC_PARSE_ERROR`  | Cannot parse memory.md                        |
 
 ---
 
@@ -995,13 +1008,13 @@ try {
 
 When Hindsight is unavailable:
 
-| Operation | Behavior |
-|-----------|----------|
-| `onSessionStart()` | Returns semantic memory only |
-| `onContextChange()` | Returns empty array |
-| `recall()` | Returns empty array |
-| `reflect()` | Returns error (requires Hindsight) |
-| `retain()` | Queued for later (if enabled) |
-| `onSessionEnd()` | Skips reflect, logs warning |
+| Operation           | Behavior                           |
+| ------------------- | ---------------------------------- |
+| `onSessionStart()`  | Returns semantic memory only       |
+| `onContextChange()` | Returns empty array                |
+| `recall()`          | Returns empty array                |
+| `reflect()`         | Returns error (requires Hindsight) |
+| `retain()`          | Queued for later (if enabled)      |
+| `onSessionEnd()`    | Skips reflect, logs warning        |
 
 Semantic memory always works (local file).

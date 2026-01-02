@@ -6,18 +6,18 @@ Phase-based implementation plan for claude-mind with full Hindsight integration.
 
 ## Overview
 
-| Phase | Focus | Outcome |
-|-------|-------|---------|
-| 0 | Documentation | Architecture defined, scaffolding removed |
-| 1 | Hindsight Client | Full client with retain/recall/reflect |
-| 2 | Orchestrator & Agents | Session lifecycle + agent templates |
-| 3 | Semantic Layer | Local file management + promotion |
-| 4 | Claude Code Integration | Hooks, MCP server, context injection |
-| 5 | Testing & Polish | Integration tests, refinement |
+| Phase | Focus                   | Outcome                                   |
+| ----- | ----------------------- | ----------------------------------------- |
+| 0     | Documentation           | Architecture defined, scaffolding removed |
+| 1     | Hindsight Client        | Full client with retain/recall/reflect    |
+| 2     | Orchestrator & Agents   | Session lifecycle + agent templates       |
+| 3     | Semantic Layer          | Local file management + promotion         |
+| 4     | Claude Code Integration | Hooks, MCP server, context injection      |
+| 5     | Testing & Polish        | Integration tests, refinement             |
 
 ---
 
-## Phase 0: Documentation (CURRENT)
+## Phase 0: Documentation (COMPLETE)
 
 **Goal:** Establish architecture before implementation
 
@@ -36,17 +36,17 @@ Phase-based implementation plan for claude-mind with full Hindsight integration.
 
 ### Decisions Made
 
-| Decision | Rationale |
-|----------|-----------|
-| Fresh start | Old code reimplemented what Hindsight provides |
-| 4 memory networks | world, experience, opinion, observation (not custom types) |
-| 3 operations | retain, recall, reflect (Hindsight's primitives) |
-| No custom decay | Hindsight handles memory management |
-| Keep semantic file | Human-curated .claude/memory.md as ground truth |
-| Hybrid integration | Automatic transcript capture + optional MCP tools |
-| Orchestrator pattern | Claude as project manager, delegates to agents |
-| Centralized memory | Only orchestrator accesses memory, agents stay focused |
-| Both agent types | Support built-in Task agents + custom `.claude/agents/` |
+| Decision             | Rationale                                                  |
+| -------------------- | ---------------------------------------------------------- |
+| Fresh start          | Old code reimplemented what Hindsight provides             |
+| 4 memory networks    | world, experience, opinion, observation (not custom types) |
+| 3 operations         | retain, recall, reflect (Hindsight's primitives)           |
+| No custom decay      | Hindsight handles memory management                        |
+| Keep semantic file   | Human-curated .claude/memory.md as ground truth            |
+| Hybrid integration   | Automatic transcript capture + optional MCP tools          |
+| Orchestrator pattern | Claude as project manager, delegates to agents             |
+| Centralized memory   | Only orchestrator accesses memory, agents stay focused     |
+| Both agent types     | Support built-in Task agents + custom `.claude/agents/`    |
 
 ### Acceptance Criteria
 
@@ -56,13 +56,14 @@ Phase-based implementation plan for claude-mind with full Hindsight integration.
 
 ---
 
-## Phase 1: Hindsight Client
+## Phase 1: Hindsight Client (COMPLETE)
 
 **Goal:** Full-featured client wrapper for Hindsight API
 
 ### Concept
 
 Create a thin wrapper around Hindsight that exposes all needed operations:
+
 - Bank management (create with disposition + background)
 - retain() for storing experiences
 - recall() for 4-way retrieval
@@ -70,22 +71,24 @@ Create a thin wrapper around Hindsight that exposes all needed operations:
 
 ### Tasks
 
-- [ ] Create TypeScript/JavaScript client
-- [ ] Bank creation with disposition traits
-- [ ] retain() with full content + context
-- [ ] recall() with all options (budget, fact_type, entities)
-- [ ] reflect() for opinion formation
-- [ ] Health check and connection management
-- [ ] Error handling and graceful degradation
+- [x] Create TypeScript/JavaScript client
+- [x] Bank creation with disposition traits
+- [x] retain() with full content + context
+- [x] recall() with all options (budget, fact_type, entities)
+- [x] reflect() for opinion formation
+- [x] Health check and connection management
+- [x] Error handling and graceful degradation
 
-### Files to Create
+### Files Created
 
 ```
 src/
 ├── index.ts                   # Main exports
 ├── client.ts                  # HindsightClient class
 ├── types.ts                   # TypeScript types
-└── config.ts                  # Configuration loading
+├── config.ts                  # Configuration loading
+├── errors.ts                  # HindsightError class
+└── retry.ts                   # Retry logic with exponential backoff
 ```
 
 ### API Design
@@ -93,45 +96,49 @@ src/
 ```typescript
 interface HindsightClient {
   // Bank management
-  createBank(options: BankOptions): Promise<void>
-  getBank(bankId: string): Promise<Bank>
-  updateDisposition(bankId: string, disposition: Disposition): Promise<void>
+  createBank(options: BankOptions): Promise<void>;
+  getBank(bankId: string): Promise<Bank>;
+  updateDisposition(bankId: string, disposition: Disposition): Promise<void>;
 
   // Core operations
-  retain(bankId: string, content: string, context?: string): Promise<string[]>
-  recall(bankId: string, query: string, options?: RecallOptions): Promise<Memory[]>
-  reflect(bankId: string, query: string): Promise<ReflectResult>
+  retain(bankId: string, content: string, context?: string): Promise<string[]>;
+  recall(
+    bankId: string,
+    query: string,
+    options?: RecallOptions,
+  ): Promise<Memory[]>;
+  reflect(bankId: string, query: string): Promise<ReflectResult>;
 
   // Utilities
-  health(): Promise<HealthStatus>
-  recent(bankId: string, days?: number): Promise<Memory[]>
-  forget(bankId: string, memoryId: string): Promise<void>
+  health(): Promise<HealthStatus>;
+  recent(bankId: string, days?: number): Promise<Memory[]>;
+  forget(bankId: string, memoryId: string): Promise<void>;
 }
 
 interface BankOptions {
-  bankId: string
+  bankId: string;
   disposition: {
-    skepticism: 1 | 2 | 3 | 4 | 5
-    literalism: 1 | 2 | 3 | 4 | 5
-    empathy: 1 | 2 | 3 | 4 | 5
-  }
-  background: string
+    skepticism: 1 | 2 | 3 | 4 | 5;
+    literalism: 1 | 2 | 3 | 4 | 5;
+    empathy: 1 | 2 | 3 | 4 | 5;
+  };
+  background: string;
 }
 
 interface RecallOptions {
-  budget?: 'low' | 'mid' | 'high'
-  factType?: 'world' | 'experience' | 'opinion' | 'observation' | 'all'
-  maxTokens?: number
-  includeEntities?: boolean
+  budget?: "low" | "mid" | "high";
+  factType?: "world" | "experience" | "opinion" | "observation" | "all";
+  maxTokens?: number;
+  includeEntities?: boolean;
 }
 
 interface ReflectResult {
-  text: string
+  text: string;
   basedOn: {
-    world: Memory[]
-    experience: Memory[]
-    opinion: Memory[]
-  }
+    world: Memory[];
+    experience: Memory[];
+    opinion: Memory[];
+  };
 }
 ```
 
@@ -152,11 +159,13 @@ interface ReflectResult {
 ### Concept
 
 Claude operates as a **project manager** (orchestrator) that:
+
 1. Manages session workflow and delegates to specialized agents
 2. Owns all memory operations (agents don't access memory)
 3. Synthesizes findings from multiple agents
 
 The Mind class supports this pattern:
+
 1. **Start**: Load context, recall relevant memories → Claude starts informed
 2. **During**: Claude orchestrates agents, uses recall when helpful
 3. **End**: Full transcript processed, memories extracted from all
@@ -221,15 +230,19 @@ templates/
 # Agent: code-explorer
 
 ## Mission
+
 [What this agent specializes in]
 
 ## Tools Available
+
 [Which tools the agent can use]
 
 ## Output Format
+
 [How the agent should structure its response]
 
 ## Constraints
+
 - Read-only (no file modifications)
 - No memory operations (orchestrator handles)
 - Focus on assigned task
@@ -239,68 +252,68 @@ templates/
 
 ```typescript
 class Mind extends EventEmitter {
-  constructor(options: MindOptions)
+  constructor(options: MindOptions);
 
   // Lifecycle hooks
-  async init(): Promise<void>
-  async onSessionStart(): Promise<string>           // Returns context to inject
-  async onSessionEnd(transcript?: string): Promise<ReflectResult>
+  async init(): Promise<void>;
+  async onSessionStart(): Promise<string>; // Returns context to inject
+  async onSessionEnd(transcript?: string): Promise<ReflectResult>;
 
   // Codebase learning (cold start)
-  async learn(options?: LearnOptions): Promise<LearnResult>
+  async learn(options?: LearnOptions): Promise<LearnResult>;
 
   // Memory operations (for orchestrator use)
-  async recall(query: string, options?: RecallOptions): Promise<Memory[]>
-  async reflect(query: string): Promise<ReflectResult>
+  async recall(query: string, options?: RecallOptions): Promise<Memory[]>;
+  async reflect(query: string): Promise<ReflectResult>;
 
   // Agent support
-  getAgentTemplates(): AgentTemplate[]
-  getAgentContext(agentType: string, task: string): Promise<string>
+  getAgentTemplates(): AgentTemplate[];
+  getAgentContext(agentType: string, task: string): Promise<string>;
 }
 
 interface LearnOptions {
-  depth?: 'quick' | 'standard' | 'full'
-  includeGitHistory?: boolean
-  maxCommits?: number
-  includeDependencies?: boolean
+  depth?: "quick" | "standard" | "full";
+  includeGitHistory?: boolean;
+  maxCommits?: number;
+  includeDependencies?: boolean;
 }
 
 interface LearnResult {
-  summary: string
-  worldFacts: number
-  opinions: Opinion[]
-  entities: Entity[]
-  filesAnalyzed: number
-  duration: number
+  summary: string;
+  worldFacts: number;
+  opinions: Opinion[];
+  entities: Entity[];
+  filesAnalyzed: number;
+  duration: number;
 }
 
 interface MindOptions {
-  projectPath: string
-  bankId?: string
+  projectPath: string;
+  bankId?: string;
   hindsight?: {
-    host: string
-    port: number
-  }
-  disposition?: Disposition
-  background?: string
+    host: string;
+    port: number;
+  };
+  disposition?: Disposition;
+  background?: string;
 }
 
 interface AgentTemplate {
-  name: string
-  mission: string
-  tools: string[]
-  outputFormat: string
-  constraints: string[]
+  name: string;
+  mission: string;
+  tools: string[];
+  outputFormat: string;
+  constraints: string[];
 }
 ```
 
 ### Events
 
 ```typescript
-mind.on('memory:recalled', (memories: Memory[]) => {})
-mind.on('opinion:formed', (opinion: Opinion) => {})
-mind.on('session:processed', (result: ProcessResult) => {})
-mind.on('error', (error: Error) => {})
+mind.on("memory:recalled", (memories: Memory[]) => {});
+mind.on("opinion:formed", (opinion: Opinion) => {});
+mind.on("session:processed", (result: ProcessResult) => {});
+mind.on("error", (error: Error) => {});
 ```
 
 ### Acceptance Criteria
@@ -322,6 +335,7 @@ mind.on('error', (error: Error) => {})
 ### Concept
 
 The `.claude/memory.md` file serves as:
+
 - Human-curated ground truth
 - Target for promoted observations
 - Always loaded at session start
@@ -346,18 +360,18 @@ src/
 
 ```typescript
 class SemanticMemory {
-  constructor(projectPath: string)
+  constructor(projectPath: string);
 
-  async load(): Promise<void>
-  async save(): Promise<void>
+  async load(): Promise<void>;
+  async save(): Promise<void>;
 
-  get(section: string): string | undefined
-  set(section: string, content: string): void
-  append(section: string, item: string): void
+  get(section: string): string | undefined;
+  set(section: string, content: string): void;
+  append(section: string, item: string): void;
 
-  toContext(): string  // Format for injection
+  toContext(): string; // Format for injection
 
-  async promoteObservation(observation: Observation): Promise<void>
+  async promoteObservation(observation: Observation): Promise<void>;
 }
 ```
 
@@ -365,18 +379,23 @@ class SemanticMemory {
 
 ```markdown
 ## Tech Stack
+
 - React Native with Expo
 - Supabase for auth and database
 
 ## Key Decisions
+
 - Magic link auth for better mobile UX
 - Zustand for state management
 
 ## Critical Paths
+
 - Auth flow: src/lib/supabase.ts → src/providers/AuthProvider.tsx
 
 ## Observations
+
 <!-- Promoted from Hindsight -->
+
 - Auth changes often require navigation updates (promoted: 2025-01-02)
 ```
 
@@ -397,11 +416,11 @@ class SemanticMemory {
 
 Hybrid integration combining automatic capture with active tools:
 
-| Component | Mechanism | Purpose |
-|-----------|-----------|---------|
+| Component              | Mechanism     | Purpose                                        |
+| ---------------------- | ------------- | ---------------------------------------------- |
 | **Session Start Hook** | Shell command | Inject context before Claude sees conversation |
-| **MCP Server** | Tool provider | Give Claude optional recall/reflect tools |
-| **Session End Hook** | Shell command | Automatically process transcript |
+| **MCP Server**         | Tool provider | Give Claude optional recall/reflect tools      |
+| **Session End Hook**   | Shell command | Automatically process transcript               |
 
 ### Tasks
 
@@ -585,13 +604,13 @@ tests/
 
 ### Test Scenarios
 
-| Scenario | Test |
-|----------|------|
-| Basic recall | Query returns relevant memories |
-| Reflect forms opinions | Opinion with confidence returned |
-| Session lifecycle | Start → changes → end works |
-| Hindsight down | Graceful degradation to semantic-only |
-| Entity traversal | Graph search finds indirect relations |
+| Scenario               | Test                                  |
+| ---------------------- | ------------------------------------- |
+| Basic recall           | Query returns relevant memories       |
+| Reflect forms opinions | Opinion with confidence returned      |
+| Session lifecycle      | Start → changes → end works           |
+| Hindsight down         | Graceful degradation to semantic-only |
+| Entity traversal       | Graph search finds indirect relations |
 
 ### Acceptance Criteria
 
@@ -606,13 +625,13 @@ tests/
 
 After all phases:
 
-| Metric | Target |
-|--------|--------|
+| Metric                | Target  |
+| --------------------- | ------- |
 | Session start latency | < 500ms |
-| Recall latency | < 200ms |
-| Reflect latency | < 2s |
-| Relevant recall rate | > 80% |
-| User notices memory | Never |
+| Recall latency        | < 200ms |
+| Reflect latency       | < 2s    |
+| Relevant recall rate  | > 80%   |
+| User notices memory   | Never   |
 
 ---
 
@@ -620,23 +639,23 @@ After all phases:
 
 Things we explicitly don't implement:
 
-| Feature | Reason |
-|---------|--------|
-| Custom decay formulas | Hindsight handles this |
-| Custom importance scoring | Hindsight extracts significance |
-| Manual entity extraction | Hindsight does this automatically |
+| Feature                     | Reason                               |
+| --------------------------- | ------------------------------------ |
+| Custom decay formulas       | Hindsight handles this               |
+| Custom importance scoring   | Hindsight extracts significance      |
+| Manual entity extraction    | Hindsight does this automatically    |
 | Custom retrieval algorithms | Hindsight's 4-way search is superior |
-| Memory deduplication | Hindsight handles this |
+| Memory deduplication        | Hindsight handles this               |
 
 ---
 
 ## Dependencies
 
-| Dependency | Purpose |
-|------------|---------|
+| Dependency       | Purpose                       |
+| ---------------- | ----------------------------- |
 | Hindsight server | Memory storage and operations |
-| Node.js 18+ | Runtime |
-| TypeScript | Type safety |
+| Node.js 18+      | Runtime                       |
+| TypeScript       | Type safety                   |
 
 ---
 

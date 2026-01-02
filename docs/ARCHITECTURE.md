@@ -69,36 +69,37 @@ Hindsight organizes memories into four distinct networks, each serving a differe
 
 External facts about the project and its environment.
 
-| Attribute | Description |
-|-----------|-------------|
-| Purpose | Store objective knowledge |
-| Perspective | Third-person, factual |
-| Confidence | Not applicable |
-| Example | "Auth uses Supabase magic links for passwordless login" |
+| Attribute   | Description                                             |
+| ----------- | ------------------------------------------------------- |
+| Purpose     | Store objective knowledge                               |
+| Perspective | Third-person, factual                                   |
+| Confidence  | Not applicable                                          |
+| Example     | "Auth uses Supabase magic links for passwordless login" |
 
 ### experience
 
 Claude's first-person experiences working in the project.
 
-| Attribute | Description |
-|-----------|-------------|
-| Purpose | Remember what Claude did |
-| Perspective | First-person ("I...") |
-| Confidence | Not applicable |
-| Example | "I fixed the redirect issue by moving AuthProvider to root layout" |
+| Attribute   | Description                                                        |
+| ----------- | ------------------------------------------------------------------ |
+| Purpose     | Remember what Claude did                                           |
+| Perspective | First-person ("I...")                                              |
+| Confidence  | Not applicable                                                     |
+| Example     | "I fixed the redirect issue by moving AuthProvider to root layout" |
 
 ### opinion
 
 Beliefs and judgments with explicit confidence scores.
 
-| Attribute | Description |
-|-----------|-------------|
-| Purpose | Track evolving beliefs |
-| Perspective | First-person with reasoning |
-| Confidence | Required (0.0 to 1.0) |
-| Example | "This codebase prefers explicit error handling over try-catch" (0.85) |
+| Attribute   | Description                                                           |
+| ----------- | --------------------------------------------------------------------- |
+| Purpose     | Track evolving beliefs                                                |
+| Perspective | First-person with reasoning                                           |
+| Confidence  | Required (0.0 to 1.0)                                                 |
+| Example     | "This codebase prefers explicit error handling over try-catch" (0.85) |
 
 Opinions evolve over time:
+
 - New evidence can strengthen or weaken confidence
 - Contradicting evidence creates tension, resolved through reflect()
 - High-confidence opinions may be promoted to semantic memory
@@ -107,12 +108,12 @@ Opinions evolve over time:
 
 Synthesized insights from reflect() that span multiple experiences.
 
-| Attribute | Description |
-|-----------|-------------|
-| Purpose | Cross-session learning |
-| Perspective | Meta-level insight |
-| Confidence | Implicit in creation |
-| Example | "Auth changes often require corresponding navigation updates" |
+| Attribute   | Description                                                   |
+| ----------- | ------------------------------------------------------------- |
+| Purpose     | Cross-session learning                                        |
+| Perspective | Meta-level insight                                            |
+| Confidence  | Implicit in creation                                          |
+| Example     | "Auth changes often require corresponding navigation updates" |
 
 ---
 
@@ -122,15 +123,16 @@ Synthesized insights from reflect() that span multiple experiences.
 
 When content is stored, Hindsight's LLM extracts five dimensions:
 
-| Dimension | Description | Example |
-|-----------|-------------|---------|
-| **what** | Complete, detailed description of what happened | "Fixed auth redirect by moving AuthProvider to wrap root layout in _layout.tsx" |
-| **when** | Temporal context (dates, times, durations) | "January 2, 2025 during afternoon session" |
-| **where** | Location (files, paths, lines) | "src/app/_layout.tsx at line 15" |
-| **who** | Entities involved (people, components, concepts) | "AuthProvider, React Context, Supabase" |
-| **why** | Motivation, emotional context, reasoning | "User was stuck on infinite redirect loop, needed auth state before navigation" |
+| Dimension | Description                                      | Example                                                                          |
+| --------- | ------------------------------------------------ | -------------------------------------------------------------------------------- |
+| **what**  | Complete, detailed description of what happened  | "Fixed auth redirect by moving AuthProvider to wrap root layout in \_layout.tsx" |
+| **when**  | Temporal context (dates, times, durations)       | "January 2, 2025 during afternoon session"                                       |
+| **where** | Location (files, paths, lines)                   | "src/app/\_layout.tsx at line 15"                                                |
+| **who**   | Entities involved (people, components, concepts) | "AuthProvider, React Context, Supabase"                                          |
+| **why**   | Motivation, emotional context, reasoning         | "User was stuck on infinite redirect loop, needed auth state before navigation"  |
 
 Additionally, retain() automatically:
+
 - Extracts and resolves entities (deduplicating "AuthProvider" vs "the auth provider")
 - Identifies causal relationships (causes, enables, prevents)
 - Creates temporal and semantic links to existing memories
@@ -161,12 +163,12 @@ Semantic    BM25      Graph    Temporal
          Results
 ```
 
-| Strategy | Method | Best For |
-|----------|--------|----------|
+| Strategy     | Method                       | Best For                         |
+| ------------ | ---------------------------- | -------------------------------- |
 | **Semantic** | Vector similarity (pgvector) | Conceptual matches, paraphrasing |
-| **BM25** | Full-text keyword search | Exact names, technical terms |
-| **Graph** | Entity traversal (MPFP/BFS) | Indirect relationships |
-| **Temporal** | Time-range + semantic | Historical queries |
+| **BM25**     | Full-text keyword search     | Exact names, technical terms     |
+| **Graph**    | Entity traversal (MPFP/BFS)  | Indirect relationships           |
+| **Temporal** | Time-range + semantic        | Historical queries               |
 
 Results are fused using Reciprocal Rank Fusion (RRF), then reranked with a neural cross-encoder for final ordering.
 
@@ -215,6 +217,7 @@ Hindsight automatically builds a knowledge graph:
 ### Entities
 
 Extracted from memory content:
+
 - **People**: Names, roles, relationships
 - **Components**: React components, classes, modules
 - **Files**: Source files, paths
@@ -224,19 +227,20 @@ Extracted from memory content:
 
 Connections between memory units:
 
-| Link Type | Description |
-|-----------|-------------|
-| `temporal` | Memories close in time |
-| `semantic` | Memories with similar meaning |
-| `entity` | Memories sharing an entity |
-| `causes` | This memory caused another |
+| Link Type   | Description                       |
+| ----------- | --------------------------------- |
+| `temporal`  | Memories close in time            |
+| `semantic`  | Memories with similar meaning     |
+| `entity`    | Memories sharing an entity        |
+| `causes`    | This memory caused another        |
 | `caused_by` | This memory was caused by another |
-| `enables` | This memory enables another |
-| `prevents` | This memory prevents another |
+| `enables`   | This memory enables another       |
+| `prevents`  | This memory prevents another      |
 
 ### Co-occurrences
 
 Track which entities appear together:
+
 - "AuthProvider" often appears with "React Context" → related concepts
 - "login.tsx" often appears with "supabase.ts" → related files
 - Enables implicit relationship discovery
@@ -267,20 +271,20 @@ Each project gets a memory bank with identity:
 
 ### Disposition Effects
 
-| Trait | Low (1) | High (5) |
-|-------|---------|----------|
-| **Skepticism** | Trusts information at face value | Questions claims, looks for inconsistencies |
-| **Literalism** | Flexible interpretation, reads between lines | Precise, exact interpretation |
-| **Empathy** | Focuses on facts and data | Considers emotional context and circumstances |
+| Trait          | Low (1)                                      | High (5)                                      |
+| -------------- | -------------------------------------------- | --------------------------------------------- |
+| **Skepticism** | Trusts information at face value             | Questions claims, looks for inconsistencies   |
+| **Literalism** | Flexible interpretation, reads between lines | Precise, exact interpretation                 |
+| **Empathy**    | Focuses on facts and data                    | Considers emotional context and circumstances |
 
 ### Recommended Configurations
 
-| Use Case | Skepticism | Literalism | Empathy |
-|----------|------------|------------|---------|
-| Code Review | 4 | 5 | 2 |
-| Bug Investigation | 4 | 4 | 2 |
-| Documentation | 3 | 3 | 3 |
-| User Support | 2 | 2 | 5 |
+| Use Case          | Skepticism | Literalism | Empathy |
+| ----------------- | ---------- | ---------- | ------- |
+| Code Review       | 4          | 5          | 2       |
+| Bug Investigation | 4          | 4          | 2       |
+| Documentation     | 3          | 3          | 3       |
+| User Support      | 2          | 2          | 5       |
 
 ---
 
@@ -299,20 +303,24 @@ Local file `.claude/memory.md` for persistent, human-curated knowledge.
 
 ```markdown
 ## Tech Stack
+
 - React Native with Expo (SDK 51)
 - Supabase for auth and database
 - NativeWind for styling
 
 ## Key Decisions
+
 - Magic link auth chosen over passwords for better mobile UX
 - Zustand for state management (simpler than Redux for this scale)
 - File-based routing via expo-router
 
 ## Critical Paths
+
 - Auth flow: src/lib/supabase.ts → src/providers/AuthProvider.tsx
-- Navigation: src/app/_layout.tsx (root layout)
+- Navigation: src/app/\_layout.tsx (root layout)
 
 ## Patterns
+
 - All API calls go through src/lib/api.ts
 - Errors handled with custom ErrorBoundary component
 - Feature flags via environment variables
@@ -349,12 +357,14 @@ High-confidence opinion (>0.9)
 ### onContextChange(context)
 
 Triggered when:
+
 - File is opened/changed
 - Entity is mentioned in conversation
 - Error occurs
 - User asks about something
 
 Process:
+
 1. Extract triggers from context (file, entities, keywords, errors)
 2. Recall relevant memories with entity-awareness
 3. Return triggered memories for context enrichment
@@ -374,12 +384,12 @@ Claude operates as a **project manager**, not a developer writing code directly.
 
 ### Core Principles
 
-| Principle | Description |
-|-----------|-------------|
-| **Claude orchestrates** | Manages workflow, doesn't implement directly |
-| **Agents specialize** | Each agent has domain expertise |
-| **Memory is centralized** | Only orchestrator accesses memory |
-| **Transcript captures all** | Agent outputs stored via session processing |
+| Principle                   | Description                                  |
+| --------------------------- | -------------------------------------------- |
+| **Claude orchestrates**     | Manages workflow, doesn't implement directly |
+| **Agents specialize**       | Each agent has domain expertise              |
+| **Memory is centralized**   | Only orchestrator accesses memory            |
+| **Transcript captures all** | Agent outputs stored via session processing  |
 
 ### Orchestrator Workflow
 
@@ -426,12 +436,12 @@ Claude operates as a **project manager**, not a developer writing code directly.
 
 Projects can use both built-in and custom agents:
 
-| Agent | Purpose | When to Use |
-|-------|---------|-------------|
-| **code-explorer** | Analyze codebase, discover patterns, trace features | Before implementing, to understand existing code |
-| **code-architect** | Design solutions, create implementation blueprints | Before major changes, for system design |
-| **code-reviewer** | Review quality, find issues, assess implementation | After changes, for quality assurance |
-| **custom agents** | Domain-specific specialists | Project-specific needs |
+| Agent              | Purpose                                             | When to Use                                      |
+| ------------------ | --------------------------------------------------- | ------------------------------------------------ |
+| **code-explorer**  | Analyze codebase, discover patterns, trace features | Before implementing, to understand existing code |
+| **code-architect** | Design solutions, create implementation blueprints  | Before major changes, for system design          |
+| **code-reviewer**  | Review quality, find issues, assess implementation  | After changes, for quality assurance             |
+| **custom agents**  | Domain-specific specialists                         | Project-specific needs                           |
 
 ### Memory Flow in Orchestration
 
@@ -488,13 +498,13 @@ Projects can use both built-in and custom agents:
 
 ### Why Agents Don't Access Memory
 
-| Reason | Benefit |
-|--------|---------|
-| **Simplicity** | Agent templates stay focused on expertise |
-| **Consistency** | Memory patterns controlled in one place |
-| **Context efficiency** | Agents don't carry memory overhead |
-| **Quality control** | Orchestrator decides what's worth remembering |
-| **Transcript capture** | Everything agents output is captured anyway |
+| Reason                 | Benefit                                       |
+| ---------------------- | --------------------------------------------- |
+| **Simplicity**         | Agent templates stay focused on expertise     |
+| **Consistency**        | Memory patterns controlled in one place       |
+| **Context efficiency** | Agents don't carry memory overhead            |
+| **Quality control**    | Orchestrator decides what's worth remembering |
+| **Transcript capture** | Everything agents output is captured anyway   |
 
 ### Agent Definition
 
@@ -504,22 +514,27 @@ Agents are defined in `.claude/agents/` with a simple structure:
 # Agent: code-explorer
 
 ## Mission
+
 Deeply analyze existing codebase features by tracing execution paths,
 mapping architecture layers, and documenting dependencies.
 
 ## Tools Available
+
 - Glob, Grep, Read (file analysis)
 - LSP (go to definition, find references)
 - WebFetch (documentation lookup)
 
 ## Output Format
+
 Return findings in structured format:
+
 - Key files discovered
 - Architecture patterns identified
 - Dependencies mapped
 - Recommendations for next steps
 
 ## Constraints
+
 - Read-only (no file modifications)
 - No memory operations (orchestrator handles)
 - Focus on assigned exploration task
@@ -611,21 +626,21 @@ Query: "How does auth work in this project?"
 
 Hindsight manages context budget in tokens, not result count:
 
-| Budget | Tokens | Best For |
-|--------|--------|----------|
-| `low` | ~2048 | Quick lookups, focused answers |
-| `mid` | ~4096 | Most queries (default) |
-| `high` | ~8192 | Comprehensive research |
+| Budget | Tokens | Best For                       |
+| ------ | ------ | ------------------------------ |
+| `low`  | ~2048  | Quick lookups, focused answers |
+| `mid`  | ~4096  | Most queries (default)         |
+| `high` | ~8192  | Comprehensive research         |
 
 ### Retrieval Depth
 
 The `budget` parameter controls search thoroughness:
 
-| Budget | Graph Hops | Candidate Pool | Latency |
-|--------|------------|----------------|---------|
-| `low` | 1 | Small | Fast |
-| `mid` | 2 | Medium | Moderate |
-| `high` | 3+ | Large | Slower |
+| Budget | Graph Hops | Candidate Pool | Latency  |
+| ------ | ---------- | -------------- | -------- |
+| `low`  | 1          | Small          | Fast     |
+| `mid`  | 2          | Medium         | Moderate |
+| `high` | 3+         | Large          | Slower   |
 
 ---
 
@@ -644,12 +659,12 @@ claude-mind integrates with Claude Code through a hybrid architecture combining 
 
 ### Design Philosophy
 
-| Principle | Implementation |
-|-----------|----------------|
-| **Storage should be automatic** | Claude shouldn't remember to remember |
-| **Recall should be available** | Claude can actively query when helpful |
-| **Context should be injected** | Claude starts sessions informed |
-| **Memory should be invisible** | User shouldn't notice it working |
+| Principle                       | Implementation                         |
+| ------------------------------- | -------------------------------------- |
+| **Storage should be automatic** | Claude shouldn't remember to remember  |
+| **Recall should be available**  | Claude can actively query when helpful |
+| **Context should be injected**  | Claude starts sessions informed        |
+| **Memory should be invisible**  | User shouldn't notice it working       |
 
 ### Integration Components
 
@@ -694,6 +709,7 @@ claude-mind inject-context --project /path/to/project
 ```
 
 Output (injected into Claude's context):
+
 ```
 ## Project Memory
 
@@ -736,6 +752,7 @@ Provides optional tools Claude can use during the session:
 ```
 
 Claude uses these when beneficial:
+
 - "I remember we tried something similar..." → `memory_recall`
 - "What patterns have I noticed about..." → `memory_reflect`
 
@@ -748,6 +765,7 @@ claude-mind process-session --transcript ~/.claude/sessions/latest.json
 ```
 
 Process:
+
 1. Parse transcript into conversation turns
 2. Send to Hindsight `retain()` for automatic extraction
 3. Hindsight extracts 5 dimensions (what/when/where/who/why)
@@ -802,13 +820,14 @@ Session End:
 
 ### Why Hybrid?
 
-| Approach | Pros | Cons |
-|----------|------|------|
+| Approach           | Pros                  | Cons                    |
+| ------------------ | --------------------- | ----------------------- |
 | **Automatic only** | No effort from Claude | Can't query mid-session |
-| **Manual only** | Full control | Claude forgets to save |
-| **Hybrid** | Best of both | Slightly more complex |
+| **Manual only**    | Full control          | Claude forgets to save  |
+| **Hybrid**         | Best of both          | Slightly more complex   |
 
 The hybrid approach ensures:
+
 - Important moments are captured even if Claude doesn't explicitly save them
 - Claude can actively leverage memory when it would help
 - The user experience is seamless (memory is invisible)
