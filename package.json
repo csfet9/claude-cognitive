@@ -36,7 +36,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/sfetanclaudiu/claude-mind"
+    "url": "https://github.com/csfet9/claude-cognitive"
   },
   "scripts": {
     "build": "tsc",
