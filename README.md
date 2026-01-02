@@ -57,28 +57,7 @@ Add to `.claude/settings.json`:
 
 ## How It Works
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                  SESSION LIFECYCLE                           │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  SESSION START                                               │
-│  └── Semantic memory loaded (.claude/memory.md)              │
-│  └── Recent context recalled from Hindsight                  │
-│  └── Claude starts informed about the project                │
-│                                                              │
-│  DURING SESSION                                              │
-│  └── Claude uses memory_recall when helpful                  │
-│  └── Claude uses memory_reflect to reason                    │
-│  └── All work captured in session transcript                 │
-│                                                              │
-│  SESSION END                                                 │
-│  └── Transcript sent to Hindsight                            │
-│  └── Memories extracted automatically                        │
-│  └── Observations formed for next session                    │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-```
+![Session Lifecycle](./docs/session-lifecycle.svg)
 
 ### Core Operations
 
