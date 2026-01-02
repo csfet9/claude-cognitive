@@ -1,0 +1,35 @@
+{
+  "name": "claude-mind",
+  "version": "0.1.0",
+  "description": "Human-inspired memory system for Claude. LLM thinks. Hindsight remembers. Together = mind.",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "claude-mind": "bin/cli.js"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src tests",
+    "format": "prettier --write ."
+  },
+  "keywords": [
+    "claude",
+    "memory",
+    "hindsight",
+    "ai",
+    "llm"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "vitest": "^1.0.0",
+    "prettier": "^3.0.0",
+    "eslint": "^8.0.0"
+  }
+}
