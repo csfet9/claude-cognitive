@@ -11,46 +11,30 @@ Claude's context clears after each session. claude-cognitive gives Claude persis
 ## Quick Start
 
 ```bash
-# Install
+# Install globally
 npm install -g claude-cognitive
 
-# Initialize in your project
+# Interactive setup (recommended)
 cd /path/to/your/project
-claude-cognitive init
+claude-cognitive install
 
-# Bootstrap memory from existing codebase
-claude-cognitive learn
-
-# Check status
-claude-cognitive status
+# Or manual setup
+claude-cognitive init      # Create config
+claude-cognitive learn     # Bootstrap memory
 ```
 
-### Configure Claude Code
+The interactive installer will:
+- Configure memory bank and disposition
+- Set up MCP server for Claude Code
+- Inject memory instructions into CLAUDE.md
+- Optionally bootstrap from your codebase
 
-Add to `.claude/settings.json`:
+```bash
+# Check status
+claude-cognitive status
 
-```json
-{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Task",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "claude-cognitive inject-context"
-          }
-        ]
-      }
-    ]
-  },
-  "mcpServers": {
-    "claude-cognitive": {
-      "command": "claude-cognitive",
-      "args": ["serve", "--project", "."]
-    }
-  }
-}
+# Uninstall from a project
+claude-cognitive uninstall --delete-bank
 ```
 
 ---
