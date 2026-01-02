@@ -172,13 +172,13 @@ The Mind class supports this pattern:
 
 ### Tasks
 
-- [ ] Create Mind class with orchestrator support
-- [ ] onSessionStart() implementation
-- [ ] onSessionEnd() with transcript processing
-- [ ] learn() for codebase bootstrapping (cold start solution)
-- [ ] Create base agent templates
-- [ ] Agent template structure (`.claude/agents/`)
-- [ ] Event emission for hooks
+- [x] Create Mind class with orchestrator support
+- [x] onSessionStart() implementation
+- [x] onSessionEnd() with transcript processing
+- [x] learn() for codebase bootstrapping (cold start solution)
+- [x] Create base agent templates
+- [x] Agent template structure (`.claude/agents/`)
+- [x] Event emission for hooks
 
 ### Files to Create
 
@@ -342,11 +342,11 @@ The `.claude/memory.md` file serves as:
 
 ### Tasks
 
-- [ ] Create SemanticMemory class
-- [ ] Read/parse .claude/memory.md
-- [ ] Format as context string
-- [ ] Write/update functionality
-- [ ] Promotion logic (high-confidence → semantic)
+- [x] Create SemanticMemory class
+- [x] Read/parse .claude/memory.md
+- [x] Format as context string
+- [x] Write/update functionality
+- [x] Promotion logic (high-confidence → semantic)
 
 ### Files to Create
 
@@ -424,12 +424,12 @@ Hybrid integration combining automatic capture with active tools:
 
 ### Tasks
 
-- [ ] Research Claude Code hook system and MCP integration
-- [ ] Implement MCP server with memory_recall and memory_reflect tools
-- [ ] Implement session start hook (inject-context command)
-- [ ] Implement session end hook (process-session command)
-- [ ] Create CLI for manual operations
-- [ ] Configuration via .claudemindrc
+- [x] Research Claude Code hook system and MCP integration
+- [x] Implement MCP server with memory_recall and memory_reflect tools
+- [x] Implement session start hook (inject-context command)
+- [x] Implement session end hook (process-session command)
+- [x] Create CLI for manual operations
+- [x] Configuration via .claudemindrc
 - [ ] Write setup instructions for Claude Code integration
 
 ### Files to Create

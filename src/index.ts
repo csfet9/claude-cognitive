@@ -124,3 +124,13 @@ export type {
   BuiltInAgentType,
   GetAgentContextOptions,
 } from "./agents/index.js";
+
+// MCP Server
+export { ClaudeMindMcpServer, createMcpServer } from "./mcp/index.js";
+export { TOOL_DEFINITIONS } from "./mcp/index.js";
+export type {
+  McpServerOptions,
+  McpTransportType,
+  HttpTransportConfig,
+  ToolResult,
+} from "./mcp/index.js";

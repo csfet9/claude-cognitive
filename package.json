@@ -5,6 +5,9 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "claude-mind": "./bin/claude-mind.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -12,7 +15,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "bin"
   ],
   "keywords": [
     "claude",
@@ -42,7 +46,14 @@
     "format:check": "prettier --check .",
     "clean": "rm -rf dist"
   },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.10.0",
+    "cac": "^6.7.14",
+    "express": "^4.21.0",
+    "zod": "^3.25.0"
+  },
   "devDependencies": {
+    "@types/express": "^5.0.0",
     "@types/node": "^25.0.3",
     "prettier": "^3.0.0",
     "typescript": "^5.0.0",
