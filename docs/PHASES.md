@@ -408,7 +408,7 @@ class SemanticMemory {
 
 ---
 
-## Phase 4: Claude Code Integration
+## Phase 4: Claude Code Integration (COMPLETE)
 
 **Goal:** Seamless integration with Claude Code via hybrid approach
 
@@ -430,7 +430,7 @@ Hybrid integration combining automatic capture with active tools:
 - [x] Implement session end hook (process-session command)
 - [x] Create CLI for manual operations
 - [x] Configuration via .claudemindrc
-- [ ] Write setup instructions for Claude Code integration
+- [x] Write setup instructions for Claude Code integration (docs/SETUP.md)
 
 ### Files to Create
 

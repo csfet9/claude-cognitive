@@ -6,6 +6,27 @@ Human-inspired memory system for Claude Code, powered by [Hindsight](https://git
 
 ---
 
+## Getting Started
+
+```bash
+# Install globally
+npm install -g claude-mind
+
+# Initialize in your project
+cd /path/to/your/project
+claude-mind init
+
+# Bootstrap memory from existing codebase
+claude-mind learn
+
+# Check status
+claude-mind status
+```
+
+See the [Setup Guide](./docs/SETUP.md) for complete Claude Code integration instructions.
+
+---
+
 ## The Vision
 
 ```
@@ -215,7 +236,7 @@ claude-mind/
 
 ## Status
 
-**Phase 0: Documentation** - Establishing architecture before implementation.
+**Phase 4: Claude Code Integration** - Complete. Ready for use.
 
 See [docs/PHASES.md](./docs/PHASES.md) for the implementation roadmap.
 
