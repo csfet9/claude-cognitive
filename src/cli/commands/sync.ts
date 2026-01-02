@@ -29,6 +29,20 @@ interface SyncResult {
 }
 
 /**
+ * Deduplicate memories by ID.
+ */
+function deduplicateMemories(memories: Memory[]): Memory[] {
+  const seen = new Set<string>();
+  return memories.filter((m) => {
+    if (seen.has(m.id)) {
+      return false;
+    }
+    seen.add(m.id);
+    return true;
+  });
+}
+
+/**
  * Group memories by fact type.
  */
 function groupByType(memories: Memory[]): Record<string, Memory[]> {
@@ -269,11 +283,12 @@ export function registerSyncCommand(cli: CAC): void {
           }),
         ]);
 
-      const allMemories = [
+      // Deduplicate memories (recall queries may overlap)
+      const allMemories = deduplicateMemories([
         ...worldMemories,
         ...experienceMemories,
         ...opinionMemories,
-      ];
+      ]);
 
       const timestamp = new Date().toISOString();
       const { content, sections } = generateMemoryContent(
