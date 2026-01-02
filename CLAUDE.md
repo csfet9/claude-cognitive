@@ -4,13 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-claude-cognitive is a memory integration layer between Claude Code and [Hindsight](https://github.com/vectorize-io/hindsight).
+claude-cognitive is a memory integration layer between Claude Code and [Hindsight](https://github.com/vectorize-io/hindsight). It gives Claude persistent memory across sessions.
 
 **LLM thinks. Hindsight remembers. Together = mind.**
-
-- Claude (LLM) = thoughts, ephemeral, reasoning
-- Hindsight = memory, persistent, cognitive
-- Together = mind with continuity across sessions
 
 ## Development Commands
 
@@ -19,147 +15,138 @@ claude-cognitive is a memory integration layer between Claude Code and [Hindsigh
 npm run build
 
 # Test
-npm test             # run all tests in watch mode
-npm run test:run     # run once without watch
-npm run test:coverage # run with coverage
+npm test                        # watch mode
+npm run test:run                # run once
+npm run test:coverage           # with coverage
+vitest run tests/unit/core/client.test.ts  # single file
 
 # Format
-npx prettier --write .
-npx prettier --check .
+npm run format                  # prettier --write .
+npm run format:check            # prettier --check .
 
-# CLI
-claude-cognitive serve    # start MCP server
-claude-cognitive status   # check connection
-claude-cognitive recall   # search memories
+# Type check
+npm run type-check              # tsc --noEmit
+
+# CLI (after build)
+claude-cognitive serve          # start MCP server
+claude-cognitive status         # check connection
+claude-cognitive learn          # bootstrap from codebase
 ```
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────┐
-│            CLAUDE-COGNITIVE                  │
-├─────────────────────────────────────────┤
-│  ┌─────────────────────────────────┐   │
-│  │   CLAUDE (ORCHESTRATOR)         │   │
-│  │   Delegates to agents           │   │
-│  │   Owns all memory operations    │   │
-│  │   ┌────────┐ ┌────────┐        │   │
-│  │   │Explorer│ │Reviewer│ + more │   │
-│  │   └────────┘ └────────┘        │   │
-│  └─────────────────────────────────┘   │
-│                 │                       │
-│                 ▼                       │
-│  ┌─────────────────────────────────┐   │
-│  │         HINDSIGHT                │   │
-│  │  world | experience | opinion   │   │
-│  │  observation | entity graph     │   │
-│  │  retain() | recall() | reflect()│   │
-│  └─────────────────────────────────┘   │
-│  ┌─────────────────────────────────┐   │
-│  │  SEMANTIC (.claude/memory.md)   │   │
-│  │  Human-curated + promoted obs   │   │
-│  └─────────────────────────────────┘   │
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────┐
+│           Mind (orchestrator)        │
+│  - Session lifecycle management      │
+│  - Graceful degradation              │
+│  - Agent context preparation         │
+├──────────────────────────────────────┤
+│         HindsightClient              │
+│  retain() | recall() | reflect()     │
+│  4-way retrieval: semantic + BM25    │
+│               + graph + temporal     │
+├──────────────────────────────────────┤
+│         SemanticMemory               │
+│  .claude/memory.md (human-curated)   │
+└──────────────────────────────────────┘
 ```
 
-### Two Memory Layers
+### Key Classes
 
-| Layer     | Storage               | Purpose                                          |
-| --------- | --------------------- | ------------------------------------------------ |
-| Hindsight | PostgreSQL + pgvector | All memories with entity graphs, 4-way retrieval |
-| Semantic  | `.claude/memory.md`   | Human-curated knowledge, promoted observations   |
-
-## Hindsight Concepts
+| Class | File | Purpose |
+|-------|------|---------|
+| `Mind` | `src/mind.ts` | Orchestrator wrapping HindsightClient with session management and graceful degradation |
+| `HindsightClient` | `src/client.ts` | HTTP client for Hindsight API (retain/recall/reflect/learn) |
+| `SemanticMemory` | `src/semantic.ts` | Section-based markdown parser for `.claude/memory.md` |
+| `PromotionManager` | `src/promotion.ts` | Promotes high-confidence opinions to semantic memory |
 
 ### Memory Networks
 
-| Type          | Purpose                           | Example                                           |
-| ------------- | --------------------------------- | ------------------------------------------------- |
-| `world`       | Facts about external world        | "Auth uses Supabase magic links"                  |
-| `experience`  | Claude's first-person experiences | "I fixed the redirect by moving Provider to root" |
-| `opinion`     | Beliefs with confidence (0.0-1.0) | "This codebase prefers explicit patterns" (0.85)  |
-| `observation` | Synthesized insights              | "Auth changes often require navigation updates"   |
+| Type | Purpose |
+|------|---------|
+| `world` | Facts about external world ("Auth uses Supabase magic links") |
+| `experience` | First-person experiences ("I fixed the redirect by...") |
+| `opinion` | Beliefs with confidence 0.0-1.0 ("This codebase prefers explicit patterns") |
+| `observation` | Synthesized cross-session insights |
 
-### Core Operations
+### MCP Tools (exposed to Claude)
 
-| Operation   | What It Does                                                         |
-| ----------- | -------------------------------------------------------------------- |
-| `retain()`  | Stores content, extracting 5 dimensions: what, when, where, who, why |
-| `recall()`  | 4-way retrieval: semantic + BM25 + graph + temporal, fused with RRF  |
-| `reflect()` | Reasons through disposition lens, forms opinions with confidence     |
-| `learn()`   | Bootstrap memory from existing codebase (solves cold start problem)  |
+- `memory_recall` - Search memories with 4-way retrieval
+- `memory_reflect` - Reason about knowledge, form opinions
 
-### Disposition Traits
-
-Each memory bank has personality traits that influence `reflect()`:
-
-| Trait      | Low (1)                 | High (5)                    |
-| ---------- | ----------------------- | --------------------------- |
-| Skepticism | Trusting                | Questions claims            |
-| Literalism | Flexible interpretation | Precise/literal             |
-| Empathy    | Fact-focused            | Considers emotional context |
-
-## Orchestrator Role
-
-Claude operates as a **project manager**, not a developer writing code directly.
-
-### Workflow
-
-```
-1. UNDERSTAND  → Clarify requirements, create todo list
-2. RECALL      → memory_recall(topic) before delegating
-3. EXPLORE     → Delegate to code-explorer agent
-4. PLAN        → Delegate to code-architect agent
-5. IMPLEMENT   → Implement directly OR delegate
-6. REVIEW      → Delegate to code-reviewer agent
-7. CONFIRM     → Summarize, get user approval
-```
-
-### Memory Ownership
-
-**Only the orchestrator accesses memory.** Agents focus on their specialty.
-
-- BEFORE delegating: Use `memory_recall(task topic)` to get relevant context, include in agent prompt
-- AFTER agent returns: No explicit memory action needed, transcript captures everything
-- SESSION END: Full transcript processed by Hindsight, memories extracted automatically
-
-### Agent Types
-
-| Agent              | Purpose                             | When to Use                             |
-| ------------------ | ----------------------------------- | --------------------------------------- |
-| **code-explorer**  | Analyze codebase, discover patterns | Before implementing, to understand code |
-| **code-architect** | Design solutions, create blueprints | Before major changes, for system design |
-| **code-reviewer**  | Review quality, find issues         | After changes, for quality assurance    |
-| **custom agents**  | Project-specific needs              | Defined in `.claude/agents/`            |
-
-## Design Principles
-
-1. **Hindsight handles memory** - No custom decay, scoring, or retrieval algorithms
-2. **4 memory networks** - world, experience, opinion, observation
-3. **3 operations** - retain, recall, reflect
-4. **Disposition shapes reasoning** - Consistent personality across sessions
-5. **Entity-aware** - Graph traversal, not just keyword matching
-6. **Semantic layer** - Human-curated truth + promoted observations
+Defined in `src/mcp/tools.ts`, handled in `src/mcp/handlers.ts`.
 
 ## Project Structure
 
 ```
 src/
-├── index.ts           # Main exports
-├── client.ts          # HindsightClient class
-├── mind.ts            # Mind orchestrator class
-├── semantic.ts        # SemanticMemory class
-├── types.ts           # TypeScript types
-├── mcp/               # MCP server
-├── cli/               # CLI commands
-├── learn/             # Learn operation
-└── agents/            # Agent templates
+├── mind.ts              # Mind orchestrator
+├── client.ts            # HindsightClient HTTP client
+├── semantic.ts          # SemanticMemory (.claude/memory.md)
+├── promotion.ts         # Opinion promotion to semantic memory
+├── events.ts            # TypedEventEmitter for Mind events
+├── config.ts            # Config loading (.claudemindrc)
+├── types.ts             # All TypeScript types
+├── errors.ts            # HindsightError class
+├── retry.ts             # Retry utilities with exponential backoff
+├── mcp/                 # MCP server implementation
+│   ├── server.ts        # ClaudeMindMcpServer class
+│   ├── tools.ts         # Tool definitions with Zod schemas
+│   └── handlers.ts      # Tool execution handlers
+├── cli/                 # CLI commands
+│   └── commands/        # Individual command implementations
+├── learn/               # Learn operation (cold start)
+│   ├── index.ts         # Main learn() function
+│   ├── extractor.ts     # Fact extraction from analysis
+│   └── analyzers/       # Codebase analyzers (git, package, readme, source, structure)
+├── agents/              # Agent templates
+│   ├── templates.ts     # Built-in: code-explorer, code-architect, code-reviewer
+│   ├── loader.ts        # Custom agent loading from .claude/agents/
+│   └── context.ts       # Agent context preparation with memory
+└── hooks/               # Claude Code hooks
+    ├── inject-context.ts   # Session start hook
+    └── process-session.ts  # Session end hook
 ```
 
-## Documentation
+## Configuration
 
-- **[Getting Started](./docs/getting-started.md)** - Installation and setup
-- **[Concepts](./docs/concepts.md)** - Memory networks, operations
-- **[Configuration](./docs/configuration.md)** - Full config reference
-- **[API Reference](./docs/api-reference.md)** - Complete API docs
-- **[Performance](./docs/performance.md)** - Benchmarks
+`.claudemindrc` in project root:
+
+```json
+{
+  "hindsight": { "host": "localhost", "port": 8888 },
+  "bankId": "my-project",
+  "disposition": { "skepticism": 4, "literalism": 4, "empathy": 2 },
+  "background": "Developer assistant for a React app",
+  "semantic": { "path": ".claude/memory.md" }
+}
+```
+
+### Disposition Traits (1-5)
+
+| Trait | Low (1) | High (5) |
+|-------|---------|----------|
+| skepticism | Trusting | Questions claims |
+| literalism | Flexible | Precise/literal |
+| empathy | Fact-focused | Considers emotion |
+
+## Testing
+
+Tests mirror source structure under `tests/`:
+- `tests/unit/` - Unit tests
+- `tests/integration/` - Integration tests (not excluded from default run)
+- `tests/e2e/` - E2E tests (excluded, run with `npm run test:e2e`)
+- `tests/perf/` - Benchmarks (`npm run bench`)
+- `tests/helpers/` - Mocks and fixtures
+
+Vitest globals are enabled. Coverage thresholds: 80% statements/functions/lines, 75% branches.
+
+## Graceful Degradation
+
+When Hindsight is unavailable, Mind enters degraded mode:
+- `recall()` returns empty array
+- `retain()` silently skips
+- `reflect()` throws (requires Hindsight)
+- Semantic memory still works
+- `attemptRecovery()` tries to reconnect
