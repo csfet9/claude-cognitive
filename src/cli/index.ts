@@ -15,6 +15,7 @@ import {
   registerReflectCommand,
   registerSemanticCommand,
   registerConfigCommand,
+  registerUpdateBankCommand,
 } from "./commands/index.js";
 import { registerInjectContextCommand } from "../hooks/inject-context.js";
 import { registerProcessSessionCommand } from "../hooks/process-session.js";
@@ -38,6 +39,7 @@ function createCLI(): CAC {
   registerReflectCommand(cli);
   registerSemanticCommand(cli);
   registerConfigCommand(cli);
+  registerUpdateBankCommand(cli);
 
   // Register hook commands
   registerInjectContextCommand(cli);

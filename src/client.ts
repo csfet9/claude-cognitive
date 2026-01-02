@@ -18,6 +18,7 @@ import type {
   HindsightClientOptions,
   Memory,
   RecallOptions,
+  TraitValue,
   ReflectResult,
   TimeoutConfig,
 } from "./types.js";
@@ -165,6 +166,54 @@ export class HindsightClient {
       "PUT",
       `/v1/default/banks/${encodeURIComponent(bankId)}/profile`,
       { body: { disposition } },
+    );
+  }
+
+  /**
+   * Update bank settings (background and/or disposition).
+   *
+   * @param bankId - Bank identifier
+   * @param updates - Fields to update
+   * @throws {HindsightError} If bank doesn't exist
+   */
+  async updateBank(
+    bankId: string,
+    updates: {
+      background?: string;
+      disposition?: {
+        skepticism?: TraitValue;
+        literalism?: TraitValue;
+        empathy?: TraitValue;
+      };
+    },
+  ): Promise<void> {
+    const body: Record<string, unknown> = {};
+
+    if (updates.background !== undefined) {
+      body.background = updates.background;
+    }
+
+    if (updates.disposition) {
+      body.disposition = updates.disposition;
+    }
+
+    // Use PUT to update bank (Hindsight doesn't support PATCH)
+    // First get current bank to merge with updates
+    const current = await this.getBank(bankId);
+
+    const mergedBody = {
+      name: bankId,
+      disposition: {
+        ...current.disposition,
+        ...(updates.disposition ?? {}),
+      },
+      background: updates.background ?? current.background ?? "",
+    };
+
+    await this.request<void>(
+      "PUT",
+      `/v1/default/banks/${encodeURIComponent(bankId)}`,
+      { body: mergedBody },
     );
   }
 
