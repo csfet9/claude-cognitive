@@ -4,8 +4,6 @@ Performance benchmarks and optimization guidelines for claude-mind.
 
 ## Target Metrics
 
-From the success criteria defined in [PHASES.md](./PHASES.md):
-
 | Metric                | Target  | Status |
 | --------------------- | ------- | ------ |
 | Session start latency | < 500ms | PASS   |

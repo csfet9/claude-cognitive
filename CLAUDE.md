@@ -15,20 +15,22 @@ claude-mind is a memory integration layer between Claude Code and [Hindsight](ht
 ## Development Commands
 
 ```bash
-# Build (when implemented)
-npx tsc
+# Build
+npm run build
 
 # Test
-npx vitest           # run all tests
-npx vitest run       # run once without watch
-npx vitest <file>    # run single test file
+npm test             # run all tests in watch mode
+npm run test:run     # run once without watch
+npm run test:coverage # run with coverage
 
 # Format
 npx prettier --write .
 npx prettier --check .
 
-# CLI (when implemented)
-npm run serve        # start MCP server
+# CLI
+claude-mind serve    # start MCP server
+claude-mind status   # check connection
+claude-mind recall   # search memories
 ```
 
 ## Architecture
@@ -139,11 +141,7 @@ Claude operates as a **project manager**, not a developer writing code directly.
 5. **Entity-aware** - Graph traversal, not just keyword matching
 6. **Semantic layer** - Human-curated truth + promoted observations
 
-## Implementation Status
-
-Currently in Phase 0: Documentation. See [docs/PHASES.md](docs/PHASES.md) for roadmap.
-
-Planned file structure:
+## Project Structure
 
 ```
 src/
@@ -152,6 +150,16 @@ src/
 ├── mind.ts            # Mind orchestrator class
 ├── semantic.ts        # SemanticMemory class
 ├── types.ts           # TypeScript types
-└── mcp/
-    └── server.ts      # MCP server implementation
+├── mcp/               # MCP server
+├── cli/               # CLI commands
+├── learn/             # Learn operation
+└── agents/            # Agent templates
 ```
+
+## Documentation
+
+- **[Getting Started](./docs/getting-started.md)** - Installation and setup
+- **[Concepts](./docs/concepts.md)** - Memory networks, operations
+- **[Configuration](./docs/configuration.md)** - Full config reference
+- **[API Reference](./docs/api-reference.md)** - Complete API docs
+- **[Performance](./docs/performance.md)** - Benchmarks

@@ -1,15 +1,17 @@
 # claude-mind
 
-Human-inspired memory system for Claude Code, powered by [Hindsight](https://github.com/vectorize-io/hindsight).
+Persistent memory for Claude Code, powered by [Hindsight](https://github.com/vectorize-io/hindsight).
 
 **LLM thinks. Hindsight remembers. Together = mind.**
 
+Claude's context clears after each session. claude-mind gives Claude persistent memory across sessions - it remembers what it learned, what it did, and forms opinions about your codebase over time.
+
 ---
 
-## Getting Started
+## Quick Start
 
 ```bash
-# Install globally
+# Install
 npm install -g claude-mind
 
 # Initialize in your project
@@ -23,71 +25,78 @@ claude-mind learn
 claude-mind status
 ```
 
-See the [Setup Guide](./docs/SETUP.md) for complete Claude Code integration instructions.
+### Configure Claude Code
 
-For a complete example, see the [todo-app example](./examples/todo-app/).
+Add to `.claude/settings.json`:
 
----
-
-## The Vision
-
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-mind inject-context"
+          }
+        ]
+      }
+    ]
+  },
+  "mcpServers": {
+    "claude-mind": {
+      "command": "claude-mind",
+      "args": ["serve", "--project", "."]
+    }
+  }
+}
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                  CLAUDE CODE + HINDSIGHT                    │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│   Claude (LLM)               Hindsight                      │
-│   ────────────               ─────────                      │
-│   - Context clears           - Persists forever             │
-│   - Thinks, reasons          - Stores, retrieves, reflects  │
-│   - Current session          - Across all sessions          │
-│   - Reconstructs meaning     - Provides rich context        │
-│                                                             │
-│              └──────── work together ────────┘              │
-│                          = MIND                             │
-└─────────────────────────────────────────────────────────────┘
-```
-
-The LLM doesn't need to "remember" - it **thinks**.
-Hindsight doesn't need to "think" - it **remembers**.
-Together, they form a **mind** with continuity across sessions.
 
 ---
 
 ## How It Works
 
-### Three Core Operations
-
-| Operation   | What Hindsight Does                                                                                                                    |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| **Retain**  | Stores experiences, extracting 5 dimensions: what, when, where, who, why. Builds entity graphs and causal relationships automatically. |
-| **Recall**  | 4-way parallel retrieval: semantic similarity + keyword matching + graph traversal + temporal filtering. Results fused and reranked.   |
-| **Reflect** | Reasons about accumulated knowledge through the bank's disposition. Forms opinions with confidence scores. Generates observations.     |
-
-### Four Memory Networks
-
-| Type          | Purpose                                     | Example                                                       |
-| ------------- | ------------------------------------------- | ------------------------------------------------------------- |
-| `world`       | Facts about the codebase and external world | "Auth uses Supabase magic links"                              |
-| `experience`  | What Claude did (first-person)              | "I fixed the redirect by moving AuthProvider to root"         |
-| `opinion`     | Beliefs with confidence scores (0.0-1.0)    | "This codebase prefers explicit error handling" (0.85)        |
-| `observation` | Synthesized cross-session insights          | "Auth changes often require corresponding navigation updates" |
-
-### Bank Disposition
-
-Each project gets a memory bank with personality traits that shape how `reflect()` reasons:
-
-```javascript
-{
-  bankId: "my-project",
-  disposition: {
-    skepticism: 4,   // 1-5: trusting → questions claims
-    literalism: 4,   // 1-5: flexible → precise interpretation
-    empathy: 2       // 1-5: fact-focused → considers emotional context
-  },
-  background: "I am a developer assistant for a React Native app..."
-}
 ```
+┌─────────────────────────────────────────────────────────────┐
+│                  SESSION LIFECYCLE                           │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  SESSION START                                               │
+│  └── Semantic memory loaded (.claude/memory.md)              │
+│  └── Recent context recalled from Hindsight                  │
+│  └── Claude starts informed about the project                │
+│                                                              │
+│  DURING SESSION                                              │
+│  └── Claude uses memory_recall when helpful                  │
+│  └── Claude uses memory_reflect to reason                    │
+│  └── All work captured in session transcript                 │
+│                                                              │
+│  SESSION END                                                 │
+│  └── Transcript sent to Hindsight                            │
+│  └── Memories extracted automatically                        │
+│  └── Observations formed for next session                    │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Core Operations
+
+| Operation | What It Does |
+|-----------|--------------|
+| **retain** | Store memories with automatic extraction (what, when, where, who, why) |
+| **recall** | 4-way parallel search: semantic + keyword + graph + temporal |
+| **reflect** | Reason through the bank's disposition, form opinions |
+| **learn** | Bootstrap memory from existing codebase (solves cold start) |
+
+### Memory Types
+
+| Type | Purpose | Example |
+|------|---------|---------|
+| `world` | Facts about the codebase | "Auth uses Supabase magic links" |
+| `experience` | What Claude did | "I fixed the redirect by moving AuthProvider" |
+| `opinion` | Beliefs with confidence | "This codebase prefers explicit patterns" (0.85) |
+| `observation` | Cross-session insights | "Auth changes require navigation updates" |
 
 ---
 
@@ -95,170 +104,207 @@ Each project gets a memory bank with personality traits that shape how `reflect(
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                       CLAUDE-MIND                           │
+│                       CLAUDE-MIND                            │
 ├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌───────────────────────────────────────────────────────┐ │
-│  │              CLAUDE (ORCHESTRATOR)                     │ │
-│  │                                                        │ │
-│  │  • Manages workflow, delegates to agents               │ │
-│  │  • Owns all memory operations                          │ │
-│  │  • Synthesizes agent findings                          │ │
-│  │                                                        │ │
-│  │    ┌──────────┐  ┌──────────┐  ┌──────────┐          │ │
-│  │    │ Explorer │  │ Architect│  │ Reviewer │ + custom │ │
-│  │    └──────────┘  └──────────┘  └──────────┘          │ │
-│  └───────────────────────────────────────────────────────┘ │
-│                           │                                 │
-│                           ▼                                 │
-│  ┌───────────────────────────────────────────────────────┐ │
-│  │                     HINDSIGHT                          │ │
-│  │  ┌─────────┐ ┌───────────┐ ┌─────────┐ ┌───────────┐  │ │
-│  │  │  world  │ │experience │ │ opinion │ │observation│  │ │
-│  │  └─────────┘ └───────────┘ └─────────┘ └───────────┘  │ │
-│  │                    │                                   │ │
-│  │     ┌──────────────┼──────────────┐                   │ │
-│  │     ▼              ▼              ▼                   │ │
-│  │  retain()      recall()      reflect()                │ │
-│  └───────────────────────────────────────────────────────┘ │
-│                                                             │
-│  ┌───────────────────────────────────────────────────────┐ │
-│  │              SEMANTIC (.claude/memory.md)              │ │
-│  │           Human-curated + promoted observations        │ │
-│  └───────────────────────────────────────────────────────┘ │
-│                                                             │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │                 CLAUDE (ORCHESTRATOR)                   │ │
+│  │  • Manages workflow, delegates to agents                │ │
+│  │  • Owns all memory operations                           │ │
+│  │  • Uses memory_recall and memory_reflect tools          │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                            │                                 │
+│              ┌─────────────┴─────────────┐                  │
+│              ▼                           ▼                  │
+│  ┌─────────────────────┐    ┌─────────────────────────────┐│
+│  │     HINDSIGHT       │    │   SEMANTIC MEMORY           ││
+│  │  PostgreSQL+pgvector│    │   .claude/memory.md         ││
+│  │                     │    │                             ││
+│  │  world | experience │    │   Human-curated knowledge   ││
+│  │  opinion|observation│    │   Promoted observations     ││
+│  │                     │    │   Always loaded at start    ││
+│  │  retain | recall    │    │                             ││
+│  │  reflect            │    │                             ││
+│  └─────────────────────┘    └─────────────────────────────┘│
+│                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### Two Memory Layers
 
-| Layer         | Storage               | Purpose                                                             |
-| ------------- | --------------------- | ------------------------------------------------------------------- |
-| **Hindsight** | PostgreSQL + pgvector | All memories with entity graphs, 4-way retrieval, opinion formation |
-| **Semantic**  | `.claude/memory.md`   | Human-curated project knowledge, promoted observations              |
+| Layer | Storage | Purpose |
+|-------|---------|---------|
+| **Hindsight** | PostgreSQL + pgvector | All memories, entity graphs, 4-way retrieval, opinions |
+| **Semantic** | `.claude/memory.md` | Human-curated knowledge, promoted observations |
 
 ---
 
-## Claude as Orchestrator
+## MCP Tools
 
-Claude operates as a **project manager**, delegating to specialized agents rather than implementing everything directly.
+When running as an MCP server, Claude has access to:
 
-### Workflow
+### memory_recall
+
+Search project memories for relevant context.
 
 ```
-1. UNDERSTAND  → Clarify requirements, create task breakdown
-2. RECALL      → memory_recall(topic) before delegating
-3. EXPLORE     → Delegate to code-explorer agent
-4. PLAN        → Delegate to code-architect agent
-5. IMPLEMENT   → Implement directly OR delegate
-6. REVIEW      → Delegate to code-reviewer agent
-7. CONFIRM     → Summarize and get user approval
+Claude: "I remember we had issues with auth redirects..."
+→ memory_recall({ query: "auth redirect issues" })
 ```
 
-### Why This Pattern?
+### memory_reflect
 
-| Aspect                 | Benefit                                                |
-| ---------------------- | ------------------------------------------------------ |
-| **Centralized memory** | Only orchestrator accesses memory, agents stay focused |
-| **Automatic capture**  | Session transcript captures all agent outputs          |
-| **Context efficiency** | Agents don't carry memory overhead                     |
-| **Quality control**    | Orchestrator decides what context agents need          |
+Reason about accumulated knowledge, form opinions.
 
-### Agent Types
-
-| Agent              | Purpose                                                     |
-| ------------------ | ----------------------------------------------------------- |
-| **code-explorer**  | Analyze codebase, discover patterns, trace features         |
-| **code-architect** | Design solutions, create implementation blueprints          |
-| **code-reviewer**  | Review quality, find issues, assess implementation          |
-| **custom agents**  | Project-specific specialists (defined in `.claude/agents/`) |
+```
+Claude: "What patterns have I noticed about error handling?"
+→ memory_reflect({ query: "error handling patterns" })
+```
 
 ---
 
-## Session Lifecycle
+## CLI Commands
 
-1. **Start**: Load semantic memory + recall relevant context → Claude starts informed
-2. **During**: Claude orchestrates agents, uses `memory_recall` when helpful
-3. **End**: Full transcript processed → Hindsight extracts memories automatically
+```bash
+claude-mind init                   # Initialize for project
+claude-mind serve                  # Start MCP server
+claude-mind status                 # Show connection status
+claude-mind learn                  # Bootstrap from codebase
+claude-mind learn --depth full     # Full analysis with git history
+claude-mind recall "query"         # Search memories
+claude-mind reflect "query"        # Reason about knowledge
+claude-mind semantic               # Show semantic memory
+claude-mind config                 # Show configuration
+```
+
+---
+
+## Configuration
+
+### .claudemindrc
+
+```json
+{
+  "hindsight": {
+    "host": "localhost",
+    "port": 8888
+  },
+  "bankId": "my-project",
+  "disposition": {
+    "skepticism": 4,
+    "literalism": 4,
+    "empathy": 2
+  },
+  "background": "Developer assistant for a React Native app",
+  "semantic": {
+    "path": ".claude/memory.md"
+  }
+}
+```
+
+### Disposition Traits
+
+Each memory bank has personality traits that shape how `reflect()` reasons:
+
+| Trait | Low (1) | High (5) |
+|-------|---------|----------|
+| skepticism | Trusting | Questions claims |
+| literalism | Flexible interpretation | Precise, literal |
+| empathy | Fact-focused | Considers emotional context |
 
 ---
 
 ## Semantic Memory
 
-The `.claude/memory.md` file serves as:
-
-- **Human-curated truth**: Project-specific knowledge maintained by developers
-- **Promoted observations**: High-confidence insights from Hindsight's reflect operation
-- **Always loaded**: Injected into Claude's context at every session start
+The `.claude/memory.md` file contains human-curated project knowledge:
 
 ```markdown
 ## Tech Stack
-
-- React Native with Expo
+- React Native with Expo SDK 51
 - Supabase for auth and database
 - NativeWind for styling
 
 ## Key Decisions
-
-- Magic link auth chosen over passwords for better mobile UX
-- Zustand for state management (simpler than Redux for this scale)
+- Magic link auth for better mobile UX
+- Zustand for state management
 
 ## Critical Paths
+- Auth: src/lib/supabase.ts → src/providers/AuthProvider.tsx
 
-- Auth flow: src/lib/supabase.ts → src/providers/AuthProvider.tsx
+## Observations
+<!-- Promoted from Hindsight when confidence > 0.9 -->
+- Auth changes often require navigation updates
 ```
+
+This file is always loaded at session start and takes precedence over Hindsight memories when there are conflicts.
 
 ---
 
-## Design Principles
+## Graceful Degradation
 
-1. **Hindsight handles memory** - No custom decay formulas, scoring algorithms, or retrieval logic
-2. **4 memory networks** - world, experience, opinion, observation (not arbitrary categories)
-3. **3 operations** - retain, recall, reflect (the cognitive primitives)
-4. **Disposition shapes reasoning** - Consistent personality across sessions via traits
-5. **Entity-aware** - Graph traversal finds indirect connections, not just keywords
-6. **Local semantic truth** - Human-curated `.claude/memory.md` as ground truth
+When Hindsight is unavailable, claude-mind continues working with semantic memory only:
 
----
-
-## Project Structure
-
-```
-claude-mind/
-├── src/                         # Source code
-│   ├── client.ts                # Hindsight API client
-│   ├── mind.ts                  # Mind orchestrator
-│   ├── semantic.ts              # Semantic memory layer
-│   └── mcp/                     # MCP server
-├── docs/
-│   ├── SETUP.md                 # Setup guide
-│   ├── ARCHITECTURE.md          # Technical design
-│   ├── PHASES.md                # Implementation phases
-│   ├── PERFORMANCE.md           # Performance benchmarks
-│   └── API.md                   # API reference
-├── examples/
-│   └── todo-app/                # Example project
-└── tests/                       # Test suite
-```
+| Operation | With Hindsight | Without Hindsight |
+|-----------|----------------|-------------------|
+| Session start | Full context | Semantic only |
+| recall | 4-way search | Empty results |
+| reflect | LLM reasoning | Error (requires Hindsight) |
+| retain | Stored | Skipped |
 
 ---
 
-## Status
+## API Usage
 
-**All phases complete.** Ready for use.
+```typescript
+import { Mind } from 'claude-mind';
 
-- 475 tests passing with 82% coverage
-- All performance targets met
-- Full documentation available
+const mind = new Mind({
+  projectPath: process.cwd(),
+  disposition: { skepticism: 4, literalism: 4, empathy: 2 },
+});
 
-See [docs/PHASES.md](./docs/PHASES.md) for the implementation details.
+await mind.init();
+
+// Get context at session start
+const context = await mind.onSessionStart();
+
+// Recall relevant memories
+const memories = await mind.recall('authentication flow');
+
+// Reason about knowledge
+const reflection = await mind.reflect('What patterns exist?');
+
+// Store new memory
+await mind.retain('Fixed auth by moving Provider to root');
+
+// Bootstrap from codebase
+const result = await mind.learn({ depth: 'full' });
+```
 
 ---
 
 ## Requirements
 
-- [Hindsight](https://github.com/vectorize-io/hindsight) server running
-- Node.js 18+
+- **Node.js 18+**
+- **[Hindsight](https://github.com/vectorize-io/hindsight)** server running (for full functionality)
+
+Without Hindsight, claude-mind works in degraded mode with semantic memory only.
+
+---
+
+## Documentation
+
+- **[Getting Started](./docs/getting-started.md)** - Installation and setup guide
+- **[Concepts](./docs/concepts.md)** - Memory networks, operations, architecture
+- **[Configuration](./docs/configuration.md)** - Full configuration reference
+- **[API Reference](./docs/api-reference.md)** - Complete API documentation
+- **[Performance](./docs/performance.md)** - Benchmarks and optimization
+
+---
+
+## Example
+
+See the [todo-app example](./examples/todo-app/) for a complete integration.
 
 ---
 
