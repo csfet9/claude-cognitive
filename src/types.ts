@@ -227,10 +227,8 @@ export interface ReflectResult {
 export interface HealthStatus {
   /** Whether Hindsight is healthy and reachable */
   healthy: boolean;
-  /** Hindsight server version */
-  version?: string;
-  /** Number of banks on the server */
-  banks: number;
+  /** Database connection status */
+  database?: string;
   /** Error message if unhealthy */
   error?: string;
 }

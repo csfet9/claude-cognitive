@@ -70,7 +70,9 @@ describe("Mind", () => {
    * Helper to create a mind instance with error handling.
    * This prevents unhandled error events from failing tests.
    */
-  function createMindWithErrorHandler(options: MindOptions = defaultOptions): Mind {
+  function createMindWithErrorHandler(
+    options: MindOptions = defaultOptions,
+  ): Mind {
     const mind = new Mind(options);
     // Add default error handler to prevent unhandled error events
     mind.on("error", () => {
@@ -105,8 +107,7 @@ describe("Mind", () => {
     it("should initialize in healthy state when Hindsight is available", async () => {
       mockHealth.mockResolvedValue({
         healthy: true,
-        version: "1.0.0",
-        banks: 0,
+        database: "connected",
       });
       mockGetBank.mockResolvedValue({
         bankId: "test-bank",
@@ -125,7 +126,6 @@ describe("Mind", () => {
       mockHealth.mockResolvedValue({
         healthy: false,
         error: "Connection refused",
-        banks: 0,
       });
 
       const mind = createMindWithErrorHandler();
@@ -144,8 +144,7 @@ describe("Mind", () => {
     it("should emit ready event after initialization", async () => {
       mockHealth.mockResolvedValue({
         healthy: true,
-        version: "1.0.0",
-        banks: 0,
+        database: "connected",
       });
       mockGetBank.mockResolvedValue({
         bankId: "test-bank",
@@ -169,7 +168,6 @@ describe("Mind", () => {
       mockHealth.mockResolvedValue({
         healthy: false,
         error: "Connection refused",
-        banks: 0,
       });
 
       const mind = createMindWithErrorHandler();
@@ -184,7 +182,6 @@ describe("Mind", () => {
       mockHealth.mockResolvedValue({
         healthy: false,
         error: "Connection refused",
-        banks: 0,
       });
 
       const mind = createMindWithErrorHandler();
@@ -200,13 +197,14 @@ describe("Mind", () => {
       mockHealth.mockResolvedValue({
         healthy: false,
         error: "Connection refused",
-        banks: 0,
       });
 
       const mind = createMindWithErrorHandler();
       await mind.init();
 
-      await expect(mind.reflect("test query")).rejects.toThrow("requires Hindsight");
+      await expect(mind.reflect("test query")).rejects.toThrow(
+        "requires Hindsight",
+      );
     });
   });
 
@@ -215,7 +213,6 @@ describe("Mind", () => {
       mockHealth.mockResolvedValue({
         healthy: false,
         error: "Connection refused",
-        banks: 0,
       });
 
       const mind = new Mind(defaultOptions);
@@ -239,7 +236,6 @@ describe("Mind", () => {
       mockHealth.mockResolvedValue({
         healthy: false,
         error: "Connection refused",
-        banks: 0,
       });
 
       const mind = createMindWithErrorHandler();
@@ -255,7 +251,6 @@ describe("Mind", () => {
       mockHealth.mockResolvedValue({
         healthy: false,
         error: "Connection refused",
-        banks: 0,
       });
 
       const mind = createMindWithErrorHandler();
@@ -272,7 +267,6 @@ describe("Mind", () => {
       mockHealth.mockResolvedValue({
         healthy: false,
         error: "Connection refused",
-        banks: 0,
       });
 
       const mind = createMindWithErrorHandler();
@@ -286,7 +280,7 @@ describe("Mind", () => {
 
   describe("getAgentTemplates()", () => {
     it("should return built-in templates", async () => {
-      mockHealth.mockResolvedValue({ healthy: false, error: "Test", banks: 0 });
+      mockHealth.mockResolvedValue({ healthy: false, error: "Test" });
 
       const mind = createMindWithErrorHandler();
       await mind.init();
@@ -302,7 +296,7 @@ describe("Mind", () => {
 
   describe("getAgentTemplate()", () => {
     it("should return template by name", async () => {
-      mockHealth.mockResolvedValue({ healthy: false, error: "Test", banks: 0 });
+      mockHealth.mockResolvedValue({ healthy: false, error: "Test" });
 
       const mind = createMindWithErrorHandler();
       await mind.init();
@@ -314,7 +308,7 @@ describe("Mind", () => {
     });
 
     it("should return undefined for unknown template", async () => {
-      mockHealth.mockResolvedValue({ healthy: false, error: "Test", banks: 0 });
+      mockHealth.mockResolvedValue({ healthy: false, error: "Test" });
 
       const mind = createMindWithErrorHandler();
       await mind.init();
@@ -329,8 +323,7 @@ describe("Mind", () => {
     it("should emit learn events", async () => {
       mockHealth.mockResolvedValue({
         healthy: true,
-        version: "1.0.0",
-        banks: 0,
+        database: "connected",
       });
       mockGetBank.mockResolvedValue({
         bankId: "test-bank",
@@ -357,7 +350,6 @@ describe("Mind", () => {
       mockHealth.mockResolvedValue({
         healthy: false,
         error: "Connection refused",
-        banks: 0,
       });
 
       const mind = createMindWithErrorHandler();

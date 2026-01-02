@@ -257,34 +257,36 @@ Check Hindsight connection.
 
 ```typescript
 const status = await client.health();
-// { healthy: true, version: '1.0.0', banks: 5 }
+// { healthy: true, database: 'connected' }
 ```
 
 Returns: `Promise<HealthStatus>`
 
 ---
 
-#### `recent(bankId, days?)`
+#### `recent(bankId, limit?)`
 
 Get recent memories.
 
 ```typescript
-const recent = await client.recent("my-project", 7);
+const recent = await client.recent("my-project", 50);
 ```
 
 Returns: `Promise<Memory[]>`
 
 ---
 
-#### `forget(bankId, memoryId)`
+#### `forgetAll(bankId)`
 
-Remove a specific memory.
+Clear all memories from a bank.
 
 ```typescript
-await client.forget("my-project", "mem-abc123");
+await client.forgetAll("my-project");
 ```
 
 Returns: `Promise<void>`
+
+> Note: The Hindsight API only supports clearing all memories at once, not individual memory deletion.
 
 ---
 

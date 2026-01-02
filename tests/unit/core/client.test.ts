@@ -45,12 +45,12 @@ describe("HindsightClient", () => {
       const c = new HindsightClient();
       // Verify by checking a request URL
       mockFetch.mockResolvedValueOnce(
-        createResponse(200, { healthy: true, version: "1.0.0", bank_count: 0 }),
+        createResponse(200, { status: "healthy", database: "connected" }),
       );
       c.health();
 
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8888/api/v1/health",
+        "http://localhost:8888/health",
         expect.any(Object),
       );
     });
@@ -58,12 +58,12 @@ describe("HindsightClient", () => {
     it("should use custom host and port", () => {
       const c = new HindsightClient({ host: "custom-host", port: 9999 });
       mockFetch.mockResolvedValueOnce(
-        createResponse(200, { healthy: true, version: "1.0.0", bank_count: 0 }),
+        createResponse(200, { status: "healthy", database: "connected" }),
       );
       c.health();
 
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://custom-host:9999/api/v1/health",
+        "http://custom-host:9999/health",
         expect.any(Object),
       );
     });
@@ -71,7 +71,7 @@ describe("HindsightClient", () => {
     it("should include API key in headers when provided", async () => {
       const c = new HindsightClient({ apiKey: "test-key" });
       mockFetch.mockResolvedValueOnce(
-        createResponse(200, { healthy: true, version: "1.0.0", bank_count: 0 }),
+        createResponse(200, { status: "healthy", database: "connected" }),
       );
       await c.health();
 
@@ -90,17 +90,15 @@ describe("HindsightClient", () => {
     it("should return healthy status when server responds", async () => {
       mockFetch.mockResolvedValueOnce(
         createResponse(200, {
-          healthy: true,
-          version: "1.2.3",
-          bank_count: 5,
+          status: "healthy",
+          database: "connected",
         }),
       );
 
       const result = await client.health();
 
       expect(result.healthy).toBe(true);
-      expect(result.version).toBe("1.2.3");
-      expect(result.banks).toBe(5);
+      expect(result.database).toBe("connected");
       expect(result.error).toBeUndefined();
     });
 
@@ -110,7 +108,6 @@ describe("HindsightClient", () => {
       const result = await client.health();
 
       expect(result.healthy).toBe(false);
-      expect(result.banks).toBe(0);
       expect(result.error).toContain("Connection refused");
     });
 
@@ -139,11 +136,11 @@ describe("HindsightClient", () => {
       ).resolves.toBeUndefined();
 
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8888/api/v1/banks",
+        "http://localhost:8888/v1/default/banks/my-bank",
         expect.objectContaining({
-          method: "POST",
+          method: "PUT",
           body: JSON.stringify({
-            bank_id: "my-bank",
+            name: "my-bank",
             disposition: { skepticism: 3, literalism: 3, empathy: 3 },
             background: "Test assistant",
           }),
@@ -183,11 +180,15 @@ describe("HindsightClient", () => {
     it("should return bank information", async () => {
       mockFetch.mockResolvedValueOnce(
         createResponse(200, {
-          bank_id: "my-bank",
-          disposition: { skepticism: 4, literalism: 4, empathy: 2 },
-          background: "Test background",
-          created_at: "2024-01-01T00:00:00Z",
-          memory_count: 42,
+          banks: [
+            {
+              bank_id: "my-bank",
+              disposition: { skepticism: 4, literalism: 4, empathy: 2 },
+              background: "Test background",
+              created_at: "2024-01-01T00:00:00Z",
+              memory_count: 42,
+            },
+          ],
         }),
       );
 
@@ -204,10 +205,8 @@ describe("HindsightClient", () => {
       expect(bank.memoryCount).toBe(42);
     });
 
-    it("should throw BANK_NOT_FOUND for 404", async () => {
-      mockFetch.mockResolvedValueOnce(
-        createResponse(404, { message: "Bank not found" }),
-      );
+    it("should throw BANK_NOT_FOUND when bank doesn't exist", async () => {
+      mockFetch.mockResolvedValueOnce(createResponse(200, { banks: [] }));
 
       try {
         await client.getBank("nonexistent");
@@ -218,20 +217,24 @@ describe("HindsightClient", () => {
       }
     });
 
-    it("should URL-encode bank ID", async () => {
+    it("should call the banks list endpoint", async () => {
       mockFetch.mockResolvedValueOnce(
         createResponse(200, {
-          bank_id: "my/bank",
-          disposition: { skepticism: 3, literalism: 3, empathy: 3 },
-          created_at: "2024-01-01T00:00:00Z",
-          memory_count: 0,
+          banks: [
+            {
+              bank_id: "my/bank",
+              disposition: { skepticism: 3, literalism: 3, empathy: 3 },
+              created_at: "2024-01-01T00:00:00Z",
+              memory_count: 0,
+            },
+          ],
         }),
       );
 
       await client.getBank("my/bank");
 
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8888/api/v1/banks/my%2Fbank",
+        "http://localhost:8888/v1/default/banks",
         expect.any(Object),
       );
     });
@@ -248,13 +251,15 @@ describe("HindsightClient", () => {
       });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8888/api/v1/banks/my-bank/disposition",
+        "http://localhost:8888/v1/default/banks/my-bank/profile",
         expect.objectContaining({
-          method: "PATCH",
+          method: "PUT",
           body: JSON.stringify({
-            skepticism: 5,
-            literalism: 5,
-            empathy: 1,
+            disposition: {
+              skepticism: 5,
+              literalism: 5,
+              empathy: 1,
+            },
           }),
         }),
       );
@@ -272,26 +277,39 @@ describe("HindsightClient", () => {
   });
 
   describe("retain()", () => {
-    it("should store content and return memory IDs", async () => {
+    it("should store content and return items count", async () => {
       mockFetch.mockResolvedValueOnce(
-        createResponse(200, { memory_ids: ["mem-1", "mem-2"] }),
+        createResponse(200, {
+          success: true,
+          bank_id: "my-bank",
+          items_count: 1,
+          async: false,
+        }),
       );
 
-      const ids = await client.retain("my-bank", "Test content");
+      const count = await client.retain("my-bank", "Test content");
 
-      expect(ids).toEqual(["mem-1", "mem-2"]);
+      expect(count).toBe(1);
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8888/api/v1/banks/my-bank/retain",
+        "http://localhost:8888/v1/default/banks/my-bank/memories",
         expect.objectContaining({
           method: "POST",
-          body: JSON.stringify({ content: "Test content", context: undefined }),
+          body: JSON.stringify({
+            items: [{ content: "Test content", context: undefined }],
+            async: false,
+          }),
         }),
       );
     });
 
     it("should include context when provided", async () => {
       mockFetch.mockResolvedValueOnce(
-        createResponse(200, { memory_ids: ["mem-1"] }),
+        createResponse(200, {
+          success: true,
+          bank_id: "my-bank",
+          items_count: 1,
+          async: false,
+        }),
       );
 
       await client.retain("my-bank", "Content", "Additional context");
@@ -300,8 +318,8 @@ describe("HindsightClient", () => {
         expect.any(String),
         expect.objectContaining({
           body: JSON.stringify({
-            content: "Content",
-            context: "Additional context",
+            items: [{ content: "Content", context: "Additional context" }],
+            async: false,
           }),
         }),
       );
@@ -312,12 +330,12 @@ describe("HindsightClient", () => {
     it("should search memories with default options", async () => {
       mockFetch.mockResolvedValueOnce(
         createResponse(200, {
-          memories: [
+          results: [
             {
               id: "mem-1",
               text: "Test memory",
-              fact_type: "world",
-              created_at: "2024-01-01T00:00:00Z",
+              type: "world",
+              mentioned_at: "2024-01-01T00:00:00Z",
             },
           ],
         }),
@@ -331,14 +349,24 @@ describe("HindsightClient", () => {
       expect(memories[0].factType).toBe("world");
     });
 
+    it("should call the correct endpoint", async () => {
+      mockFetch.mockResolvedValueOnce(createResponse(200, { results: [] }));
+
+      await client.recall("my-bank", "query");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "http://localhost:8888/v1/default/banks/my-bank/memories/recall",
+        expect.any(Object),
+      );
+    });
+
     it("should include recall options in request", async () => {
-      mockFetch.mockResolvedValueOnce(createResponse(200, { memories: [] }));
+      mockFetch.mockResolvedValueOnce(createResponse(200, { results: [] }));
 
       await client.recall("my-bank", "query", {
         budget: "high",
         factType: "experience",
         maxTokens: 1000,
-        includeEntities: true,
       });
 
       expect(mockFetch).toHaveBeenCalledWith(
@@ -347,9 +375,8 @@ describe("HindsightClient", () => {
           body: JSON.stringify({
             query: "query",
             budget: "high",
-            fact_type: "experience",
+            type: "experience",
             max_tokens: 1000,
-            include_entities: true,
           }),
         }),
       );
@@ -358,34 +385,15 @@ describe("HindsightClient", () => {
     it("should map memory fields correctly", async () => {
       mockFetch.mockResolvedValueOnce(
         createResponse(200, {
-          memories: [
+          results: [
             {
               id: "mem-1",
               text: "Memory text",
-              fact_type: "experience",
-              created_at: "2024-01-01T00:00:00Z",
+              type: "experience",
+              mentioned_at: "2024-01-01T00:00:00Z",
               context: "Some context",
-              what: "Did something",
-              when: "Yesterday",
-              where: "src/file.ts",
-              who: "Developer",
-              why: "To fix bug",
               occurred_start: "2024-01-01",
               occurred_end: "2024-01-02",
-              confidence: 0.9,
-              causes: ["cause-1"],
-              caused_by: ["caused-by-1"],
-              enables: ["enables-1"],
-              prevents: ["prevents-1"],
-              entities: [
-                {
-                  id: "ent-1",
-                  name: "Entity",
-                  aliases: ["E"],
-                  type: "person",
-                  co_occurrences: [{ entity_id: "ent-2", count: 5 }],
-                },
-              ],
             },
           ],
         }),
@@ -394,23 +402,12 @@ describe("HindsightClient", () => {
       const memories = await client.recall("my-bank", "query");
       const mem = memories[0];
 
+      expect(mem.id).toBe("mem-1");
+      expect(mem.text).toBe("Memory text");
+      expect(mem.factType).toBe("experience");
       expect(mem.context).toBe("Some context");
-      expect(mem.what).toBe("Did something");
-      expect(mem.when).toBe("Yesterday");
-      expect(mem.where).toBe("src/file.ts");
-      expect(mem.who).toBe("Developer");
-      expect(mem.why).toBe("To fix bug");
       expect(mem.occurredStart).toBe("2024-01-01");
       expect(mem.occurredEnd).toBe("2024-01-02");
-      expect(mem.confidence).toBe(0.9);
-      expect(mem.causes).toEqual(["cause-1"]);
-      expect(mem.causedBy).toEqual(["caused-by-1"]);
-      expect(mem.enables).toEqual(["enables-1"]);
-      expect(mem.prevents).toEqual(["prevents-1"]);
-      expect(mem.entities).toHaveLength(1);
-      expect(mem.entities![0].coOccurrences).toEqual([
-        { entityId: "ent-2", count: 5 },
-      ]);
     });
   });
 
@@ -419,38 +416,44 @@ describe("HindsightClient", () => {
       mockFetch.mockResolvedValueOnce(
         createResponse(200, {
           text: "Reflection text",
-          opinions: [{ opinion: "Test opinion", confidence: 0.85 }],
-          based_on: {
-            world: [
-              {
-                id: "w1",
-                text: "World fact",
-                fact_type: "world",
-                created_at: "2024-01-01T00:00:00Z",
-              },
-            ],
-            experience: [],
-            opinion: [],
-          },
+          based_on: [
+            { id: "w1", text: "World fact", type: "world" },
+            { id: "e1", text: "Experience fact", type: "experience" },
+          ],
         }),
       );
 
       const result = await client.reflect("my-bank", "What patterns exist?");
 
       expect(result.text).toBe("Reflection text");
-      expect(result.opinions).toHaveLength(1);
-      expect(result.opinions[0].opinion).toBe("Test opinion");
-      expect(result.opinions[0].confidence).toBe(0.85);
+      expect(result.opinions).toEqual([]); // API doesn't return opinions
       expect(result.basedOn.world).toHaveLength(1);
       expect(result.basedOn.world[0].text).toBe("World fact");
+      expect(result.basedOn.experience).toHaveLength(1);
+      expect(result.basedOn.experience[0].text).toBe("Experience fact");
+    });
+
+    it("should call the correct endpoint", async () => {
+      mockFetch.mockResolvedValueOnce(
+        createResponse(200, {
+          text: "Reflection",
+          based_on: [],
+        }),
+      );
+
+      await client.reflect("my-bank", "query");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "http://localhost:8888/v1/default/banks/my-bank/reflect",
+        expect.any(Object),
+      );
     });
 
     it("should include context when provided", async () => {
       mockFetch.mockResolvedValueOnce(
         createResponse(200, {
           text: "Reflection",
-          opinions: [],
-          based_on: { world: [], experience: [], opinion: [] },
+          based_on: [],
         }),
       );
 
@@ -466,37 +469,54 @@ describe("HindsightClient", () => {
   });
 
   describe("recent()", () => {
-    it("should fetch recent memories with default days", async () => {
-      mockFetch.mockResolvedValueOnce(createResponse(200, { memories: [] }));
+    it("should fetch recent memories with default limit", async () => {
+      mockFetch.mockResolvedValueOnce(
+        createResponse(200, { items: [], total: 0, limit: 50, offset: 0 }),
+      );
 
       await client.recent("my-bank");
 
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8888/api/v1/banks/my-bank/memories/recent?days=7",
+        "http://localhost:8888/v1/default/banks/my-bank/memories/list?limit=50",
         expect.any(Object),
       );
     });
 
-    it("should use custom days parameter", async () => {
-      mockFetch.mockResolvedValueOnce(createResponse(200, { memories: [] }));
+    it("should use custom limit parameter", async () => {
+      mockFetch.mockResolvedValueOnce(
+        createResponse(200, { items: [], total: 0, limit: 100, offset: 0 }),
+      );
 
-      await client.recent("my-bank", 30);
+      await client.recent("my-bank", 100);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining("days=30"),
+        expect.stringContaining("limit=100"),
         expect.any(Object),
       );
     });
   });
 
-  describe("forget()", () => {
-    it("should delete memory", async () => {
+  describe("forgetAll()", () => {
+    it("should delete all memories", async () => {
+      mockFetch.mockResolvedValueOnce(createResponse(204, undefined));
+
+      await client.forgetAll("my-bank");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "http://localhost:8888/v1/default/banks/my-bank/memories",
+        expect.objectContaining({ method: "DELETE" }),
+      );
+    });
+  });
+
+  describe("forget() (deprecated)", () => {
+    it("should call forgetAll", async () => {
       mockFetch.mockResolvedValueOnce(createResponse(204, undefined));
 
       await client.forget("my-bank", "mem-123");
 
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8888/api/v1/banks/my-bank/memories/mem-123",
+        "http://localhost:8888/v1/default/banks/my-bank/memories",
         expect.objectContaining({ method: "DELETE" }),
       );
     });

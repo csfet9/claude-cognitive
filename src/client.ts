@@ -13,21 +13,12 @@ import type {
   BankOptions,
   BankResponseDTO,
   Disposition,
-  Entity,
-  EntityResponseDTO,
-  EntityType,
   FactType,
-  HealthResponseDTO,
   HealthStatus,
   HindsightClientOptions,
   Memory,
-  MemoryResponseDTO,
-  Opinion,
   RecallOptions,
-  RecallResponseDTO,
-  ReflectResponseDTO,
   ReflectResult,
-  RetainResponseDTO,
   TimeoutConfig,
 } from "./types.js";
 
@@ -102,7 +93,7 @@ export class HindsightClient {
     const host = options.host ?? "localhost";
     const port = options.port ?? 8888;
 
-    this.baseUrl = `http://${host}:${port}/api/v1`;
+    this.baseUrl = `http://${host}:${port}`;
     if (options.apiKey !== undefined) {
       this.apiKey = options.apiKey;
     }
@@ -122,13 +113,17 @@ export class HindsightClient {
   async createBank(options: BankOptions): Promise<void> {
     this.validateDisposition(options.disposition);
 
-    await this.request<void>("POST", "/banks", {
-      body: {
-        bank_id: options.bankId,
-        disposition: options.disposition,
-        background: options.background,
+    await this.request<void>(
+      "PUT",
+      `/v1/default/banks/${encodeURIComponent(options.bankId)}`,
+      {
+        body: {
+          name: options.bankId,
+          disposition: options.disposition,
+          background: options.background ?? "",
+        },
       },
-    });
+    );
   }
 
   /**
@@ -139,11 +134,18 @@ export class HindsightClient {
    * @throws {HindsightError} If bank doesn't exist
    */
   async getBank(bankId: string): Promise<Bank> {
-    const response = await this.request<BankResponseDTO>(
+    // List all banks and find the one we want
+    const response = await this.request<{ banks: BankResponseDTO[] }>(
       "GET",
-      `/banks/${encodeURIComponent(bankId)}`,
+      "/v1/default/banks",
     );
-    return this.mapBankResponse(response);
+    const bank = response.banks.find((b) => b.bank_id === bankId);
+    if (!bank) {
+      throw new HindsightError(`Bank not found: ${bankId}`, "BANK_NOT_FOUND", {
+        isRetryable: false,
+      });
+    }
+    return this.mapBankResponse(bank);
   }
 
   /**
@@ -160,9 +162,9 @@ export class HindsightClient {
     this.validateDisposition(disposition);
 
     await this.request<void>(
-      "PATCH",
-      `/banks/${encodeURIComponent(bankId)}/disposition`,
-      { body: disposition },
+      "PUT",
+      `/v1/default/banks/${encodeURIComponent(bankId)}/profile`,
+      { body: { disposition } },
     );
   }
 
@@ -171,35 +173,39 @@ export class HindsightClient {
   // ============================================
 
   /**
-   * Store content with automatic 5-dimension extraction.
+   * Store content with automatic extraction.
    *
-   * Hindsight automatically extracts:
-   * - what: Complete description of what happened
-   * - when: Temporal context (dates, times, durations)
-   * - where: Location context (files, paths, lines)
-   * - who: Entities involved (people, components, concepts)
-   * - why: Motivation and reasoning
+   * Hindsight automatically extracts entities, relationships, and metadata.
    *
    * @param bankId - Bank identifier
    * @param content - Content to store
    * @param context - Optional additional context
-   * @returns Array of created memory IDs
+   * @returns Number of items processed
    * @throws {HindsightError} If bank doesn't exist
    */
   async retain(
     bankId: string,
     content: string,
     context?: string,
-  ): Promise<string[]> {
-    const response = await this.request<RetainResponseDTO>(
+  ): Promise<number> {
+    interface RetainApiResponse {
+      success: boolean;
+      bank_id: string;
+      items_count: number;
+      async: boolean;
+    }
+    const response = await this.request<RetainApiResponse>(
       "POST",
-      `/banks/${encodeURIComponent(bankId)}/retain`,
+      `/v1/default/banks/${encodeURIComponent(bankId)}/memories`,
       {
-        body: { content, context },
+        body: {
+          items: [{ content, context }],
+          async: false,
+        },
         timeout: this.timeouts.retain,
       },
     );
-    return response.memory_ids;
+    return response.items_count;
   }
 
   /**
@@ -225,21 +231,44 @@ export class HindsightClient {
     query: string,
     options: RecallOptions = {},
   ): Promise<Memory[]> {
-    const response = await this.request<RecallResponseDTO>(
+    interface RecallResult {
+      id: string;
+      text: string;
+      type?: string;
+      context?: string;
+      entities?: string[];
+      occurred_start?: string;
+      occurred_end?: string;
+      mentioned_at?: string;
+    }
+    interface RecallApiResponse {
+      results: RecallResult[];
+    }
+    const response = await this.request<RecallApiResponse>(
       "POST",
-      `/banks/${encodeURIComponent(bankId)}/recall`,
+      `/v1/default/banks/${encodeURIComponent(bankId)}/memories/recall`,
       {
         body: {
           query,
           budget: options.budget ?? "mid",
-          fact_type: options.factType ?? "all",
+          type: options.factType !== "all" ? options.factType : undefined,
           max_tokens: options.maxTokens,
-          include_entities: options.includeEntities ?? false,
         },
         timeout: this.timeouts.recall,
       },
     );
-    return response.memories.map((m) => this.mapMemoryResponse(m));
+    return response.results.map((r): Memory => {
+      const mem: Memory = {
+        id: r.id,
+        text: r.text,
+        factType: (r.type as FactType) ?? "world",
+        createdAt: r.mentioned_at ?? new Date().toISOString(),
+      };
+      if (r.context) mem.context = r.context;
+      if (r.occurred_start) mem.occurredStart = r.occurred_start;
+      if (r.occurred_end) mem.occurredEnd = r.occurred_end;
+      return mem;
+    });
   }
 
   /**
@@ -264,15 +293,62 @@ export class HindsightClient {
     query: string,
     context?: string,
   ): Promise<ReflectResult> {
-    const response = await this.request<ReflectResponseDTO>(
+    interface ReflectFact {
+      id: string;
+      text: string;
+      type?: string;
+    }
+    interface ReflectApiResponse {
+      text: string;
+      based_on?: ReflectFact[];
+      structured_output?: unknown;
+    }
+    const response = await this.request<ReflectApiResponse>(
       "POST",
-      `/banks/${encodeURIComponent(bankId)}/reflect`,
+      `/v1/default/banks/${encodeURIComponent(bankId)}/reflect`,
       {
         body: { query, context },
         timeout: this.timeouts.reflect,
       },
     );
-    return this.mapReflectResponse(response);
+    // Map the simpler API response to our ReflectResult structure
+    const basedOn = response.based_on ?? [];
+    return {
+      text: response.text,
+      opinions: [], // API doesn't return opinions separately
+      basedOn: {
+        world: basedOn
+          .filter((f) => f.type === "world")
+          .map(
+            (f): Memory => ({
+              id: f.id,
+              text: f.text,
+              factType: "world",
+              createdAt: new Date().toISOString(),
+            }),
+          ),
+        experience: basedOn
+          .filter((f) => f.type === "experience")
+          .map(
+            (f): Memory => ({
+              id: f.id,
+              text: f.text,
+              factType: "experience",
+              createdAt: new Date().toISOString(),
+            }),
+          ),
+        opinion: basedOn
+          .filter((f) => f.type === "opinion")
+          .map(
+            (f): Memory => ({
+              id: f.id,
+              text: f.text,
+              factType: "opinion",
+              createdAt: new Date().toISOString(),
+            }),
+          ),
+      },
+    };
   }
 
   // ============================================
@@ -289,20 +365,22 @@ export class HindsightClient {
    */
   async health(): Promise<HealthStatus> {
     try {
-      const response = await this.request<HealthResponseDTO>("GET", "/health", {
-        timeout: this.timeouts.health,
-      });
+      const response = await this.request<{ status: string; database: string }>(
+        "GET",
+        "/health",
+        {
+          timeout: this.timeouts.health,
+        },
+      );
 
       return {
-        healthy: response.healthy,
-        version: response.version,
-        banks: response.bank_count,
+        healthy: response.status === "healthy",
+        database: response.database,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
       return {
         healthy: false,
-        banks: 0,
         error: message,
       };
     }
@@ -312,31 +390,63 @@ export class HindsightClient {
    * Get recent memories from a bank.
    *
    * @param bankId - Bank identifier
-   * @param days - Number of days to look back (default: 7)
-   * @returns Recent memories sorted by creation time
+   * @param limit - Maximum number of memories to return (default: 50)
+   * @returns Recent memories sorted by creation time (newest first)
    * @throws {HindsightError} If bank doesn't exist
    */
-  async recent(bankId: string, days: number = 7): Promise<Memory[]> {
-    const response = await this.request<RecallResponseDTO>(
+  async recent(bankId: string, limit: number = 50): Promise<Memory[]> {
+    interface ListItem {
+      id: string;
+      text: string;
+      type?: string;
+      context?: string;
+      date?: string;
+      entities?: string;
+    }
+    interface ListResponse {
+      items: ListItem[];
+      total: number;
+      limit: number;
+      offset: number;
+    }
+    const response = await this.request<ListResponse>(
       "GET",
-      `/banks/${encodeURIComponent(bankId)}/memories/recent`,
-      { params: { days: days.toString() } },
+      `/v1/default/banks/${encodeURIComponent(bankId)}/memories/list`,
+      { params: { limit: limit.toString() } },
     );
-    return response.memories.map((m) => this.mapMemoryResponse(m));
+    return response.items.map((item): Memory => {
+      const mem: Memory = {
+        id: item.id,
+        text: item.text,
+        factType: (item.type as FactType) ?? "world",
+        createdAt: item.date ?? new Date().toISOString(),
+      };
+      if (item.context) mem.context = item.context;
+      return mem;
+    });
   }
 
   /**
-   * Remove a specific memory from a bank.
+   * Clear all memories from a bank.
+   *
+   * Note: The Hindsight API only supports clearing all memories at once,
+   * not removing individual memories.
    *
    * @param bankId - Bank identifier
-   * @param memoryId - Memory identifier
-   * @throws {HindsightError} If bank or memory doesn't exist
+   * @throws {HindsightError} If bank doesn't exist
    */
-  async forget(bankId: string, memoryId: string): Promise<void> {
+  async forgetAll(bankId: string): Promise<void> {
     await this.request<void>(
       "DELETE",
-      `/banks/${encodeURIComponent(bankId)}/memories/${encodeURIComponent(memoryId)}`,
+      `/v1/default/banks/${encodeURIComponent(bankId)}/memories`,
     );
+  }
+
+  /**
+   * @deprecated Use forgetAll() instead - individual memory deletion not supported
+   */
+  async forget(bankId: string, _memoryId?: string): Promise<void> {
+    await this.forgetAll(bankId);
   }
 
   // ============================================
@@ -459,77 +569,4 @@ export class HindsightClient {
     return result;
   }
 
-  /**
-   * Map memory response DTO to public Memory interface.
-   * @internal
-   */
-  private mapMemoryResponse(raw: MemoryResponseDTO): Memory {
-    const result: Memory = {
-      id: raw.id,
-      text: raw.text,
-      factType: raw.fact_type as FactType,
-      createdAt: raw.created_at,
-    };
-
-    // Optional fields - only set if defined
-    if (raw.context !== undefined) result.context = raw.context;
-    if (raw.what !== undefined) result.what = raw.what;
-    if (raw.when !== undefined) result.when = raw.when;
-    if (raw.where !== undefined) result.where = raw.where;
-    if (raw.who !== undefined) result.who = raw.who;
-    if (raw.why !== undefined) result.why = raw.why;
-    if (raw.occurred_start !== undefined)
-      result.occurredStart = raw.occurred_start;
-    if (raw.occurred_end !== undefined) result.occurredEnd = raw.occurred_end;
-    if (raw.confidence !== undefined) result.confidence = raw.confidence;
-    if (raw.entities !== undefined) {
-      result.entities = raw.entities.map((e) => this.mapEntityResponse(e));
-    }
-    if (raw.causes !== undefined) result.causes = raw.causes;
-    if (raw.caused_by !== undefined) result.causedBy = raw.caused_by;
-    if (raw.enables !== undefined) result.enables = raw.enables;
-    if (raw.prevents !== undefined) result.prevents = raw.prevents;
-
-    return result;
-  }
-
-  /**
-   * Map entity response DTO to public Entity interface.
-   * @internal
-   */
-  private mapEntityResponse(raw: EntityResponseDTO): Entity {
-    return {
-      id: raw.id,
-      name: raw.name,
-      aliases: raw.aliases,
-      type: raw.type as EntityType,
-      coOccurrences: raw.co_occurrences.map((co) => ({
-        entityId: co.entity_id,
-        count: co.count,
-      })),
-    };
-  }
-
-  /**
-   * Map reflect response DTO to public ReflectResult interface.
-   * @internal
-   */
-  private mapReflectResponse(raw: ReflectResponseDTO): ReflectResult {
-    return {
-      text: raw.text,
-      opinions: raw.opinions.map(
-        (o): Opinion => ({
-          opinion: o.opinion,
-          confidence: o.confidence,
-        }),
-      ),
-      basedOn: {
-        world: raw.based_on.world.map((m) => this.mapMemoryResponse(m)),
-        experience: raw.based_on.experience.map((m) =>
-          this.mapMemoryResponse(m),
-        ),
-        opinion: raw.based_on.opinion.map((m) => this.mapMemoryResponse(m)),
-      },
-    };
-  }
 }

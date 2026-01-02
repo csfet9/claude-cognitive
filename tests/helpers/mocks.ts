@@ -46,8 +46,7 @@ export function createMockHealthStatus(
 ): HealthStatus {
   return {
     healthy: true,
-    version: "1.0.0",
-    banks: 1,
+    database: "connected",
     ...overrides,
   };
 }
