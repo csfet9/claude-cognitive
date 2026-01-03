@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **MCP configuration path** - Now correctly uses `~/.claude/mcp.json` instead of `~/.claude.json`
 - **Automatic hooks setup** - `install` command now configures session hooks in `~/.claude/settings.json`
 - **Global configuration** - MCP server and hooks work for all projects with `.claudemindrc`
+- **Transcript parsing** - `process-session` hook now properly parses JSONL transcripts:
+  - Extracts only meaningful user/assistant messages
+  - Filters out session metadata (session IDs, paths, permissions)
+  - Skips system reminders and empty messages
+  - Results in higher quality memories about actual project work
 
 ### Changed
 
