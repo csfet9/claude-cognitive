@@ -132,6 +132,8 @@ claude-cognitive sync-session    # Sync and clear buffer
 
 Session interactions are automatically buffered during your conversation via the PostToolUse hook.
 
+> **Note:** If you upgraded from an earlier version, run `claude-cognitive update` to add the PostToolUse hook for session buffering.
+
 ---
 
 ## Configuration
