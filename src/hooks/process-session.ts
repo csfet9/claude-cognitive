@@ -74,6 +74,16 @@ function parseTranscript(rawContent: string): string {
       if (text.includes("session_id")) continue;
       if (text.includes("transcript_path")) continue;
 
+      // Skip CLI commands that don't provide meaningful content
+      if (text.includes("<command-name>/exit</command-name>")) continue;
+      if (text.includes("<command-name>/clear</command-name>")) continue;
+      if (text.includes("<command-name>/help</command-name>")) continue;
+      if (text.includes("<command-name>/compact</command-name>")) continue;
+      if (text.includes("<command-name>/config</command-name>")) continue;
+      if (text.includes("<local-command-stdout>See ya!</local-command-stdout>"))
+        continue;
+      if (text.includes("<local-command-stdout>")) continue;
+
       // Format message
       const prefix = role === "user" ? "User" : "Assistant";
       messages.push(`${prefix}: ${text.trim()}`);
