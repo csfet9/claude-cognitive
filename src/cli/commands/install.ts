@@ -187,6 +187,21 @@ async function readSettings(path: string): Promise<Record<string, unknown>> {
 }
 
 /**
+ * Check if a hook command exists in a hooks array.
+ */
+function hasHookCommand(
+  hooksArray: Array<{ matcher: string; hooks: unknown[] }>,
+  commandSubstring: string,
+): boolean {
+  return hooksArray.some((entry) =>
+    entry.hooks?.some((h: unknown) => {
+      const hook = h as { command?: string };
+      return hook.command?.includes(commandSubstring);
+    }),
+  );
+}
+
+/**
  * Configure hooks in Claude Code settings.
  */
 async function configureHooks(): Promise<string> {
@@ -200,15 +215,8 @@ async function configureHooks(): Promise<string> {
   const stopHooks =
     (hooks.Stop as Array<{ matcher: string; hooks: unknown[] }>) || [];
 
-  // Check if claude-cognitive hook already exists
-  const hasHook = stopHooks.some((entry) =>
-    entry.hooks?.some((h: unknown) => {
-      const hook = h as { command?: string };
-      return hook.command?.includes("claude-cognitive");
-    }),
-  );
-
-  if (!hasHook) {
+  // Add process-session hook on Stop (session end)
+  if (!hasHookCommand(stopHooks, "claude-cognitive process-session")) {
     stopHooks.push({
       matcher: "",
       hooks: [
@@ -221,6 +229,26 @@ async function configureHooks(): Promise<string> {
   }
 
   hooks.Stop = stopHooks;
+
+  // Get or create PostToolUse hooks array for session buffering
+  const postToolUseHooks =
+    (hooks.PostToolUse as Array<{ matcher: string; hooks: unknown[] }>) || [];
+
+  // Add buffer-message hook on PostToolUse (captures tool interactions)
+  if (!hasHookCommand(postToolUseHooks, "claude-cognitive buffer-message")) {
+    postToolUseHooks.push({
+      matcher: "",
+      hooks: [
+        {
+          type: "command",
+          command:
+            'claude-cognitive buffer-message --role assistant --content "$TOOL_OUTPUT"',
+        },
+      ],
+    });
+  }
+
+  hooks.PostToolUse = postToolUseHooks;
   settings.hooks = hooks;
 
   // Ensure .claude directory exists
@@ -639,6 +667,14 @@ You are the **orchestrator**. For non-trivial tasks, delegate to specialized age
             ),
           );
         }
+        print("");
+        print(
+          color(
+            "Tip: Run 'claude-cognitive sync-session' before /clear",
+            "dim",
+          ),
+        );
+        print(color("     to save your session to Hindsight.", "dim"));
         print("");
       } finally {
         prompt.close();

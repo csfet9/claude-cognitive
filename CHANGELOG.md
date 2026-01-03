@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`sync-session` command** - Sync session to Hindsight before `/clear`
+  - `claude-cognitive sync-session` - Sync buffered session and clear buffer
+  - `claude-cognitive sync-session --keep-buffer` - Sync but preserve buffer
+  - Solves the issue where `/clear` doesn't trigger session end hooks
+  - Session interactions are buffered via PostToolUse hook
+
+- **`buffer-message` hook** - Captures tool interactions during session
+  - Automatically buffers to `.claude/.session-buffer.jsonl`
+  - Used by `sync-session` to save session before clearing
+
 - **`update` command** - Update configuration without reinstall
   - `claude-cognitive update` - Apply missing configurations
   - `claude-cognitive update --check` - Dry run to see what needs updating

@@ -15,4 +15,5 @@ export { registerConfigCommand } from "./config.js";
 export { registerUpdateBankCommand } from "./update-bank.js";
 export { registerUninstallCommand } from "./uninstall.js";
 export { registerSyncCommand } from "./sync.js";
+export { registerSyncSessionCommand } from "./sync-session.js";
 export { registerUpdateCommand } from "./update.js";
