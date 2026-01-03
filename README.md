@@ -115,24 +115,12 @@ claude-cognitive recall "query"         # Search memories
 claude-cognitive reflect "query"        # Reason about knowledge
 claude-cognitive semantic               # Show semantic memory
 claude-cognitive config                 # Show configuration
-claude-cognitive sync-session           # Sync session before /clear
 claude-cognitive update                 # Update global configuration
 claude-cognitive update --check         # Check what needs updating
 claude-cognitive uninstall              # Remove from project
 ```
 
-### Syncing Before /clear
-
-The `/clear` command in Claude Code clears the conversation but doesn't trigger session end hooks. To save your session to Hindsight before clearing:
-
-```bash
-claude-cognitive sync-session    # Sync and clear buffer
-/clear                           # Now safe to clear
-```
-
-Session interactions are automatically buffered during your conversation via the PostToolUse hook.
-
-> **Note:** If you upgraded from an earlier version, run `claude-cognitive update` to add the PostToolUse hook for session buffering.
+> **Tip:** Use `/exit` instead of `/clear` to ensure your session syncs to Hindsight.
 
 ---
 

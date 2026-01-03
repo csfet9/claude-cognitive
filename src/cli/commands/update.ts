@@ -194,35 +194,8 @@ export function registerUpdateCommand(cli: CAC): void {
         }
       }
 
-      // Check/update PostToolUse hook (buffer-message for sync-session)
-      const postToolUseHooks =
-        (hooks.PostToolUse as Array<{ matcher: string; hooks: unknown[] }>) ||
-        [];
-
-      if (!hasHookCommand(postToolUseHooks, "claude-cognitive buffer-message")) {
-        updatesNeeded++;
-        if (dryRun) {
-          printWarn(
-            "PostToolUse hook not configured (needed for sync-session)",
-          );
-        } else {
-          postToolUseHooks.push({
-            matcher: "",
-            hooks: [
-              {
-                type: "command",
-                command:
-                  'claude-cognitive buffer-message --role assistant --content "$TOOL_OUTPUT"',
-              },
-            ],
-          });
-          hooks.PostToolUse = postToolUseHooks;
-          printSuccess("Added PostToolUse hook (buffer-message)");
-          updatesApplied++;
-        }
-      } else {
-        printInfo("PostToolUse hook already configured");
-      }
+      // Note: PostToolUse buffer hook removed - was capturing agent activity
+      // Session sync now relies on Stop hook with $TRANSCRIPT_PATH
 
       // Write settings if any hooks were updated
       if (!dryRun && updatesApplied > 0) {

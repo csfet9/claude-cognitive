@@ -231,25 +231,8 @@ async function configureHooks(): Promise<string> {
 
   hooks.Stop = stopHooks;
 
-  // Get or create PostToolUse hooks array for session buffering
-  const postToolUseHooks =
-    (hooks.PostToolUse as Array<{ matcher: string; hooks: unknown[] }>) || [];
-
-  // Add buffer-message hook on PostToolUse (captures tool interactions)
-  if (!hasHookCommand(postToolUseHooks, "claude-cognitive buffer-message")) {
-    postToolUseHooks.push({
-      matcher: "",
-      hooks: [
-        {
-          type: "command",
-          command:
-            'claude-cognitive buffer-message --role assistant --content "$TOOL_OUTPUT"',
-        },
-      ],
-    });
-  }
-
-  hooks.PostToolUse = postToolUseHooks;
+  // Note: PostToolUse buffer hook removed - was capturing agent activity
+  // Session sync relies on Stop hook with $TRANSCRIPT_PATH
   settings.hooks = hooks;
 
   // Ensure .claude directory exists
@@ -670,12 +653,8 @@ You are the **orchestrator**. For non-trivial tasks, delegate to specialized age
         }
         print("");
         print(
-          color(
-            "Tip: Run 'claude-cognitive sync-session' before /clear",
-            "dim",
-          ),
+          color("Tip: Use /exit instead of /clear to sync session to Hindsight", "dim"),
         );
-        print(color("     to save your session to Hindsight.", "dim"));
         print("");
       } finally {
         prompt.close();
