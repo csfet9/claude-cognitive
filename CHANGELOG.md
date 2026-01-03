@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-01-03
+
+### Added
+
+- **`update` command** - Update configuration without reinstall
+  - `claude-cognitive update` - Apply missing configurations
+  - `claude-cognitive update --check` - Dry run to see what needs updating
+  - Automatically adds MCP server and session hooks if missing
+
+### Fixed
+
+- **MCP configuration path** - Now correctly uses `~/.claude/mcp.json` instead of `~/.claude.json`
+- **Automatic hooks setup** - `install` command now configures session hooks in `~/.claude/settings.json`
+- **Global configuration** - MCP server and hooks work for all projects with `.claudemindrc`
+
+### Changed
+
+- `install` command now automatically configures:
+  - MCP server in `~/.claude/mcp.json`
+  - Session hooks (`process-session`) in `~/.claude/settings.json`
+- `uninstall` command now properly removes:
+  - MCP server from `~/.claude/mcp.json`
+  - Session hooks from `~/.claude/settings.json`
+
 ## [0.1.0] - 2025-01-02
 
 ### Added
@@ -59,4 +83,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Unit, integration, and E2E tests
   - Performance benchmarks
 
+[0.2.0]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.2.0
 [0.1.0]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.1.0

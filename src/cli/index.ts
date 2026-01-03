@@ -18,12 +18,13 @@ import {
   registerConfigCommand,
   registerUpdateBankCommand,
   registerSyncCommand,
+  registerUpdateCommand,
 } from "./commands/index.js";
 import { registerInjectContextCommand } from "../hooks/inject-context.js";
 import { registerProcessSessionCommand } from "../hooks/process-session.js";
 
 // Get version from package.json
-const VERSION = "0.1.0";
+const VERSION = "0.2.0";
 
 /**
  * Create and configure the CLI.
@@ -44,6 +45,7 @@ function createCLI(): CAC {
   registerConfigCommand(cli);
   registerUpdateBankCommand(cli);
   registerSyncCommand(cli);
+  registerUpdateCommand(cli);
 
   // Register hook commands
   registerInjectContextCommand(cli);

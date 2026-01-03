@@ -119,28 +119,62 @@ export function registerUninstallCommand(cli: CAC): void {
           }
         }
 
-        // 2. Remove from global ~/.claude.json
-        const globalConfigPath = join(homedir(), ".claude.json");
-        if (await fileExists(globalConfigPath)) {
+        // 2. Remove from global ~/.claude/mcp.json
+        const globalMcpPath = join(homedir(), ".claude", "mcp.json");
+        if (await fileExists(globalMcpPath)) {
           try {
-            const content = await readFile(globalConfigPath, "utf-8");
+            const content = await readFile(globalMcpPath, "utf-8");
             const config = JSON.parse(content);
+
+            if (config.mcpServers?.["claude-cognitive"]) {
+              delete config.mcpServers["claude-cognitive"];
+
+              // If no more servers, remove mcpServers key
+              if (Object.keys(config.mcpServers).length === 0) {
+                delete config.mcpServers;
+              }
+
+              await writeFile(
+                globalMcpPath,
+                JSON.stringify(config, null, 2) + "\n",
+              );
+              printSuccess("Removed from ~/.claude/mcp.json");
+            }
+          } catch {
+            printWarn("Could not update ~/.claude/mcp.json");
+          }
+        }
+
+        // 2b. Remove hooks from ~/.claude/settings.json
+        const settingsPath = join(homedir(), ".claude", "settings.json");
+        if (await fileExists(settingsPath)) {
+          try {
+            const content = await readFile(settingsPath, "utf-8");
+            const settings = JSON.parse(content);
             let modified = false;
 
-            // Check projects section
-            if (
-              config.projects?.[projectPath]?.mcpServers?.["claude-cognitive"]
-            ) {
-              delete config.projects[projectPath].mcpServers[
-                "claude-cognitive"
-              ];
+            // Remove claude-cognitive from Stop hooks
+            if (settings.hooks?.Stop) {
+              const stopHooks = settings.hooks.Stop as Array<{
+                matcher: string;
+                hooks: Array<{ type: string; command?: string }>;
+              }>;
 
-              // Clean up empty objects
-              if (
-                Object.keys(config.projects[projectPath].mcpServers).length ===
-                0
-              ) {
-                delete config.projects[projectPath].mcpServers;
+              settings.hooks.Stop = stopHooks.filter((entry) => {
+                const hasCognitive = entry.hooks?.some((h) =>
+                  h.command?.includes("claude-cognitive"),
+                );
+                return !hasCognitive;
+              });
+
+              // Clean up empty Stop array
+              if (settings.hooks.Stop.length === 0) {
+                delete settings.hooks.Stop;
+              }
+
+              // Clean up empty hooks object
+              if (Object.keys(settings.hooks).length === 0) {
+                delete settings.hooks;
               }
 
               modified = true;
@@ -148,13 +182,13 @@ export function registerUninstallCommand(cli: CAC): void {
 
             if (modified) {
               await writeFile(
-                globalConfigPath,
-                JSON.stringify(config, null, 2) + "\n",
+                settingsPath,
+                JSON.stringify(settings, null, 2) + "\n",
               );
-              printSuccess("Removed from ~/.claude.json");
+              printSuccess("Removed hooks from ~/.claude/settings.json");
             }
           } catch {
-            printWarn("Could not update ~/.claude.json");
+            printWarn("Could not update ~/.claude/settings.json");
           }
         }
 

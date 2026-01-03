@@ -21,6 +21,7 @@ claude-cognitive install
 # Or manual setup
 claude-cognitive init      # Create config
 claude-cognitive learn     # Bootstrap memory
+claude-cognitive learn --depth full # Full project learn
 ```
 
 The interactive installer will:
@@ -105,6 +106,7 @@ Claude: "What patterns have I noticed about error handling?"
 
 ```bash
 claude-cognitive init                   # Initialize for project
+claude-cognitive install                # Interactive setup wizard
 claude-cognitive serve                  # Start MCP server
 claude-cognitive status                 # Show connection status
 claude-cognitive learn                  # Bootstrap from codebase
@@ -113,6 +115,9 @@ claude-cognitive recall "query"         # Search memories
 claude-cognitive reflect "query"        # Reason about knowledge
 claude-cognitive semantic               # Show semantic memory
 claude-cognitive config                 # Show configuration
+claude-cognitive update                 # Update global configuration
+claude-cognitive update --check         # Check what needs updating
+claude-cognitive uninstall              # Remove from project
 ```
 
 ---

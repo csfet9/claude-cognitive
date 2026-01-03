@@ -157,14 +157,77 @@ async function fileExists(path: string): Promise<boolean> {
 
 /**
  * Get the Claude Code MCP config path.
- * - Global: ~/.claude.json
+ * - Global: ~/.claude/mcp.json
  * - Project: .mcp.json in project root
  */
 function getMcpConfigPath(global: boolean, projectPath: string): string {
   if (global) {
-    return join(homedir(), ".claude.json");
+    return join(homedir(), ".claude", "mcp.json");
   }
   return join(projectPath, ".mcp.json");
+}
+
+/**
+ * Get the Claude Code settings path.
+ */
+function getSettingsPath(): string {
+  return join(homedir(), ".claude", "settings.json");
+}
+
+/**
+ * Read existing settings or return empty object.
+ */
+async function readSettings(path: string): Promise<Record<string, unknown>> {
+  try {
+    const content = await readFile(path, "utf-8");
+    return JSON.parse(content);
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Configure hooks in Claude Code settings.
+ */
+async function configureHooks(): Promise<string> {
+  const settingsPath = getSettingsPath();
+  const settings = await readSettings(settingsPath);
+
+  // Get or create hooks object
+  const hooks = (settings.hooks as Record<string, unknown[]>) || {};
+
+  // Get or create Stop hooks array
+  const stopHooks =
+    (hooks.Stop as Array<{ matcher: string; hooks: unknown[] }>) || [];
+
+  // Check if claude-cognitive hook already exists
+  const hasHook = stopHooks.some((entry) =>
+    entry.hooks?.some((h: unknown) => {
+      const hook = h as { command?: string };
+      return hook.command?.includes("claude-cognitive");
+    }),
+  );
+
+  if (!hasHook) {
+    stopHooks.push({
+      matcher: "",
+      hooks: [
+        {
+          type: "command",
+          command: "claude-cognitive process-session",
+        },
+      ],
+    });
+  }
+
+  hooks.Stop = stopHooks;
+  settings.hooks = hooks;
+
+  // Ensure .claude directory exists
+  await mkdir(join(homedir(), ".claude"), { recursive: true });
+
+  await writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n");
+  return settingsPath;
 }
 
 /**
@@ -401,62 +464,42 @@ export function registerInstallCommand(cli: CAC): void {
             answers.projectPath,
           );
 
+          // Ensure ~/.claude directory exists for global install
+          if (answers.globalInstall) {
+            await mkdir(join(homedir(), ".claude"), { recursive: true });
+          }
+
           const existing = await readMcpConfig(mcpConfigPath);
           const serveCmd = await getServeCommand();
 
-          if (answers.globalInstall) {
-            // Global config: ~/.claude.json with projects key
-            const projects =
-              (existing.projects as Record<string, unknown>) || {};
-            const projectConfig =
-              (projects[answers.projectPath] as Record<string, unknown>) || {};
-            const mcpServers =
-              (projectConfig.mcpServers as Record<string, unknown>) || {};
+          // MCP config structure is the same for both global and project
+          const mcpServers =
+            (existing.mcpServers as Record<string, unknown>) || {};
 
-            mcpServers["claude-cognitive"] = {
-              command: serveCmd.command,
-              args: [...serveCmd.args, "--project", answers.projectPath],
-            };
+          mcpServers["claude-cognitive"] = {
+            command: serveCmd.command,
+            args: [...serveCmd.args],
+          };
 
-            projects[answers.projectPath] = {
-              ...projectConfig,
-              mcpServers,
-            };
+          const newConfig = {
+            ...existing,
+            mcpServers,
+          };
 
-            const newConfig = {
-              ...existing,
-              projects,
-            };
-
-            await writeFile(
-              mcpConfigPath,
-              JSON.stringify(newConfig, null, 2) + "\n",
-            );
-          } else {
-            // Project config: .mcp.json in project root
-            const mcpServers =
-              (existing.mcpServers as Record<string, unknown>) || {};
-
-            mcpServers["claude-cognitive"] = {
-              command: serveCmd.command,
-              args: serveCmd.args,
-            };
-
-            const newConfig = {
-              ...existing,
-              mcpServers,
-            };
-
-            await writeFile(
-              mcpConfigPath,
-              JSON.stringify(newConfig, null, 2) + "\n",
-            );
-          }
+          await writeFile(
+            mcpConfigPath,
+            JSON.stringify(newConfig, null, 2) + "\n",
+          );
 
           printSuccess(
-            `Configured MCP server: ${answers.globalInstall ? "global (~/.claude.json)" : "project (.mcp.json)"}`,
+            `Configured MCP server: ${answers.globalInstall ? "global (~/.claude/mcp.json)" : "project (.mcp.json)"}`,
           );
           printInfo(mcpConfigPath);
+
+          // Configure hooks for session-to-session memory
+          const hooksPath = await configureHooks();
+          printSuccess("Configured session hooks for memory persistence");
+          printInfo(hooksPath);
         }
 
         // Inject memory instructions into CLAUDE.md
