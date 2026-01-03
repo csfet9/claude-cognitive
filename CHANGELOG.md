@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Extracts only meaningful user/assistant messages
   - Filters out session metadata (session IDs, paths, permissions)
   - Skips system reminders and empty messages
+  - Filters CLI commands (`/exit`, `/clear`, `/help`, `/compact`, `/config`) to reduce API costs
   - Results in higher quality memories about actual project work
 
 ### Changed
