@@ -119,20 +119,28 @@ export function registerUpdateCommand(cli: CAC): void {
       // 3. Check/update hooks configuration
       const settings = await readJsonFile(settingsPath);
       const hooks = (settings.hooks as Record<string, unknown[]>) || {};
+
+      // Helper to check if a hook command exists
+      const hasHookCommand = (
+        hooksArray: Array<{ matcher: string; hooks: unknown[] }>,
+        commandSubstring: string,
+      ): boolean => {
+        return hooksArray.some((entry) =>
+          entry.hooks?.some((h: unknown) => {
+            const hook = h as { command?: string };
+            return hook.command?.includes(commandSubstring);
+          }),
+        );
+      };
+
+      // Check/update Stop hook (process-session)
       const stopHooks =
         (hooks.Stop as Array<{ matcher: string; hooks: unknown[] }>) || [];
 
-      const hasHook = stopHooks.some((entry) =>
-        entry.hooks?.some((h: unknown) => {
-          const hook = h as { command?: string };
-          return hook.command?.includes("claude-cognitive");
-        }),
-      );
-
-      if (!hasHook) {
+      if (!hasHookCommand(stopHooks, "claude-cognitive process-session")) {
         updatesNeeded++;
         if (dryRun) {
-          printWarn("Session hooks not configured in ~/.claude/settings.json");
+          printWarn("Stop hook not configured in ~/.claude/settings.json");
         } else {
           stopHooks.push({
             matcher: "",
@@ -144,16 +152,50 @@ export function registerUpdateCommand(cli: CAC): void {
             ],
           });
           hooks.Stop = stopHooks;
-          settings.hooks = hooks;
-          await writeFile(
-            settingsPath,
-            JSON.stringify(settings, null, 2) + "\n",
-          );
-          printSuccess("Added session hooks to ~/.claude/settings.json");
+          printSuccess("Added Stop hook (process-session)");
           updatesApplied++;
         }
       } else {
-        printInfo("Session hooks already configured");
+        printInfo("Stop hook already configured");
+      }
+
+      // Check/update PostToolUse hook (buffer-message for sync-session)
+      const postToolUseHooks =
+        (hooks.PostToolUse as Array<{ matcher: string; hooks: unknown[] }>) ||
+        [];
+
+      if (!hasHookCommand(postToolUseHooks, "claude-cognitive buffer-message")) {
+        updatesNeeded++;
+        if (dryRun) {
+          printWarn(
+            "PostToolUse hook not configured (needed for sync-session)",
+          );
+        } else {
+          postToolUseHooks.push({
+            matcher: "",
+            hooks: [
+              {
+                type: "command",
+                command:
+                  'claude-cognitive buffer-message --role assistant --content "$TOOL_OUTPUT"',
+              },
+            ],
+          });
+          hooks.PostToolUse = postToolUseHooks;
+          printSuccess("Added PostToolUse hook (buffer-message)");
+          updatesApplied++;
+        }
+      } else {
+        printInfo("PostToolUse hook already configured");
+      }
+
+      // Write settings if any hooks were updated
+      if (!dryRun && updatesApplied > 0) {
+        settings.hooks = hooks;
+        await writeFile(
+          settingsPath,
+          JSON.stringify(settings, null, 2) + "\n",
+        );
       }
 
       // Summary
