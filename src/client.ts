@@ -30,8 +30,8 @@ const DEFAULT_TIMEOUTS: TimeoutConfig = {
   default: 10_000, // 10 seconds
   health: 3_000, // 3 seconds - quick check
   recall: 15_000, // 15 seconds - 4-way search
-  reflect: 30_000, // 30 seconds - involves LLM
-  retain: 10_000, // 10 seconds - write operation
+  reflect: 60_000, // 60 seconds - involves LLM (increased for complex sessions)
+  retain: 30_000, // 30 seconds - write operation (increased for large transcripts)
 };
 
 /**
@@ -249,6 +249,7 @@ export class HindsightClient {
     bankId: string,
     content: string,
     context?: string,
+    options?: { async?: boolean },
   ): Promise<number> {
     interface RetainApiResponse {
       success: boolean;
@@ -256,15 +257,17 @@ export class HindsightClient {
       items_count: number;
       async: boolean;
     }
+    // Use async mode for content > 2KB to avoid timeout from LLM extraction
+    const useAsync = options?.async ?? content.length > 2000;
     const response = await this.request<RetainApiResponse>(
       "POST",
       `/v1/default/banks/${encodeURIComponent(bankId)}/memories`,
       {
         body: {
           items: [{ content, context }],
-          async: false,
+          async: useAsync,
         },
-        timeout: this.timeouts.retain,
+        timeout: useAsync ? 5000 : this.timeouts.retain, // Quick return for async
       },
     );
     return response.items_count;
