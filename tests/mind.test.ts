@@ -248,7 +248,7 @@ describe("Mind", () => {
   });
 
   describe("onSessionStart()", () => {
-    it("should return empty string in degraded mode", async () => {
+    it("should return agent orchestration context in degraded mode", async () => {
       mockHealth.mockResolvedValue({
         healthy: false,
         error: "Connection refused",
@@ -258,7 +258,10 @@ describe("Mind", () => {
       await mind.init();
 
       const result = await mind.onSessionStart();
-      expect(result).toBe("");
+      // In degraded mode, still returns agent orchestration instructions
+      // (just no memories from Hindsight)
+      expect(result).toContain("Agent Orchestration");
+      expect(result).toContain("code-explorer");
     });
   });
 
