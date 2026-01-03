@@ -1,6 +1,6 @@
 # claude-cognitive
 
-Persistent memory for Claude Code, powered by [Hindsight](https://github.com/vectorize-io/hindsight).
+Human-inspired memory system for Claude, powered by [Hindsight](https://github.com/vectorize-io/hindsight).
 
 **LLM thinks. Hindsight remembers. Together = mind.**
 
