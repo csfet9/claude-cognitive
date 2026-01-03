@@ -28,18 +28,20 @@ async function createStopHookScript(): Promise<string> {
 
   const scriptContent = `#!/bin/bash
 # Claude Code Stop hook wrapper for claude-cognitive
-# Reads JSON from stdin, syncs to Hindsight, then cleans up
+# Reads JSON from stdin, syncs to Hindsight, then cleans up only this session's data
 
 # Read stdin
 INPUT=$(cat)
 
-# Extract transcript_path and cwd using jq (or fallback to grep/sed)
+# Extract fields using jq (or fallback to grep/sed)
 if command -v jq &> /dev/null; then
   TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // empty')
   PROJECT_DIR=$(echo "$INPUT" | jq -r '.cwd // empty')
+  SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
 else
   TRANSCRIPT_PATH=$(echo "$INPUT" | grep -o '"transcript_path":"[^"]*"' | cut -d'"' -f4)
   PROJECT_DIR=$(echo "$INPUT" | grep -o '"cwd":"[^"]*"' | cut -d'"' -f4)
+  SESSION_ID=$(echo "$INPUT" | grep -o '"session_id":"[^"]*"' | cut -d'"' -f4)
 fi
 
 # Only process if we have a transcript path
@@ -47,11 +49,31 @@ if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
   # Sync to Hindsight
   claude-cognitive process-session --transcript "$TRANSCRIPT_PATH"
 
-  # Clean up session buffer after successful sync
-  if [ -n "$PROJECT_DIR" ]; then
+  # Clean up ONLY this session's entries from buffer (not other ongoing sessions)
+  if [ -n "$PROJECT_DIR" ] && [ -n "$SESSION_ID" ]; then
     BUFFER_FILE="$PROJECT_DIR/.claude/.session-buffer.jsonl"
     if [ -f "$BUFFER_FILE" ]; then
-      rm -f "$BUFFER_FILE"
+      if command -v jq &> /dev/null; then
+        # Filter out entries matching this session_id
+        TEMP_FILE=$(mktemp)
+        jq -c "select(.session_id != \\"$SESSION_ID\\")" "$BUFFER_FILE" > "$TEMP_FILE" 2>/dev/null || true
+        if [ -s "$TEMP_FILE" ]; then
+          # Buffer has other sessions' data, keep only those
+          mv "$TEMP_FILE" "$BUFFER_FILE"
+        else
+          # Buffer is empty after filtering, delete it
+          rm -f "$BUFFER_FILE" "$TEMP_FILE"
+        fi
+      else
+        # Without jq, use grep to filter (less reliable but works)
+        TEMP_FILE=$(mktemp)
+        grep -v "\\"session_id\\":\\"$SESSION_ID\\"" "$BUFFER_FILE" > "$TEMP_FILE" 2>/dev/null || true
+        if [ -s "$TEMP_FILE" ]; then
+          mv "$TEMP_FILE" "$BUFFER_FILE"
+        else
+          rm -f "$BUFFER_FILE" "$TEMP_FILE"
+        fi
+      fi
     fi
   fi
 fi
