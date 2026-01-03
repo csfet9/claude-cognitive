@@ -310,6 +310,12 @@ export class Mind extends TypedEventEmitter {
 
     const contextParts: string[] = [];
 
+    // Add agent orchestration instructions
+    const agentInstructions = this.formatAgentInstructions();
+    if (agentInstructions.trim().length > 0) {
+      contextParts.push(agentInstructions);
+    }
+
     // Load semantic memory context
     if (this.semantic?.isLoaded()) {
       const semanticContext = this.semantic.toContext();
@@ -769,6 +775,83 @@ ${template.outputFormat}
         mem.text.length > 100 ? `${mem.text.slice(0, 100)}...` : mem.text;
       lines.push(`- ${date}: ${text}`);
     }
+    return lines.join("\n");
+  }
+
+  /**
+   * Format agent orchestration instructions.
+   * @internal
+   */
+  formatAgentInstructions(): string {
+    const allAgents = this.getAgentTemplates();
+    if (allAgents.length === 0) return "";
+
+    const custom = allAgents.filter(
+      (a) =>
+        !["code-explorer", "code-architect", "code-reviewer"].includes(a.name),
+    );
+
+    const lines: string[] = [];
+    lines.push("## Agent Orchestration");
+    lines.push("");
+    lines.push(
+      "You are the **orchestrator**. Delegate complex tasks to specialized agents using the Task tool.",
+    );
+    lines.push("");
+
+    lines.push("### Built-in Agents");
+    lines.push("");
+    lines.push("| Agent | When to Use |");
+    lines.push("|-------|-------------|");
+    lines.push(
+      "| `code-explorer` | Before implementing features - explore codebase patterns, trace execution paths |",
+    );
+    lines.push(
+      "| `code-architect` | Before complex changes - design solutions, create implementation plans |",
+    );
+    lines.push(
+      "| `code-reviewer` | After writing code - review for bugs, security issues, adherence to patterns |",
+    );
+    lines.push("");
+
+    if (custom.length > 0) {
+      lines.push("### Project Agents");
+      lines.push("");
+      for (const agent of custom) {
+        const firstLine = agent.mission.split("\n")[0] ?? "";
+        const mission =
+          firstLine.slice(0, 80) + (firstLine.length > 80 ? "..." : "");
+        lines.push(`- **${agent.name}**: ${mission}`);
+      }
+      lines.push("");
+    }
+
+    lines.push("### Orchestration Workflow");
+    lines.push("");
+    lines.push("For non-trivial features, follow this workflow:");
+    lines.push("");
+    lines.push(
+      "1. **Explore**: Launch `code-explorer` agents to understand existing patterns",
+    );
+    lines.push("2. **Clarify**: Ask user questions about unclear requirements");
+    lines.push(
+      "3. **Design**: Launch `code-architect` agents to create implementation plans",
+    );
+    lines.push(
+      "4. **Implement**: Write code following the chosen architecture",
+    );
+    lines.push(
+      "5. **Review**: Launch `code-reviewer` agents to check your work",
+    );
+    lines.push("");
+    lines.push(
+      "**Parallelization**: Launch multiple agents with different focuses simultaneously.",
+    );
+    lines.push(
+      "**Memory**: Only YOU (orchestrator) access memory - agents receive context from you.",
+    );
+    lines.push("");
+
     return lines.join("\n");
   }
 }

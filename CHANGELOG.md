@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `claude-cognitive update --check` - Dry run to see what needs updating
   - Automatically adds MCP server and session hooks if missing
 
+- **Agent orchestration instructions** - Session context now includes:
+  - Built-in agents: `code-explorer`, `code-architect`, `code-reviewer`
+  - Project agents from `.claude/agents/`
+  - Orchestration workflow (explore → clarify → design → implement → review)
+  - Instructions for parallel agent execution
+
 ### Fixed
 
 - **MCP configuration path** - Now correctly uses `~/.claude/mcp.json` instead of `~/.claude.json`
@@ -28,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `uninstall` command now properly removes:
   - MCP server from `~/.claude/mcp.json`
   - Session hooks from `~/.claude/settings.json`
+- CLAUDE.md injection now includes agent orchestration instructions
 
 ## [0.1.0] - 2025-01-02
 

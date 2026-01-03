@@ -509,25 +509,40 @@ export function registerInstallCommand(cli: CAC): void {
 
           // Check if memory section already exists
           if (
-            !claudeMdContent.includes("## 🧠 MEMORY SYSTEM") &&
-            !claudeMdContent.includes("memory_recall")
+            !claudeMdContent.includes("## 🧠 MEMORY") &&
+            !claudeMdContent.includes("memory_recall") &&
+            !claudeMdContent.includes("Agent Orchestration")
           ) {
             const memorySection = `
-## 🧠 MEMORY SYSTEM
+## 🧠 MEMORY & AGENT SYSTEM
 
-This project uses **claude-cognitive** for persistent memory across sessions.
+This project uses **claude-cognitive** for persistent memory and agent orchestration.
 
-### Always Use Memory Tools
-- **Before starting work:** Use \`memory_recall\` to get context about the area you're working on
-- **When asked about the project:** Use \`memory_recall\` to retrieve what you know
-- **When forming opinions:** Use \`memory_reflect\` to reason through your knowledge
+### Memory Tools
+- **Before starting work:** Use \`memory_recall\` to get context about the area
+- **When asked about the project:** Use \`memory_recall\` to retrieve knowledge
+- **When forming opinions:** Use \`memory_reflect\` to reason through knowledge
 
-### Examples
-\`\`\`
-memory_recall("authentication")     # Before working on auth
-memory_recall("database schema")    # Before working on DB
-memory_reflect("What patterns does this codebase follow?")
-\`\`\`
+### Agent Orchestration
+You are the **orchestrator**. For non-trivial tasks, delegate to specialized agents:
+
+| Agent | When to Use |
+|-------|-------------|
+| \`code-explorer\` | Before implementing - explore codebase patterns, trace execution paths |
+| \`code-architect\` | Before complex changes - design solutions, create implementation plans |
+| \`code-reviewer\` | After writing code - review for bugs, security issues, pattern adherence |
+
+**Workflow for features:**
+1. **Explore** → Launch \`code-explorer\` agents to understand existing patterns
+2. **Clarify** → Ask user about unclear requirements
+3. **Design** → Launch \`code-architect\` agents for implementation plans
+4. **Implement** → Write code following the chosen architecture
+5. **Review** → Launch \`code-reviewer\` agents to check your work
+
+**Tips:**
+- Launch multiple agents in parallel with different focuses
+- Only YOU (orchestrator) access memory - pass relevant context to agents
+- Check \`.claude/agents/\` for project-specific agents
 
 ---
 `;

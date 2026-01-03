@@ -210,9 +210,9 @@ export function registerUninstallCommand(cli: CAC): void {
             try {
               let content = await readFile(claudeMdPath, "utf-8");
 
-              // Remove the memory section
+              // Remove the memory section (handles both old and new titles)
               const memoryRegex =
-                /\n?## 🧠 MEMORY SYSTEM[\s\S]*?(?=\n## |\n---\n|$)/;
+                /\n?## 🧠 MEMORY[^\n]*[\s\S]*?(?=\n## |\n---\n|$)/;
               if (memoryRegex.test(content)) {
                 content = content.replace(memoryRegex, "");
                 // Clean up double newlines
