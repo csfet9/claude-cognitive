@@ -147,7 +147,8 @@ export function registerUpdateCommand(cli: CAC): void {
             hooks: [
               {
                 type: "command",
-                command: "claude-cognitive process-session",
+                command:
+                  'claude-cognitive process-session --transcript "$TRANSCRIPT_PATH"',
               },
             ],
           });
@@ -156,7 +157,41 @@ export function registerUpdateCommand(cli: CAC): void {
           updatesApplied++;
         }
       } else {
-        printInfo("Stop hook already configured");
+        // Check if existing hook has transcript path
+        const needsUpdate = stopHooks.some((entry) =>
+          entry.hooks?.some((h: unknown) => {
+            const hook = h as { command?: string };
+            return (
+              hook.command?.includes("claude-cognitive process-session") &&
+              !hook.command?.includes("TRANSCRIPT")
+            );
+          }),
+        );
+        if (needsUpdate) {
+          updatesNeeded++;
+          if (dryRun) {
+            printWarn("Stop hook missing transcript path");
+          } else {
+            // Update the hook command
+            for (const entry of stopHooks) {
+              for (const h of entry.hooks || []) {
+                const hook = h as { command?: string };
+                if (
+                  hook.command?.includes("claude-cognitive process-session") &&
+                  !hook.command?.includes("TRANSCRIPT")
+                ) {
+                  hook.command =
+                    'claude-cognitive process-session --transcript "$TRANSCRIPT_PATH"';
+                }
+              }
+            }
+            hooks.Stop = stopHooks;
+            printSuccess("Updated Stop hook with transcript path");
+            updatesApplied++;
+          }
+        } else {
+          printInfo("Stop hook already configured");
+        }
       }
 
       // Check/update PostToolUse hook (buffer-message for sync-session)

@@ -222,7 +222,8 @@ async function configureHooks(): Promise<string> {
       hooks: [
         {
           type: "command",
-          command: "claude-cognitive process-session",
+          command:
+            'claude-cognitive process-session --transcript "$TRANSCRIPT_PATH"',
         },
       ],
     });
