@@ -20,8 +20,14 @@ interface SemanticOptions {
 export function registerSemanticCommand(cli: CAC): void {
   cli
     .command("semantic [section]", "Show or manage semantic memory")
-    .option("--project <path>", "Project directory (default: current directory)")
-    .option("--set <content>", "Set section content (requires section argument)")
+    .option(
+      "--project <path>",
+      "Project directory (default: current directory)",
+    )
+    .option(
+      "--set <content>",
+      "Set section content (requires section argument)",
+    )
     .option("--json", "Output as JSON")
     .option("--quiet", "Suppress output")
     .action(async (section: string | undefined, options: SemanticOptions) => {

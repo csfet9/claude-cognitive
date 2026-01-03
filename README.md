@@ -24,6 +24,7 @@ claude-cognitive learn     # Bootstrap memory
 ```
 
 The interactive installer will:
+
 - Configure memory bank and disposition
 - Set up MCP server for Claude Code
 - Inject memory instructions into CLAUDE.md
@@ -45,21 +46,21 @@ claude-cognitive uninstall --delete-bank
 
 ### Core Operations
 
-| Operation | What It Does |
-|-----------|--------------|
-| **retain** | Store memories with automatic extraction (what, when, where, who, why) |
-| **recall** | 4-way parallel search: semantic + keyword + graph + temporal |
-| **reflect** | Reason through the bank's disposition, form opinions |
-| **learn** | Bootstrap memory from existing codebase (solves cold start) |
+| Operation   | What It Does                                                           |
+| ----------- | ---------------------------------------------------------------------- |
+| **retain**  | Store memories with automatic extraction (what, when, where, who, why) |
+| **recall**  | 4-way parallel search: semantic + keyword + graph + temporal           |
+| **reflect** | Reason through the bank's disposition, form opinions                   |
+| **learn**   | Bootstrap memory from existing codebase (solves cold start)            |
 
 ### Memory Types
 
-| Type | Purpose | Example |
-|------|---------|---------|
-| `world` | Facts about the codebase | "Auth uses Supabase magic links" |
-| `experience` | What Claude did | "I fixed the redirect by moving AuthProvider" |
-| `opinion` | Beliefs with confidence | "This codebase prefers explicit patterns" (0.85) |
-| `observation` | Cross-session insights | "Auth changes require navigation updates" |
+| Type          | Purpose                  | Example                                          |
+| ------------- | ------------------------ | ------------------------------------------------ |
+| `world`       | Facts about the codebase | "Auth uses Supabase magic links"                 |
+| `experience`  | What Claude did          | "I fixed the redirect by moving AuthProvider"    |
+| `opinion`     | Beliefs with confidence  | "This codebase prefers explicit patterns" (0.85) |
+| `observation` | Cross-session insights   | "Auth changes require navigation updates"        |
 
 ---
 
@@ -69,10 +70,10 @@ claude-cognitive uninstall --delete-bank
 
 ### Two Memory Layers
 
-| Layer | Storage | Purpose |
-|-------|---------|---------|
+| Layer         | Storage               | Purpose                                                |
+| ------------- | --------------------- | ------------------------------------------------------ |
 | **Hindsight** | PostgreSQL + pgvector | All memories, entity graphs, 4-way retrieval, opinions |
-| **Semantic** | `.claude/memory.md` | Human-curated knowledge, promoted observations |
+| **Semantic**  | `.claude/memory.md`   | Human-curated knowledge, promoted observations         |
 
 ---
 
@@ -143,11 +144,11 @@ claude-cognitive config                 # Show configuration
 
 Each memory bank has personality traits that shape how `reflect()` reasons:
 
-| Trait | Low (1) | High (5) |
-|-------|---------|----------|
-| skepticism | Trusting | Questions claims |
-| literalism | Flexible interpretation | Precise, literal |
-| empathy | Fact-focused | Considers emotional context |
+| Trait      | Low (1)                 | High (5)                    |
+| ---------- | ----------------------- | --------------------------- |
+| skepticism | Trusting                | Questions claims            |
+| literalism | Flexible interpretation | Precise, literal            |
+| empathy    | Fact-focused            | Considers emotional context |
 
 ---
 
@@ -157,19 +158,24 @@ The `.claude/memory.md` file contains human-curated project knowledge:
 
 ```markdown
 ## Tech Stack
+
 - React Native with Expo SDK 51
 - Supabase for auth and database
 - NativeWind for styling
 
 ## Key Decisions
+
 - Magic link auth for better mobile UX
 - Zustand for state management
 
 ## Critical Paths
+
 - Auth: src/lib/supabase.ts → src/providers/AuthProvider.tsx
 
 ## Observations
+
 <!-- Promoted from Hindsight when confidence > 0.9 -->
+
 - Auth changes often require navigation updates
 ```
 
@@ -181,19 +187,19 @@ This file is always loaded at session start and takes precedence over Hindsight 
 
 When Hindsight is unavailable, claude-cognitive continues working with semantic memory only:
 
-| Operation | With Hindsight | Without Hindsight |
-|-----------|----------------|-------------------|
-| Session start | Full context | Semantic only |
-| recall | 4-way search | Empty results |
-| reflect | LLM reasoning | Error (requires Hindsight) |
-| retain | Stored | Skipped |
+| Operation     | With Hindsight | Without Hindsight          |
+| ------------- | -------------- | -------------------------- |
+| Session start | Full context   | Semantic only              |
+| recall        | 4-way search   | Empty results              |
+| reflect       | LLM reasoning  | Error (requires Hindsight) |
+| retain        | Stored         | Skipped                    |
 
 ---
 
 ## API Usage
 
 ```typescript
-import { Mind } from 'claude-cognitive';
+import { Mind } from "claude-cognitive";
 
 const mind = new Mind({
   projectPath: process.cwd(),
@@ -206,16 +212,16 @@ await mind.init();
 const context = await mind.onSessionStart();
 
 // Recall relevant memories
-const memories = await mind.recall('authentication flow');
+const memories = await mind.recall("authentication flow");
 
 // Reason about knowledge
-const reflection = await mind.reflect('What patterns exist?');
+const reflection = await mind.reflect("What patterns exist?");
 
 // Store new memory
-await mind.retain('Fixed auth by moving Provider to root');
+await mind.retain("Fixed auth by moving Provider to root");
 
 // Bootstrap from codebase
-const result = await mind.learn({ depth: 'full' });
+const result = await mind.learn({ depth: "full" });
 ```
 
 ---

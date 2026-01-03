@@ -214,7 +214,8 @@ function analyzeCommitPatterns(
  */
 function detectConvention(messages: string[]): string | undefined {
   // Conventional commits pattern: type(scope): message
-  const conventionalPattern = /^(feat|fix|docs|style|refactor|test|chore)(\([^)]+\))?:/;
+  const conventionalPattern =
+    /^(feat|fix|docs|style|refactor|test|chore)(\([^)]+\))?:/;
   const conventionalCount = messages.filter((m) =>
     conventionalPattern.test(m),
   ).length;
@@ -238,9 +239,7 @@ function detectConvention(messages: string[]): string | undefined {
  * Find significant commits (refactors, major changes).
  * @internal
  */
-function findSignificantCommits(
-  commits: CommitInfo[],
-): SignificantCommit[] {
+function findSignificantCommits(commits: CommitInfo[]): SignificantCommit[] {
   return commits
     .filter((c) => {
       const msgLower = c.message.toLowerCase();
@@ -264,7 +263,9 @@ function findSignificantCommits(
 export function getGitSummary(analysis: GitAnalysis): string {
   const parts: string[] = [];
 
-  parts.push(`${analysis.totalCommits} commits by ${analysis.contributors.length} contributors`);
+  parts.push(
+    `${analysis.totalCommits} commits by ${analysis.contributors.length} contributors`,
+  );
 
   if (analysis.commitPatterns.messageConvention) {
     parts.push(`Convention: ${analysis.commitPatterns.messageConvention}`);

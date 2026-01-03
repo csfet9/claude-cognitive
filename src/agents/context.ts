@@ -5,7 +5,11 @@
 
 import type { HindsightClient } from "../client.js";
 import type { Memory, RecallOptions } from "../types.js";
-import type { AgentContext, AgentTemplate, GetAgentContextOptions } from "./types.js";
+import type {
+  AgentContext,
+  AgentTemplate,
+  GetAgentContextOptions,
+} from "./types.js";
 
 /**
  * Prepare context for agent delegation.

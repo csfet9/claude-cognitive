@@ -462,7 +462,10 @@ describe("HindsightClient", () => {
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          body: JSON.stringify({ query: "query", context: "Additional context" }),
+          body: JSON.stringify({
+            query: "query",
+            context: "Additional context",
+          }),
         }),
       );
     });

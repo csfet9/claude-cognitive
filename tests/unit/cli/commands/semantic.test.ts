@@ -59,7 +59,9 @@ describe("semantic command", () => {
       const cli = cac("test");
       registerSemanticCommand(cli);
 
-      const semanticCmd = cli.commands.find((c) => c.name.startsWith("semantic"));
+      const semanticCmd = cli.commands.find((c) =>
+        c.name.startsWith("semantic"),
+      );
       const projectOpt = semanticCmd?.options.find((o) =>
         o.names.includes("project"),
       );
@@ -71,7 +73,9 @@ describe("semantic command", () => {
       const cli = cac("test");
       registerSemanticCommand(cli);
 
-      const semanticCmd = cli.commands.find((c) => c.name.startsWith("semantic"));
+      const semanticCmd = cli.commands.find((c) =>
+        c.name.startsWith("semantic"),
+      );
       const setOpt = semanticCmd?.options.find((o) => o.names.includes("set"));
 
       expect(setOpt).toBeDefined();
@@ -81,7 +85,9 @@ describe("semantic command", () => {
       const cli = cac("test");
       registerSemanticCommand(cli);
 
-      const semanticCmd = cli.commands.find((c) => c.name.startsWith("semantic"));
+      const semanticCmd = cli.commands.find((c) =>
+        c.name.startsWith("semantic"),
+      );
       const jsonOpt = semanticCmd?.options.find((o) =>
         o.names.includes("json"),
       );
@@ -93,7 +99,9 @@ describe("semantic command", () => {
       const cli = cac("test");
       registerSemanticCommand(cli);
 
-      const semanticCmd = cli.commands.find((c) => c.name.startsWith("semantic"));
+      const semanticCmd = cli.commands.find((c) =>
+        c.name.startsWith("semantic"),
+      );
       const quietOpt = semanticCmd?.options.find((o) =>
         o.names.includes("quiet"),
       );
@@ -105,7 +113,9 @@ describe("semantic command", () => {
       const cli = cac("test");
       registerSemanticCommand(cli);
 
-      const semanticCmd = cli.commands.find((c) => c.name.startsWith("semantic"));
+      const semanticCmd = cli.commands.find((c) =>
+        c.name.startsWith("semantic"),
+      );
 
       expect(semanticCmd?.description).toContain("semantic");
     });

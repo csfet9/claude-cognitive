@@ -48,7 +48,10 @@ async function fileExists(path: string): Promise<boolean> {
 export function registerUninstallCommand(cli: CAC): void {
   cli
     .command("uninstall", "Remove claude-cognitive from a project")
-    .option("--project <path>", "Project directory (default: current directory)")
+    .option(
+      "--project <path>",
+      "Project directory (default: current directory)",
+    )
     .option("--keep-config", "Keep .claudemindrc file")
     .option("--keep-memory", "Keep .claude/memory.md file")
     .option("--keep-claude-md", "Don't remove memory section from CLAUDE.md")
@@ -69,7 +72,9 @@ export function registerUninstallCommand(cli: CAC): void {
 
         // Read config first (before we delete it) for --delete-bank
         let bankId: string | undefined;
-        let hindsightConfig: { host?: string; port?: number; apiKey?: string } | undefined;
+        let hindsightConfig:
+          | { host?: string; port?: number; apiKey?: string }
+          | undefined;
         if (options.deleteBank) {
           try {
             const config = await loadConfig(projectPath);
@@ -100,7 +105,10 @@ export function registerUninstallCommand(cli: CAC): void {
                 await unlink(projectMcpPath);
                 printSuccess("Removed .mcp.json (was empty)");
               } else {
-                await writeFile(projectMcpPath, JSON.stringify(config, null, 2) + "\n");
+                await writeFile(
+                  projectMcpPath,
+                  JSON.stringify(config, null, 2) + "\n",
+                );
                 printSuccess("Removed from .mcp.json");
               }
             } else {
@@ -120,11 +128,18 @@ export function registerUninstallCommand(cli: CAC): void {
             let modified = false;
 
             // Check projects section
-            if (config.projects?.[projectPath]?.mcpServers?.["claude-cognitive"]) {
-              delete config.projects[projectPath].mcpServers["claude-cognitive"];
+            if (
+              config.projects?.[projectPath]?.mcpServers?.["claude-cognitive"]
+            ) {
+              delete config.projects[projectPath].mcpServers[
+                "claude-cognitive"
+              ];
 
               // Clean up empty objects
-              if (Object.keys(config.projects[projectPath].mcpServers).length === 0) {
+              if (
+                Object.keys(config.projects[projectPath].mcpServers).length ===
+                0
+              ) {
                 delete config.projects[projectPath].mcpServers;
               }
 
@@ -132,7 +147,10 @@ export function registerUninstallCommand(cli: CAC): void {
             }
 
             if (modified) {
-              await writeFile(globalConfigPath, JSON.stringify(config, null, 2) + "\n");
+              await writeFile(
+                globalConfigPath,
+                JSON.stringify(config, null, 2) + "\n",
+              );
               printSuccess("Removed from ~/.claude.json");
             }
           } catch {
@@ -159,7 +177,8 @@ export function registerUninstallCommand(cli: CAC): void {
               let content = await readFile(claudeMdPath, "utf-8");
 
               // Remove the memory section
-              const memoryRegex = /\n?## 🧠 MEMORY SYSTEM[\s\S]*?(?=\n## |\n---\n|$)/;
+              const memoryRegex =
+                /\n?## 🧠 MEMORY SYSTEM[\s\S]*?(?=\n## |\n---\n|$)/;
               if (memoryRegex.test(content)) {
                 content = content.replace(memoryRegex, "");
                 // Clean up double newlines
@@ -192,7 +211,11 @@ export function registerUninstallCommand(cli: CAC): void {
         if (options.deleteBank) {
           if (bankId) {
             try {
-              const clientOptions: { host: string; port: number; apiKey?: string } = {
+              const clientOptions: {
+                host: string;
+                port: number;
+                apiKey?: string;
+              } = {
                 host: hindsightConfig?.host ?? "localhost",
                 port: hindsightConfig?.port ?? 8888,
               };
@@ -210,7 +233,9 @@ export function registerUninstallCommand(cli: CAC): void {
                 printWarn("Hindsight not available - could not delete bank");
               }
             } catch (error) {
-              printWarn(`Could not delete bank: ${error instanceof Error ? error.message : error}`);
+              printWarn(
+                `Could not delete bank: ${error instanceof Error ? error.message : error}`,
+              );
             }
           } else {
             printInfo("No bankId configured - nothing to delete");

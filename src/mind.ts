@@ -18,10 +18,7 @@ import { HindsightClient } from "./client.js";
 import { loadConfig } from "./config.js";
 import { HindsightError } from "./errors.js";
 import { TypedEventEmitter } from "./events.js";
-import {
-  PromotionManager,
-  DEFAULT_PROMOTION_THRESHOLD,
-} from "./promotion.js";
+import { PromotionManager, DEFAULT_PROMOTION_THRESHOLD } from "./promotion.js";
 import { SemanticMemory } from "./semantic.js";
 import type {
   Bank,
@@ -775,4 +772,3 @@ ${template.outputFormat}
     return lines.join("\n");
   }
 }
-

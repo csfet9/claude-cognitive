@@ -19,18 +19,23 @@ build understanding, not to make changes.
 Return findings in this structure:
 
 ### Key Files Discovered
+
 - `[file path]`: [purpose/role]
 
 ### Architecture Patterns
+
 - [pattern name]: [description and examples]
 
 ### Dependencies Mapped
+
 - [component/module]: depends on [list]
 
 ### Code Flow
+
 - [entry] -> [step 1] -> [step 2] -> [result]
 
 ### Recommendations
+
 - [actionable insights for next steps]
 
 ## Constraints

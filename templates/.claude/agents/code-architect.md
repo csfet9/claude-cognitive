@@ -20,27 +20,33 @@ that can be followed to implement features correctly.
 Return design in this structure:
 
 ### Problem Analysis
+
 - Requirements understood
 - Constraints identified
 - Existing patterns to follow
 
 ### Proposed Solution
+
 - Architecture overview
 - Key components and responsibilities
 - Data flow diagram (text-based)
 
 ### Implementation Plan
+
 1. [Step with specific files/changes]
 2. [Step with specific files/changes]
-...
+   ...
 
 ### Files to Create/Modify
+
 - `[path]`: [what changes]
 
 ### Trade-offs Considered
+
 - [option A] vs [option B]: chose [X] because [reasoning]
 
 ### Risks and Mitigations
+
 - [risk]: [mitigation strategy]
 
 ## Constraints

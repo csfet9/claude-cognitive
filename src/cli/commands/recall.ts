@@ -5,7 +5,11 @@
 
 import type { CAC } from "cac";
 import { Mind } from "../../mind.js";
-import type { FactType, RecallBudget, RecallOptions as MindRecallOptions } from "../../types.js";
+import type {
+  FactType,
+  RecallBudget,
+  RecallOptions as MindRecallOptions,
+} from "../../types.js";
 import { CLIError, ExitCode, output, formatMemories } from "../utils/index.js";
 
 interface RecallCliOptions {
@@ -23,7 +27,10 @@ interface RecallCliOptions {
 export function registerRecallCommand(cli: CAC): void {
   cli
     .command("recall <query>", "Search memories for relevant context")
-    .option("--project <path>", "Project directory (default: current directory)")
+    .option(
+      "--project <path>",
+      "Project directory (default: current directory)",
+    )
     .option(
       "--type <type>",
       "Memory type: world, experience, opinion, or all (default: all)",

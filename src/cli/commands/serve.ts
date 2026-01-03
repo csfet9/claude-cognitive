@@ -24,7 +24,10 @@ interface ServeOptions {
 export function registerServeCommand(cli: CAC): void {
   cli
     .command("serve", "Start the MCP server")
-    .option("--project <path>", "Project directory (default: current directory)")
+    .option(
+      "--project <path>",
+      "Project directory (default: current directory)",
+    )
     .option(
       "--transport <type>",
       "Transport type: stdio or http (default: stdio)",

@@ -4,13 +4,13 @@ Performance benchmarks and optimization guidelines for claude-cognitive.
 
 ## Target Metrics
 
-| Metric                | Target  | Status |
-| --------------------- | ------- | ------ |
-| Session start latency | < 500ms | PASS   |
-| Recall latency        | < 200ms | PASS   |
-| Reflect latency       | < 2s    | PASS*  |
-| Relevant recall rate  | > 80%   | N/A**  |
-| User notices memory   | Never   | PASS   |
+| Metric                | Target  | Status  |
+| --------------------- | ------- | ------- |
+| Session start latency | < 500ms | PASS    |
+| Recall latency        | < 200ms | PASS    |
+| Reflect latency       | < 2s    | PASS\*  |
+| Relevant recall rate  | > 80%   | N/A\*\* |
+| User notices memory   | Never   | PASS    |
 
 \* Reflect requires Hindsight connection
 \*\* Qualitative metric, depends on content quality
@@ -23,14 +23,14 @@ Run benchmarks with: `npm run bench`
 
 Operations without Hindsight connection - tests local-only performance:
 
-| Benchmark             | Mean     | P95      | Target  | Result  |
-| --------------------- | -------- | -------- | ------- | ------- |
-| Config Load           | 0.09ms   | 0.11ms   | < 50ms  | PASS    |
-| Semantic Load         | 0.05ms   | 0.06ms   | < 100ms | PASS    |
-| Semantic Format       | < 0.01ms | < 0.01ms | < 10ms  | PASS    |
-| Mind Init (degraded)  | 1.42ms   | 2.37ms   | < 500ms | PASS    |
-| Session Start         | < 0.01ms | < 0.01ms | < 500ms | PASS    |
-| Recall (degraded)     | < 0.01ms | < 0.01ms | < 200ms | PASS    |
+| Benchmark            | Mean     | P95      | Target  | Result |
+| -------------------- | -------- | -------- | ------- | ------ |
+| Config Load          | 0.09ms   | 0.11ms   | < 50ms  | PASS   |
+| Semantic Load        | 0.05ms   | 0.06ms   | < 100ms | PASS   |
+| Semantic Format      | < 0.01ms | < 0.01ms | < 10ms  | PASS   |
+| Mind Init (degraded) | 1.42ms   | 2.37ms   | < 500ms | PASS   |
+| Session Start        | < 0.01ms | < 0.01ms | < 500ms | PASS   |
+| Recall (degraded)    | < 0.01ms | < 0.01ms | < 200ms | PASS   |
 
 ### Full Mode (With Hindsight)
 
@@ -48,11 +48,11 @@ npm run bench
 
 Expected performance (depends on Hindsight server):
 
-| Benchmark             | Expected   | Target  |
-| --------------------- | ---------- | ------- |
-| Session Start (full)  | ~50-200ms  | < 500ms |
-| Recall (Hindsight)    | ~20-100ms  | < 200ms |
-| Reflect (Hindsight)   | ~500-1500ms| < 2s    |
+| Benchmark            | Expected    | Target  |
+| -------------------- | ----------- | ------- |
+| Session Start (full) | ~50-200ms   | < 500ms |
+| Recall (Hindsight)   | ~20-100ms   | < 200ms |
+| Reflect (Hindsight)  | ~500-1500ms | < 2s    |
 
 ## Performance Characteristics
 
@@ -93,6 +93,7 @@ Expected performance (depends on Hindsight server):
 ### Degraded Mode Considerations
 
 When Hindsight is unavailable:
+
 - Operations fall back to semantic-only memory
 - No network latency
 - Recall returns empty results
@@ -128,13 +129,13 @@ node --inspect dist/your-script.js
 
 Typical memory footprint:
 
-| Component             | Size      |
-| --------------------- | --------- |
-| Base runtime          | ~50 MB    |
-| Loaded config         | < 1 KB    |
-| Semantic memory       | < 100 KB  |
-| Agent templates       | < 50 KB   |
-| Hindsight client      | < 1 MB    |
+| Component        | Size     |
+| ---------------- | -------- |
+| Base runtime     | ~50 MB   |
+| Loaded config    | < 1 KB   |
+| Semantic memory  | < 100 KB |
+| Agent templates  | < 50 KB  |
+| Hindsight client | < 1 MB   |
 
 ## Continuous Monitoring
 
@@ -145,12 +146,12 @@ For production use, consider:
 3. **Degraded mode detection**: Monitor Hindsight availability
 
 ```typescript
-import { Mind } from 'claude-cognitive';
+import { Mind } from "claude-cognitive";
 
-const mind = new Mind({ projectPath: '.' });
-mind.on('degraded:change', (isDegraded) => {
+const mind = new Mind({ projectPath: "." });
+mind.on("degraded:change", (isDegraded) => {
   if (isDegraded) {
-    console.warn('Running in degraded mode');
+    console.warn("Running in degraded mode");
   }
 });
 ```

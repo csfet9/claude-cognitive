@@ -108,9 +108,7 @@ export async function handleRecall(
     const message =
       error instanceof Error ? error.message : "Unknown error occurred";
     return {
-      content: [
-        { type: "text", text: `Error searching memories: ${message}` },
-      ],
+      content: [{ type: "text", text: `Error searching memories: ${message}` }],
       isError: true,
     };
   }

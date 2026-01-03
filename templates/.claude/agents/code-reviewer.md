@@ -18,27 +18,34 @@ maintainability concerns. Provide constructive, actionable feedback.
 Return review in this structure:
 
 ### Summary
+
 - Overall: [approve / request changes / needs discussion]
 - Risk level: [low / medium / high]
 
 ### Issues Found
 
 #### Critical (must fix)
+
 - `[file:line]`: [issue description]
 
 #### Major (should fix)
+
 - `[file:line]`: [issue description]
 
 #### Minor (nice to fix)
+
 - `[file:line]`: [issue description]
 
 ### Positive Observations
+
 - [what was done well]
 
 ### Suggestions
+
 - [improvement ideas, not blocking]
 
 ### Checklist
+
 - [ ] Tests cover changes
 - [ ] No security issues
 - [ ] Follows project patterns

@@ -66,11 +66,13 @@ claude-cognitive init
 ```
 
 This creates:
+
 - `.claudemindrc` - Project configuration
 - `.claude/memory.md` - Semantic memory file
 - Memory bank in Hindsight (if connected)
 
 Options:
+
 ```bash
 claude-cognitive init --bank-id my-custom-bank
 claude-cognitive init --force  # Overwrite existing config
@@ -132,6 +134,7 @@ claude-cognitive status
 ```
 
 Expected output:
+
 ```
 Hindsight: Connected (localhost:8888)
 Bank: my-project
@@ -166,6 +169,7 @@ claude-cognitive reflect "what patterns exist"
 **Symptom**: "Hindsight unavailable" warnings
 
 **Solutions**:
+
 1. Verify Hindsight is running:
    ```bash
    curl http://localhost:8888/health
@@ -180,6 +184,7 @@ claude-cognitive reflect "what patterns exist"
 **Symptom**: Claude Code doesn't show memory tools
 
 **Solutions**:
+
 1. Verify installation: `which claude-cognitive`
 2. Check `.claude/settings.json` syntax
 3. Restart Claude Code after configuration changes
@@ -189,6 +194,7 @@ claude-cognitive reflect "what patterns exist"
 **Symptom**: Default values used despite config file
 
 **Solutions**:
+
 1. Validate JSON syntax in `.claudemindrc`
 2. Check file permissions
 3. Run `claude-cognitive config` to see loaded configuration
@@ -213,15 +219,15 @@ claude-cognitive config             # Show configuration
 
 ### Key Files
 
-| File | Purpose |
-|------|---------|
-| `.claudemindrc` | Project configuration |
-| `.claude/memory.md` | Semantic memory |
-| `.claude/settings.json` | Claude Code settings |
+| File                    | Purpose               |
+| ----------------------- | --------------------- |
+| `.claudemindrc`         | Project configuration |
+| `.claude/memory.md`     | Semantic memory       |
+| `.claude/settings.json` | Claude Code settings  |
 
 ### MCP Tools
 
-| Tool | Purpose |
-|------|---------|
-| `memory_recall` | Search project memories |
-| `memory_reflect` | Reason about knowledge |
+| Tool             | Purpose                 |
+| ---------------- | ----------------------- |
+| `memory_recall`  | Search project memories |
+| `memory_reflect` | Reason about knowledge  |

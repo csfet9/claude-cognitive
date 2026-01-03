@@ -82,7 +82,9 @@ describe("MCP tools", () => {
       expect(TOOL_DEFINITIONS.memory_recall).toBeDefined();
       expect(TOOL_DEFINITIONS.memory_recall.name).toBe("memory_recall");
       expect(TOOL_DEFINITIONS.memory_recall.description).toContain("memories");
-      expect(TOOL_DEFINITIONS.memory_recall.inputSchema).toBe(recallInputSchema);
+      expect(TOOL_DEFINITIONS.memory_recall.inputSchema).toBe(
+        recallInputSchema,
+      );
     });
 
     it("should have memory_reflect tool", () => {

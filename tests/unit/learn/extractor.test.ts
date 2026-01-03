@@ -87,9 +87,9 @@ describe("fact extractor", () => {
             },
           });
 
-          expect(
-            facts.some((f) => f.content.includes("A great package")),
-          ).toBe(true);
+          expect(facts.some((f) => f.content.includes("A great package"))).toBe(
+            true,
+          );
         });
 
         it("should extract framework dependencies", () => {
@@ -99,7 +99,9 @@ describe("fact extractor", () => {
               name: "app",
               version: "1.0.0",
               description: "",
-              dependencies: [{ name: "react", version: "18.0.0", category: "framework" }],
+              dependencies: [
+                { name: "react", version: "18.0.0", category: "framework" },
+              ],
               devDependencies: [],
               scripts: {},
               engines: {},
@@ -120,7 +122,9 @@ describe("fact extractor", () => {
               name: "app",
               version: "1.0.0",
               description: "",
-              dependencies: [{ name: "@mantine/core", version: "6.0.0", category: "ui" }],
+              dependencies: [
+                { name: "@mantine/core", version: "6.0.0", category: "ui" },
+              ],
               devDependencies: [],
               scripts: {},
               engines: {},
@@ -138,7 +142,9 @@ describe("fact extractor", () => {
               name: "app",
               version: "1.0.0",
               description: "",
-              dependencies: [{ name: "zustand", version: "4.0.0", category: "state" }],
+              dependencies: [
+                { name: "zustand", version: "4.0.0", category: "state" },
+              ],
               devDependencies: [],
               scripts: {},
               engines: {},
@@ -159,7 +165,9 @@ describe("fact extractor", () => {
               name: "app",
               version: "1.0.0",
               description: "",
-              dependencies: [{ name: "prisma", version: "5.0.0", category: "database" }],
+              dependencies: [
+                { name: "prisma", version: "5.0.0", category: "database" },
+              ],
               devDependencies: [],
               scripts: {},
               engines: {},
@@ -178,13 +186,17 @@ describe("fact extractor", () => {
               version: "1.0.0",
               description: "",
               dependencies: [],
-              devDependencies: [{ name: "vite", version: "5.0.0", category: "build" }],
+              devDependencies: [
+                { name: "vite", version: "5.0.0", category: "build" },
+              ],
               scripts: {},
               engines: {},
             },
           });
 
-          const buildFact = facts.find((f) => f.content.includes("Build tools"));
+          const buildFact = facts.find((f) =>
+            f.content.includes("Build tools"),
+          );
           expect(buildFact).toBeDefined();
           expect(buildFact?.content).toContain("vite");
         });
@@ -197,7 +209,9 @@ describe("fact extractor", () => {
               version: "1.0.0",
               description: "",
               dependencies: [],
-              devDependencies: [{ name: "vitest", version: "1.0.0", category: "testing" }],
+              devDependencies: [
+                { name: "vitest", version: "1.0.0", category: "testing" },
+              ],
               scripts: {},
               engines: {},
             },
@@ -223,7 +237,9 @@ describe("fact extractor", () => {
             },
           });
 
-          const scriptFact = facts.find((f) => f.content.includes("NPM scripts"));
+          const scriptFact = facts.find((f) =>
+            f.content.includes("NPM scripts"),
+          );
           expect(scriptFact).toBeDefined();
           expect(scriptFact?.content).toContain("vitest");
         });
@@ -375,7 +391,11 @@ describe("fact extractor", () => {
               totalCommits: 100,
               contributors: [],
               significantCommits: [
-                { hash: "abc123", message: "Major refactor", date: "2024-01-01" },
+                {
+                  hash: "abc123",
+                  message: "Major refactor",
+                  date: "2024-01-01",
+                },
               ],
               hotspots: [],
               commitPatterns: { avgCommitsPerDay: 2 },
@@ -548,7 +568,9 @@ describe("fact extractor", () => {
             name: "test",
             version: "1.0.0",
             description: "Test package",
-            dependencies: [{ name: "react", version: "18.0.0", category: "framework" }],
+            dependencies: [
+              { name: "react", version: "18.0.0", category: "framework" },
+            ],
             devDependencies: [],
             scripts: { test: "vitest" },
             engines: {},

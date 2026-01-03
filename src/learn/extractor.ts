@@ -131,7 +131,9 @@ export class DefaultFactExtractor implements FactExtractor {
     }
 
     // Tech stack - frameworks
-    const frameworks = pkg.dependencies.filter((d) => d.category === "framework");
+    const frameworks = pkg.dependencies.filter(
+      (d) => d.category === "framework",
+    );
     if (frameworks.length > 0) {
       facts.push({
         content: `Framework stack: ${frameworks.map((f) => f.name).join(", ")}`,
@@ -226,7 +228,10 @@ export class DefaultFactExtractor implements FactExtractor {
     const facts: ExtractedFact[] = [];
 
     // Project structure
-    if (structure.sourceDirectories.length > 0 || structure.testDirectories.length > 0) {
+    if (
+      structure.sourceDirectories.length > 0 ||
+      structure.testDirectories.length > 0
+    ) {
       const parts: string[] = [];
       if (structure.sourceDirectories.length > 0) {
         parts.push(`source in ${structure.sourceDirectories.join(", ")}`);

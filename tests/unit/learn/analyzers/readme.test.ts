@@ -69,7 +69,9 @@ This is the actual description.`,
       );
 
       const result = await analyzeReadme(tempDir);
-      expect(result?.projectDescription).toBe("This is the actual description.");
+      expect(result?.projectDescription).toBe(
+        "This is the actual description.",
+      );
       expect(result?.projectDescription).not.toContain("Build");
     });
 
@@ -108,7 +110,9 @@ npx create-app
       );
 
       const result = await analyzeReadme(tempDir);
-      expect(result?.setupInstructions.some((i) => i.includes("npm install"))).toBe(true);
+      expect(
+        result?.setupInstructions.some((i) => i.includes("npm install")),
+      ).toBe(true);
     });
 
     it("should extract features list", async () => {
@@ -142,7 +146,9 @@ Visit [Homepage](https://example.com) for more.`,
       );
 
       const result = await analyzeReadme(tempDir);
-      expect(result?.documentation.some((d) => d.includes("API Documentation"))).toBe(true);
+      expect(
+        result?.documentation.some((d) => d.includes("API Documentation")),
+      ).toBe(true);
       expect(result?.documentation.some((d) => d.includes("Wiki"))).toBe(true);
     });
 

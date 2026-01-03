@@ -172,7 +172,9 @@ export async function analyzePackage(
     const version = getString(pkg, "version");
     if (version) result.version = version;
 
-    const engines = getRecord(pkg, "engines") as Record<string, string> | undefined;
+    const engines = getRecord(pkg, "engines") as
+      | Record<string, string>
+      | undefined;
     if (engines) result.engines = engines;
 
     const main = getString(pkg, "main");
@@ -191,7 +193,10 @@ export async function analyzePackage(
  * Get string value from object.
  * @internal
  */
-function getString(obj: Record<string, unknown>, key: string): string | undefined {
+function getString(
+  obj: Record<string, unknown>,
+  key: string,
+): string | undefined {
   const value = obj[key];
   return typeof value === "string" ? value : undefined;
 }
@@ -253,7 +258,11 @@ function categorizeDependency(name: string): DependencyCategory {
   if (API_PACKAGES.has(name)) return "api";
 
   // Check partial matches for scoped packages
-  if (name.includes("react") || name.includes("vue") || name.includes("angular")) {
+  if (
+    name.includes("react") ||
+    name.includes("vue") ||
+    name.includes("angular")
+  ) {
     return "framework";
   }
   if (name.includes("test") || name.includes("spec")) {

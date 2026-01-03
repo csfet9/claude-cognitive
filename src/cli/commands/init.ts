@@ -34,8 +34,14 @@ interface InitResult {
 export function registerInitCommand(cli: CAC): void {
   cli
     .command("init", "Initialize claude-cognitive for the current project")
-    .option("--project <path>", "Project directory (default: current directory)")
-    .option("--bank-id <id>", "Memory bank ID (default: derived from project name)")
+    .option(
+      "--project <path>",
+      "Project directory (default: current directory)",
+    )
+    .option(
+      "--bank-id <id>",
+      "Memory bank ID (default: derived from project name)",
+    )
     .option("--force", "Overwrite existing configuration")
     .option("--json", "Output as JSON")
     .option("--quiet", "Suppress output")
@@ -129,10 +135,7 @@ export function registerInitCommand(cli: CAC): void {
         result.created.bank = !mind.isDegraded;
 
         if (mind.isDegraded) {
-          info(
-            "Warning: Hindsight unavailable. Bank not created.",
-            options,
-          );
+          info("Warning: Hindsight unavailable. Bank not created.", options);
         } else {
           info(`Bank '${result.bankId}' ready`, options);
         }

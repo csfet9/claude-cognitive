@@ -28,8 +28,8 @@ describe("process-session hook", () => {
       registerProcessSessionCommand(cli);
 
       const processCmd = cli.commands.find((c) => c.name === "process-session");
-      const projectOpt = processCmd?.options.find(
-        (o) => o.names.includes("project"),
+      const projectOpt = processCmd?.options.find((o) =>
+        o.names.includes("project"),
       );
 
       expect(projectOpt).toBeDefined();
@@ -40,8 +40,8 @@ describe("process-session hook", () => {
       registerProcessSessionCommand(cli);
 
       const processCmd = cli.commands.find((c) => c.name === "process-session");
-      const transcriptOpt = processCmd?.options.find(
-        (o) => o.names.includes("transcript"),
+      const transcriptOpt = processCmd?.options.find((o) =>
+        o.names.includes("transcript"),
       );
 
       expect(transcriptOpt).toBeDefined();

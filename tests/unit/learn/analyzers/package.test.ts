@@ -281,7 +281,11 @@ describe("package analyzer", () => {
           { name: "react", version: "^18.0.0", category: "framework" },
           { name: "tailwindcss", version: "^3.0.0", category: "ui" },
           { name: "zustand", version: "^4.0.0", category: "state" },
-          { name: "@supabase/supabase-js", version: "^2.0.0", category: "database" },
+          {
+            name: "@supabase/supabase-js",
+            version: "^2.0.0",
+            category: "database",
+          },
         ],
         devDependencies: [
           { name: "typescript", version: "^5.0.0", category: "build" },

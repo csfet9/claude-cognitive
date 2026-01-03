@@ -4,7 +4,12 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CLIError, ExitCode, handleError, withErrorHandling } from "../../../../src/cli/utils/errors.js";
+import {
+  CLIError,
+  ExitCode,
+  handleError,
+  withErrorHandling,
+} from "../../../../src/cli/utils/errors.js";
 
 describe("CLI errors", () => {
   describe("ExitCode", () => {

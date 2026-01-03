@@ -130,9 +130,9 @@ describe("extractErrorMessage()", () => {
   });
 
   it("should prefer message over error", () => {
-    expect(
-      extractErrorMessage({ message: "Message", error: "Error" }),
-    ).toBe("Message");
+    expect(extractErrorMessage({ message: "Message", error: "Error" })).toBe(
+      "Message",
+    );
   });
 
   it("should return undefined for null", () => {

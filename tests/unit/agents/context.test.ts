@@ -125,13 +125,9 @@ describe("agent context", () => {
     });
 
     it("should pass budget option to recall", async () => {
-      await getAgentContext(
-        mockClient,
-        "test-bank",
-        sampleTemplate,
-        "Task",
-        { budget: "large" },
-      );
+      await getAgentContext(mockClient, "test-bank", sampleTemplate, "Task", {
+        budget: "large",
+      });
 
       expect(mockClient.recall).toHaveBeenCalledWith(
         "test-bank",

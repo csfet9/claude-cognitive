@@ -37,34 +37,35 @@ Hindsight organizes memories into four distinct networks:
 
 External facts about the project and its environment.
 
-| Attribute | Description |
-|-----------|-------------|
-| Purpose | Store objective knowledge |
-| Perspective | Third-person, factual |
-| Example | "Auth uses Supabase magic links for passwordless login" |
+| Attribute   | Description                                             |
+| ----------- | ------------------------------------------------------- |
+| Purpose     | Store objective knowledge                               |
+| Perspective | Third-person, factual                                   |
+| Example     | "Auth uses Supabase magic links for passwordless login" |
 
 ### experience
 
 Claude's first-person experiences working in the project.
 
-| Attribute | Description |
-|-----------|-------------|
-| Purpose | Remember what Claude did |
-| Perspective | First-person ("I...") |
-| Example | "I fixed the redirect issue by moving AuthProvider to root layout" |
+| Attribute   | Description                                                        |
+| ----------- | ------------------------------------------------------------------ |
+| Purpose     | Remember what Claude did                                           |
+| Perspective | First-person ("I...")                                              |
+| Example     | "I fixed the redirect issue by moving AuthProvider to root layout" |
 
 ### opinion
 
 Beliefs and judgments with explicit confidence scores.
 
-| Attribute | Description |
-|-----------|-------------|
-| Purpose | Track evolving beliefs |
-| Perspective | First-person with reasoning |
-| Confidence | Required (0.0 to 1.0) |
-| Example | "This codebase prefers explicit error handling over try-catch" (0.85) |
+| Attribute   | Description                                                           |
+| ----------- | --------------------------------------------------------------------- |
+| Purpose     | Track evolving beliefs                                                |
+| Perspective | First-person with reasoning                                           |
+| Confidence  | Required (0.0 to 1.0)                                                 |
+| Example     | "This codebase prefers explicit error handling over try-catch" (0.85) |
 
 Opinions evolve over time:
+
 - New evidence can strengthen or weaken confidence
 - Contradicting evidence creates tension, resolved through reflect()
 - High-confidence opinions may be promoted to semantic memory
@@ -73,11 +74,11 @@ Opinions evolve over time:
 
 Synthesized insights from reflect() that span multiple experiences.
 
-| Attribute | Description |
-|-----------|-------------|
-| Purpose | Cross-session learning |
-| Perspective | Meta-level insight |
-| Example | "Auth changes often require corresponding navigation updates" |
+| Attribute   | Description                                                   |
+| ----------- | ------------------------------------------------------------- |
+| Purpose     | Cross-session learning                                        |
+| Perspective | Meta-level insight                                            |
+| Example     | "Auth changes often require corresponding navigation updates" |
 
 ---
 
@@ -87,15 +88,16 @@ Synthesized insights from reflect() that span multiple experiences.
 
 When content is stored, Hindsight's LLM extracts five dimensions:
 
-| Dimension | Description | Example |
-|-----------|-------------|---------|
-| **what** | Complete description | "Fixed auth redirect by moving AuthProvider" |
-| **when** | Temporal context | "January 2, 2025 during afternoon session" |
-| **where** | Location (files, paths) | "src/app/_layout.tsx at line 15" |
-| **who** | Entities involved | "AuthProvider, React Context, Supabase" |
-| **why** | Motivation, reasoning | "User stuck on infinite redirect loop" |
+| Dimension | Description             | Example                                      |
+| --------- | ----------------------- | -------------------------------------------- |
+| **what**  | Complete description    | "Fixed auth redirect by moving AuthProvider" |
+| **when**  | Temporal context        | "January 2, 2025 during afternoon session"   |
+| **where** | Location (files, paths) | "src/app/\_layout.tsx at line 15"            |
+| **who**   | Entities involved       | "AuthProvider, React Context, Supabase"      |
+| **why**   | Motivation, reasoning   | "User stuck on infinite redirect loop"       |
 
 Additionally, retain() automatically:
+
 - Extracts and resolves entities
 - Identifies causal relationships (causes, enables, prevents)
 - Creates temporal and semantic links to existing memories
@@ -123,18 +125,19 @@ Query: "Why was AuthProvider moved?"
          Results
 ```
 
-| Strategy | Method | Best For |
-|----------|--------|----------|
+| Strategy     | Method                       | Best For                         |
+| ------------ | ---------------------------- | -------------------------------- |
 | **Semantic** | Vector similarity (pgvector) | Conceptual matches, paraphrasing |
-| **BM25** | Full-text keyword search | Exact names, technical terms |
-| **Graph** | Entity traversal (MPFP/BFS) | Indirect relationships |
-| **Temporal** | Time-range + semantic | Historical queries |
+| **BM25**     | Full-text keyword search     | Exact names, technical terms     |
+| **Graph**    | Entity traversal (MPFP/BFS)  | Indirect relationships           |
+| **Temporal** | Time-range + semantic        | Historical queries               |
 
 Results are fused using Reciprocal Rank Fusion (RRF), then reranked with a neural cross-encoder.
 
 ### reflect() - Opinion Formation
 
 Process:
+
 1. Recall relevant memories (world, experience, opinion)
 2. Load bank disposition (skepticism, literalism, empathy)
 3. LLM reasons through disposition lens
@@ -151,6 +154,7 @@ Hindsight automatically builds a knowledge graph:
 ### Entities
 
 Extracted from memory content:
+
 - **People**: Names, roles, relationships
 - **Components**: React components, classes, modules
 - **Files**: Source files, paths
@@ -158,19 +162,20 @@ Extracted from memory content:
 
 ### Links
 
-| Link Type | Description |
-|-----------|-------------|
-| `temporal` | Memories close in time |
-| `semantic` | Memories with similar meaning |
-| `entity` | Memories sharing an entity |
-| `causes` | This memory caused another |
+| Link Type   | Description                       |
+| ----------- | --------------------------------- |
+| `temporal`  | Memories close in time            |
+| `semantic`  | Memories with similar meaning     |
+| `entity`    | Memories sharing an entity        |
+| `causes`    | This memory caused another        |
 | `caused_by` | This memory was caused by another |
-| `enables` | This memory enables another |
-| `prevents` | This memory prevents another |
+| `enables`   | This memory enables another       |
+| `prevents`  | This memory prevents another      |
 
 ### Co-occurrences
 
 Track which entities appear together:
+
 - "AuthProvider" often appears with "React Context" → related concepts
 - "login.tsx" often appears with "supabase.ts" → related files
 
@@ -194,20 +199,20 @@ Each project gets a memory bank with personality traits:
 
 ### Trait Effects
 
-| Trait | Low (1) | High (5) |
-|-------|---------|----------|
-| **Skepticism** | Trusts information | Questions claims, looks for inconsistencies |
-| **Literalism** | Flexible interpretation | Precise, exact interpretation |
-| **Empathy** | Focuses on facts | Considers emotional context |
+| Trait          | Low (1)                 | High (5)                                    |
+| -------------- | ----------------------- | ------------------------------------------- |
+| **Skepticism** | Trusts information      | Questions claims, looks for inconsistencies |
+| **Literalism** | Flexible interpretation | Precise, exact interpretation               |
+| **Empathy**    | Focuses on facts        | Considers emotional context                 |
 
 ### Recommended Configurations
 
-| Use Case | Skepticism | Literalism | Empathy |
-|----------|------------|------------|---------|
-| Code Review | 4 | 5 | 2 |
-| Bug Investigation | 4 | 4 | 2 |
-| Documentation | 3 | 3 | 3 |
-| User Support | 2 | 2 | 5 |
+| Use Case          | Skepticism | Literalism | Empathy |
+| ----------------- | ---------- | ---------- | ------- |
+| Code Review       | 4          | 5          | 2       |
+| Bug Investigation | 4          | 4          | 2       |
+| Documentation     | 3          | 3          | 3       |
+| User Support      | 2          | 2          | 5       |
 
 ---
 
@@ -284,13 +289,13 @@ Claude operates as a **project manager**, delegating to specialized agents:
 
 ### Why Agents Don't Access Memory
 
-| Reason | Benefit |
-|--------|---------|
-| **Simplicity** | Agent templates stay focused |
-| **Consistency** | Memory patterns controlled in one place |
-| **Context efficiency** | Agents don't carry memory overhead |
-| **Quality control** | Orchestrator decides what's worth remembering |
-| **Transcript capture** | Everything agents output is captured anyway |
+| Reason                 | Benefit                                       |
+| ---------------------- | --------------------------------------------- |
+| **Simplicity**         | Agent templates stay focused                  |
+| **Consistency**        | Memory patterns controlled in one place       |
+| **Context efficiency** | Agents don't carry memory overhead            |
+| **Quality control**    | Orchestrator decides what's worth remembering |
+| **Transcript capture** | Everything agents output is captured anyway   |
 
 ---
 
@@ -298,15 +303,16 @@ Claude operates as a **project manager**, delegating to specialized agents:
 
 ### Budget Levels
 
-| Budget | Tokens | Graph Hops | Best For |
-|--------|--------|------------|----------|
-| `low` | ~2048 | 1 | Quick lookups |
-| `mid` | ~4096 | 2 | Most queries (default) |
-| `high` | ~8192 | 3+ | Comprehensive research |
+| Budget | Tokens | Graph Hops | Best For               |
+| ------ | ------ | ---------- | ---------------------- |
+| `low`  | ~2048  | 1          | Quick lookups          |
+| `mid`  | ~4096  | 2          | Most queries (default) |
+| `high` | ~8192  | 3+         | Comprehensive research |
 
 ### Graceful Degradation
 
 When Hindsight is unavailable:
+
 - Semantic memory still works (local file)
 - recall() returns empty array
 - reflect() throws error

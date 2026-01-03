@@ -28,8 +28,8 @@ describe("inject-context hook", () => {
       registerInjectContextCommand(cli);
 
       const injectCmd = cli.commands.find((c) => c.name === "inject-context");
-      const projectOpt = injectCmd?.options.find(
-        (o) => o.names.includes("project"),
+      const projectOpt = injectCmd?.options.find((o) =>
+        o.names.includes("project"),
       );
 
       expect(projectOpt).toBeDefined();
@@ -40,8 +40,8 @@ describe("inject-context hook", () => {
       registerInjectContextCommand(cli);
 
       const injectCmd = cli.commands.find((c) => c.name === "inject-context");
-      const timeoutOpt = injectCmd?.options.find(
-        (o) => o.names.includes("timeout"),
+      const timeoutOpt = injectCmd?.options.find((o) =>
+        o.names.includes("timeout"),
       );
 
       expect(timeoutOpt).toBeDefined();

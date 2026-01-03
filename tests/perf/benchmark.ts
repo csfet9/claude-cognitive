@@ -121,7 +121,9 @@ export function formatResultsTable(
 
   const separator = "-".repeat(header.length);
 
-  const rows = results.map(({ result, target }) => formatResult(result, target));
+  const rows = results.map(({ result, target }) =>
+    formatResult(result, target),
+  );
 
   return [separator, header, separator, ...rows, separator].join("\n");
 }

@@ -125,9 +125,7 @@ describe("sync command", () => {
   describe("helper functions", () => {
     it("should group memories by type", async () => {
       // Import the module to test internal function behavior indirectly
-      const syncModule = await import(
-        "../../../../src/cli/commands/sync.js"
-      );
+      const syncModule = await import("../../../../src/cli/commands/sync.js");
 
       // The groupByType function is internal, so we test it through the command
       expect(syncModule.registerSyncCommand).toBeDefined();

@@ -4,7 +4,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { analyzeGitHistory, getGitSummary } from "../../../../src/learn/analyzers/git.js";
+import {
+  analyzeGitHistory,
+  getGitSummary,
+} from "../../../../src/learn/analyzers/git.js";
 
 // Mock child_process
 vi.mock("node:child_process", () => ({
@@ -40,9 +43,7 @@ describe("git analyzer", () => {
   describe("analyzeGitHistory()", () => {
     it("should return null if .git directory does not exist", async () => {
       const { stat } = await import("node:fs/promises");
-      (stat as ReturnType<typeof vi.fn>).mockRejectedValue(
-        new Error("ENOENT"),
-      );
+      (stat as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("ENOENT"));
 
       const result = await analyzeGitHistory("/test/project");
 

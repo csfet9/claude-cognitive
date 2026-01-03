@@ -630,5 +630,4 @@ export class HindsightClient {
     }
     return result;
   }
-
 }

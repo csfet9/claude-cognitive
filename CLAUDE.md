@@ -55,21 +55,21 @@ claude-cognitive sync           # regenerate memory.md from Hindsight
 
 ### Key Classes
 
-| Class | File | Purpose |
-|-------|------|---------|
-| `Mind` | `src/mind.ts` | Orchestrator wrapping HindsightClient with session management and graceful degradation |
-| `HindsightClient` | `src/client.ts` | HTTP client for Hindsight API (retain/recall/reflect/learn) |
-| `SemanticMemory` | `src/semantic.ts` | Section-based markdown parser for `.claude/memory.md` |
-| `PromotionManager` | `src/promotion.ts` | Promotes high-confidence opinions to semantic memory |
+| Class              | File               | Purpose                                                                                |
+| ------------------ | ------------------ | -------------------------------------------------------------------------------------- |
+| `Mind`             | `src/mind.ts`      | Orchestrator wrapping HindsightClient with session management and graceful degradation |
+| `HindsightClient`  | `src/client.ts`    | HTTP client for Hindsight API (retain/recall/reflect/learn)                            |
+| `SemanticMemory`   | `src/semantic.ts`  | Section-based markdown parser for `.claude/memory.md`                                  |
+| `PromotionManager` | `src/promotion.ts` | Promotes high-confidence opinions to semantic memory                                   |
 
 ### Memory Networks
 
-| Type | Purpose |
-|------|---------|
-| `world` | Facts about external world ("Auth uses Supabase magic links") |
-| `experience` | First-person experiences ("I fixed the redirect by...") |
-| `opinion` | Beliefs with confidence 0.0-1.0 ("This codebase prefers explicit patterns") |
-| `observation` | Synthesized cross-session insights |
+| Type          | Purpose                                                                     |
+| ------------- | --------------------------------------------------------------------------- |
+| `world`       | Facts about external world ("Auth uses Supabase magic links")               |
+| `experience`  | First-person experiences ("I fixed the redirect by...")                     |
+| `opinion`     | Beliefs with confidence 0.0-1.0 ("This codebase prefers explicit patterns") |
+| `observation` | Synthesized cross-session insights                                          |
 
 ### MCP Tools (exposed to Claude)
 
@@ -126,15 +126,16 @@ src/
 
 ### Disposition Traits (1-5)
 
-| Trait | Low (1) | High (5) |
-|-------|---------|----------|
-| skepticism | Trusting | Questions claims |
-| literalism | Flexible | Precise/literal |
-| empathy | Fact-focused | Considers emotion |
+| Trait      | Low (1)      | High (5)          |
+| ---------- | ------------ | ----------------- |
+| skepticism | Trusting     | Questions claims  |
+| literalism | Flexible     | Precise/literal   |
+| empathy    | Fact-focused | Considers emotion |
 
 ## Testing
 
 Tests mirror source structure under `tests/`:
+
 - `tests/unit/` - Unit tests
 - `tests/integration/` - Integration tests (not excluded from default run)
 - `tests/e2e/` - E2E tests (excluded, run with `npm run test:e2e`)
@@ -146,6 +147,7 @@ Vitest globals are enabled. Coverage thresholds: 80% statements/functions/lines,
 ## Graceful Degradation
 
 When Hindsight is unavailable, Mind enters degraded mode:
+
 - `recall()` returns empty array
 - `retain()` silently skips
 - `reflect()` throws (requires Hindsight)

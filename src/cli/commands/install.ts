@@ -91,10 +91,7 @@ function createPrompt(): {
     });
   };
 
-  const confirm = (
-    question: string,
-    defaultValue = true,
-  ): Promise<boolean> => {
+  const confirm = (question: string, defaultValue = true): Promise<boolean> => {
     const hint = defaultValue ? "[Y/n]" : "[y/N]";
     return new Promise((resolve) => {
       rl.question(`  ${question} ${color(hint, "dim")}: `, (answer) => {
@@ -173,9 +170,7 @@ function getMcpConfigPath(global: boolean, projectPath: string): string {
 /**
  * Read existing MCP config or return empty object.
  */
-async function readMcpConfig(
-  path: string,
-): Promise<Record<string, unknown>> {
+async function readMcpConfig(path: string): Promise<Record<string, unknown>> {
   try {
     const content = await readFile(path, "utf-8");
     return JSON.parse(content);
@@ -234,10 +229,7 @@ export function registerInstallCommand(cli: CAC): void {
         printStep(1, 5, "Project Configuration");
 
         if (!options.project) {
-          answers.projectPath = await prompt.ask(
-            "Project path",
-            process.cwd(),
-          );
+          answers.projectPath = await prompt.ask("Project path", process.cwd());
         }
         printInfo(`Using: ${answers.projectPath}`);
 
@@ -334,7 +326,10 @@ export function registerInstallCommand(cli: CAC): void {
           answers.learnDepth = await prompt.select(
             "Analysis depth:",
             [
-              { label: "Quick - README, package.json, structure", value: "quick" as const },
+              {
+                label: "Quick - README, package.json, structure",
+                value: "quick" as const,
+              },
               {
                 label: "Standard - + source patterns, recent git",
                 value: "standard" as const,
@@ -411,9 +406,12 @@ export function registerInstallCommand(cli: CAC): void {
 
           if (answers.globalInstall) {
             // Global config: ~/.claude.json with projects key
-            const projects = (existing.projects as Record<string, unknown>) || {};
-            const projectConfig = (projects[answers.projectPath] as Record<string, unknown>) || {};
-            const mcpServers = (projectConfig.mcpServers as Record<string, unknown>) || {};
+            const projects =
+              (existing.projects as Record<string, unknown>) || {};
+            const projectConfig =
+              (projects[answers.projectPath] as Record<string, unknown>) || {};
+            const mcpServers =
+              (projectConfig.mcpServers as Record<string, unknown>) || {};
 
             mcpServers["claude-cognitive"] = {
               command: serveCmd.command,
@@ -436,7 +434,8 @@ export function registerInstallCommand(cli: CAC): void {
             );
           } else {
             // Project config: .mcp.json in project root
-            const mcpServers = (existing.mcpServers as Record<string, unknown>) || {};
+            const mcpServers =
+              (existing.mcpServers as Record<string, unknown>) || {};
 
             mcpServers["claude-cognitive"] = {
               command: serveCmd.command,
@@ -466,7 +465,10 @@ export function registerInstallCommand(cli: CAC): void {
           const claudeMdContent = await readFile(claudeMdPath, "utf-8");
 
           // Check if memory section already exists
-          if (!claudeMdContent.includes("## 🧠 MEMORY SYSTEM") && !claudeMdContent.includes("memory_recall")) {
+          if (
+            !claudeMdContent.includes("## 🧠 MEMORY SYSTEM") &&
+            !claudeMdContent.includes("memory_recall")
+          ) {
             const memorySection = `
 ## 🧠 MEMORY SYSTEM
 
@@ -493,7 +495,11 @@ memory_reflect("What patterns does this codebase follow?")
             if (firstDividerIndex !== -1) {
               // Insert after the first ---
               const insertPoint = firstDividerIndex + 3;
-              newContent = claudeMdContent.slice(0, insertPoint) + "\n" + memorySection + claudeMdContent.slice(insertPoint);
+              newContent =
+                claudeMdContent.slice(0, insertPoint) +
+                "\n" +
+                memorySection +
+                claudeMdContent.slice(insertPoint);
             } else {
               // No divider found, prepend to file
               newContent = memorySection + "\n" + claudeMdContent;
@@ -529,7 +535,12 @@ memory_reflect("What patterns does this codebase follow?")
             // Run learn if requested
             if (answers.runLearn) {
               print("");
-              print(color(`Learning from codebase (${answers.learnDepth})...`, "dim"));
+              print(
+                color(
+                  `Learning from codebase (${answers.learnDepth})...`,
+                  "dim",
+                ),
+              );
               const result = await mind.learn({ depth: answers.learnDepth });
               printSuccess(
                 `Learned ${result.worldFacts} facts from ${result.filesAnalyzed} files`,
@@ -561,9 +572,7 @@ memory_reflect("What patterns does this codebase follow?")
         print("");
         print("Next steps:");
         print(color("  1. Restart Claude Code to load the MCP server", "dim"));
-        print(
-          color("  2. Ask Claude to use memory_recall to verify", "dim"),
-        );
+        print(color("  2. Ask Claude to use memory_recall to verify", "dim"));
         if (!hindsightConnected) {
           print(
             color(

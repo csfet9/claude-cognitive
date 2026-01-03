@@ -112,7 +112,13 @@ export async function learn(
   const duration = Date.now() - startTime;
 
   return {
-    summary: generateSummary(worldFacts, opinions, analysis.filesAnalyzed, duration, failedFacts),
+    summary: generateSummary(
+      worldFacts,
+      opinions,
+      analysis.filesAnalyzed,
+      duration,
+      failedFacts,
+    ),
     worldFacts,
     opinions,
     entities,

@@ -216,7 +216,9 @@ function analyzeFile(content: string, _filePath: string): FileAnalysis {
   }
 
   // Extract imports
-  const importMatches = content.matchAll(/import\s+.*?\s+from\s+['"]([^'"]+)['"]/g);
+  const importMatches = content.matchAll(
+    /import\s+.*?\s+from\s+['"]([^'"]+)['"]/g,
+  );
   for (const match of importMatches) {
     if (match[1]) {
       result.imports.push(match[1]);
@@ -241,7 +243,9 @@ function analyzeFile(content: string, _filePath: string): FileAnalysis {
 
   // Count import styles
   result.namedImportCount = (content.match(/import\s*\{/g) || []).length;
-  result.defaultImportCount = (content.match(/import\s+\w+\s+from/g) || []).length;
+  result.defaultImportCount = (
+    content.match(/import\s+\w+\s+from/g) || []
+  ).length;
 
   // Count error handling
   result.tryCatchCount = (content.match(/try\s*\{/g) || []).length;
@@ -275,7 +279,8 @@ function detectPatterns(modules: ModuleInfo[]): CodePattern[] {
 
   // Detect modular architecture
   const hasMultipleModules = modules.length > 10;
-  const avgExports = modules.reduce((sum, m) => sum + m.exports.length, 0) / modules.length;
+  const avgExports =
+    modules.reduce((sum, m) => sum + m.exports.length, 0) / modules.length;
   if (hasMultipleModules && avgExports < 10) {
     patterns.push({
       type: "modular-architecture",

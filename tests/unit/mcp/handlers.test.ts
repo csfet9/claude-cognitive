@@ -91,7 +91,9 @@ describe("MCP handlers", () => {
 
       const result = await handleRecall(mockMind, { query: "test" });
 
-      expect(result.content[0].text).toContain("Context: Additional context info");
+      expect(result.content[0].text).toContain(
+        "Context: Additional context info",
+      );
     });
 
     it("should return error on failure", async () => {
@@ -113,13 +115,17 @@ describe("MCP handlers", () => {
         text: "This is my reflection on the topic.",
         opinions: [{ opinion: "Test opinion", confidence: 0.9 }],
         basedOn: {
-          world: [{ id: "w1", text: "World fact", factType: "world", createdAt: "" }],
+          world: [
+            { id: "w1", text: "World fact", factType: "world", createdAt: "" },
+          ],
           experience: [],
           opinion: [],
         },
       });
 
-      const result = await handleReflect(mockMind, { query: "What do you think?" });
+      const result = await handleReflect(mockMind, {
+        query: "What do you think?",
+      });
 
       expect(result.isError).toBeUndefined();
       expect(result.content[0].text).toContain("This is my reflection");
@@ -182,7 +188,9 @@ describe("MCP handlers", () => {
       const result = await handleReflect(mockMind, { query: "test" });
 
       expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain("Hindsight server is unavailable");
+      expect(result.content[0].text).toContain(
+        "Hindsight server is unavailable",
+      );
       expect(result.content[0].text).toContain("degraded mode");
     });
   });

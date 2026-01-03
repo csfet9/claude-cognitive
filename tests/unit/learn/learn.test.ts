@@ -79,12 +79,9 @@ describe("learn()", () => {
 
   describe("quick depth", () => {
     it("should run analysis and return result", async () => {
-      const result = await learn(
-        mockClient,
-        "test-bank",
-        "/test/project",
-        { depth: "quick" },
-      );
+      const result = await learn(mockClient, "test-bank", "/test/project", {
+        depth: "quick",
+      });
 
       expect(result.worldFacts).toBe(3); // 3 facts from mock
       expect(result.filesAnalyzed).toBe(10);
@@ -104,12 +101,9 @@ describe("learn()", () => {
     });
 
     it("should form opinions via reflect()", async () => {
-      const result = await learn(
-        mockClient,
-        "test-bank",
-        "/test/project",
-        { depth: "quick" },
-      );
+      const result = await learn(mockClient, "test-bank", "/test/project", {
+        depth: "quick",
+      });
 
       // Quick depth has 1 reflection query
       expect(mockClient.reflect).toHaveBeenCalledTimes(1);
@@ -120,12 +114,9 @@ describe("learn()", () => {
 
   describe("standard depth", () => {
     it("should run more reflection queries", async () => {
-      const result = await learn(
-        mockClient,
-        "test-bank",
-        "/test/project",
-        { depth: "standard" },
-      );
+      const result = await learn(mockClient, "test-bank", "/test/project", {
+        depth: "standard",
+      });
 
       // Standard depth has 3 reflection queries
       expect(mockClient.reflect).toHaveBeenCalledTimes(3);
@@ -135,12 +126,9 @@ describe("learn()", () => {
 
   describe("full depth", () => {
     it("should run all reflection queries", async () => {
-      const result = await learn(
-        mockClient,
-        "test-bank",
-        "/test/project",
-        { depth: "full" },
-      );
+      const result = await learn(mockClient, "test-bank", "/test/project", {
+        depth: "full",
+      });
 
       // Full depth has 5 reflection queries
       expect(mockClient.reflect).toHaveBeenCalledTimes(5);
@@ -158,12 +146,9 @@ describe("learn()", () => {
         return Promise.resolve(["mem-1"]);
       });
 
-      const result = await learn(
-        mockClient,
-        "test-bank",
-        "/test/project",
-        { depth: "quick" },
-      );
+      const result = await learn(mockClient, "test-bank", "/test/project", {
+        depth: "quick",
+      });
 
       expect(result.worldFacts).toBe(2); // 2 succeeded, 1 failed
       expect(result.summary).toContain("1 facts failed");
@@ -174,12 +159,9 @@ describe("learn()", () => {
         new Error("Reflection failed"),
       );
 
-      const result = await learn(
-        mockClient,
-        "test-bank",
-        "/test/project",
-        { depth: "quick" },
-      );
+      const result = await learn(mockClient, "test-bank", "/test/project", {
+        depth: "quick",
+      });
 
       expect(result.opinions).toEqual([]);
       expect(result.worldFacts).toBe(3); // Facts still stored
@@ -188,24 +170,18 @@ describe("learn()", () => {
 
   describe("summary generation", () => {
     it("should include facts count and duration", async () => {
-      const result = await learn(
-        mockClient,
-        "test-bank",
-        "/test/project",
-        { depth: "quick" },
-      );
+      const result = await learn(mockClient, "test-bank", "/test/project", {
+        depth: "quick",
+      });
 
       expect(result.summary).toMatch(/Learned \d+ world facts/);
       expect(result.summary).toMatch(/Duration: \d+\.\d+s/);
     });
 
     it("should include opinions with avg confidence", async () => {
-      const result = await learn(
-        mockClient,
-        "test-bank",
-        "/test/project",
-        { depth: "quick" },
-      );
+      const result = await learn(mockClient, "test-bank", "/test/project", {
+        depth: "quick",
+      });
 
       expect(result.summary).toContain("formed 1 opinions");
       expect(result.summary).toContain("avg confidence");
@@ -225,7 +201,13 @@ describe("learn()", () => {
               factType: "world",
               createdAt: "2024-01-01",
               entities: [
-                { id: "ent-1", name: "React", aliases: [], type: "concept", coOccurrences: [] },
+                {
+                  id: "ent-1",
+                  name: "React",
+                  aliases: [],
+                  type: "concept",
+                  coOccurrences: [],
+                },
               ],
             },
           ],
@@ -234,12 +216,9 @@ describe("learn()", () => {
         },
       });
 
-      const result = await learn(
-        mockClient,
-        "test-bank",
-        "/test/project",
-        { depth: "quick" },
-      );
+      const result = await learn(mockClient, "test-bank", "/test/project", {
+        depth: "quick",
+      });
 
       expect(result.entities).toHaveLength(1);
       expect(result.entities[0].name).toBe("React");
@@ -257,7 +236,13 @@ describe("learn()", () => {
               factType: "world",
               createdAt: "2024-01-01",
               entities: [
-                { id: "ent-1", name: "React", aliases: [], type: "concept", coOccurrences: [] },
+                {
+                  id: "ent-1",
+                  name: "React",
+                  aliases: [],
+                  type: "concept",
+                  coOccurrences: [],
+                },
               ],
             },
             {
@@ -266,7 +251,13 @@ describe("learn()", () => {
               factType: "world",
               createdAt: "2024-01-01",
               entities: [
-                { id: "ent-1", name: "React", aliases: [], type: "concept", coOccurrences: [] }, // Same entity
+                {
+                  id: "ent-1",
+                  name: "React",
+                  aliases: [],
+                  type: "concept",
+                  coOccurrences: [],
+                }, // Same entity
               ],
             },
           ],
@@ -275,12 +266,9 @@ describe("learn()", () => {
         },
       });
 
-      const result = await learn(
-        mockClient,
-        "test-bank",
-        "/test/project",
-        { depth: "quick" },
-      );
+      const result = await learn(mockClient, "test-bank", "/test/project", {
+        depth: "quick",
+      });
 
       expect(result.entities).toHaveLength(1); // Deduplicated
     });

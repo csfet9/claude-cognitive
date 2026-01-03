@@ -155,9 +155,15 @@ describe("TypedEventEmitter", () => {
       const listener = vi.fn();
 
       emitter.on("learn:complete", listener);
-      emitter.emit("learn:complete", { summary: "Learned 10 facts", worldFacts: 10 });
+      emitter.emit("learn:complete", {
+        summary: "Learned 10 facts",
+        worldFacts: 10,
+      });
 
-      expect(listener).toHaveBeenCalledWith({ summary: "Learned 10 facts", worldFacts: 10 });
+      expect(listener).toHaveBeenCalledWith({
+        summary: "Learned 10 facts",
+        worldFacts: 10,
+      });
     });
 
     it("should work with agent:context-prepared event", () => {
@@ -165,9 +171,15 @@ describe("TypedEventEmitter", () => {
       const listener = vi.fn();
 
       emitter.on("agent:context-prepared", listener);
-      emitter.emit("agent:context-prepared", { agent: "code-explorer", task: "analyze codebase" });
+      emitter.emit("agent:context-prepared", {
+        agent: "code-explorer",
+        task: "analyze codebase",
+      });
 
-      expect(listener).toHaveBeenCalledWith({ agent: "code-explorer", task: "analyze codebase" });
+      expect(listener).toHaveBeenCalledWith({
+        agent: "code-explorer",
+        task: "analyze codebase",
+      });
     });
   });
 });

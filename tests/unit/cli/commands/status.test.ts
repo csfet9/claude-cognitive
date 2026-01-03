@@ -22,7 +22,9 @@ vi.mock("../../../../src/mind.js", () => ({
 // Mock output utilities
 vi.mock("../../../../src/cli/utils/index.js", () => ({
   output: vi.fn(),
-  formatStatus: vi.fn((r) => `Status: ${r.hindsight.healthy ? "healthy" : "degraded"}`),
+  formatStatus: vi.fn(
+    (r) => `Status: ${r.hindsight.healthy ? "healthy" : "degraded"}`,
+  ),
 }));
 
 describe("status command", () => {

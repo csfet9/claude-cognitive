@@ -6,7 +6,13 @@
 import type { CAC } from "cac";
 import { Mind } from "../../mind.js";
 import type { LearnDepth } from "../../types.js";
-import { CLIError, ExitCode, info, output, formatLearnResult } from "../utils/index.js";
+import {
+  CLIError,
+  ExitCode,
+  info,
+  output,
+  formatLearnResult,
+} from "../utils/index.js";
 
 interface LearnOptions {
   project?: string;
@@ -21,7 +27,10 @@ interface LearnOptions {
 export function registerLearnCommand(cli: CAC): void {
   cli
     .command("learn", "Bootstrap memory from codebase")
-    .option("--project <path>", "Project directory (default: current directory)")
+    .option(
+      "--project <path>",
+      "Project directory (default: current directory)",
+    )
     .option(
       "--depth <level>",
       "Analysis depth: quick, standard, or full (default: standard)",

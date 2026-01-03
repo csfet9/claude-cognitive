@@ -178,7 +178,9 @@ export class ClaudeMindMcpServer {
       async (args) => {
         const input = {
           query: args.query as string,
-          ...(args.type ? { type: args.type as "world" | "experience" | "opinion" | "all" } : {}),
+          ...(args.type
+            ? { type: args.type as "world" | "experience" | "opinion" | "all" }
+            : {}),
         };
         const result = await handleRecall(this.mind, input);
         return {
@@ -277,46 +279,50 @@ export class ClaudeMindMcpServer {
     });
 
     // Tool execution endpoint (simple JSON-RPC style)
-    this.expressApp.post("/tools/:name", async (req: Request, res: Response) => {
-      const toolName = req.params.name;
-      const sessionId = (req.headers["mcp-session-id"] as string) || randomUUID();
+    this.expressApp.post(
+      "/tools/:name",
+      async (req: Request, res: Response) => {
+        const toolName = req.params.name;
+        const sessionId =
+          (req.headers["mcp-session-id"] as string) || randomUUID();
 
-      try {
-        if (toolName === "memory_recall") {
-          const parsed = recallInputSchema.safeParse(req.body);
-          if (!parsed.success) {
-            res.status(400).json({
-              error: "Invalid input",
-              details: parsed.error.errors,
-            });
-            return;
+        try {
+          if (toolName === "memory_recall") {
+            const parsed = recallInputSchema.safeParse(req.body);
+            if (!parsed.success) {
+              res.status(400).json({
+                error: "Invalid input",
+                details: parsed.error.errors,
+              });
+              return;
+            }
+            const input = {
+              query: parsed.data.query,
+              ...(parsed.data.type ? { type: parsed.data.type } : {}),
+            };
+            const result = await handleRecall(this.mind, input);
+            res.json({ sessionId, ...result });
+          } else if (toolName === "memory_reflect") {
+            const parsed = reflectInputSchema.safeParse(req.body);
+            if (!parsed.success) {
+              res.status(400).json({
+                error: "Invalid input",
+                details: parsed.error.errors,
+              });
+              return;
+            }
+            const result = await handleReflect(this.mind, parsed.data);
+            res.json({ sessionId, ...result });
+          } else {
+            res.status(404).json({ error: `Unknown tool: ${toolName}` });
           }
-          const input = {
-            query: parsed.data.query,
-            ...(parsed.data.type ? { type: parsed.data.type } : {}),
-          };
-          const result = await handleRecall(this.mind, input);
-          res.json({ sessionId, ...result });
-        } else if (toolName === "memory_reflect") {
-          const parsed = reflectInputSchema.safeParse(req.body);
-          if (!parsed.success) {
-            res.status(400).json({
-              error: "Invalid input",
-              details: parsed.error.errors,
-            });
-            return;
-          }
-          const result = await handleReflect(this.mind, parsed.data);
-          res.json({ sessionId, ...result });
-        } else {
-          res.status(404).json({ error: `Unknown tool: ${toolName}` });
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "Unknown error";
+          res.status(500).json({ error: message });
         }
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Unknown error";
-        res.status(500).json({ error: message });
-      }
-    });
+      },
+    );
 
     // Start listening
     await new Promise<void>((resolve) => {

@@ -36,10 +36,11 @@ export function registerUpdateBankCommand(cli: CAC): void {
         try {
           const config = await loadConfig(process.cwd());
 
-          const clientOptions: { host: string; port: number; apiKey?: string } = {
-            host: config.hindsight?.host ?? "localhost",
-            port: config.hindsight?.port ?? 8888,
-          };
+          const clientOptions: { host: string; port: number; apiKey?: string } =
+            {
+              host: config.hindsight?.host ?? "localhost",
+              port: config.hindsight?.port ?? 8888,
+            };
           if (config.hindsight?.apiKey) {
             clientOptions.apiKey = config.hindsight.apiKey;
           }
@@ -55,7 +56,9 @@ export function registerUpdateBankCommand(cli: CAC): void {
 
           const bankId = config.bankId;
           if (!bankId) {
-            console.error("Error: No bankId configured. Run 'claude-cognitive init' first.");
+            console.error(
+              "Error: No bankId configured. Run 'claude-cognitive init' first.",
+            );
             process.exit(1);
           }
 
@@ -70,7 +73,11 @@ export function registerUpdateBankCommand(cli: CAC): void {
 
           const updates: {
             background?: string;
-            disposition?: { skepticism?: TraitValue; literalism?: TraitValue; empathy?: TraitValue };
+            disposition?: {
+              skepticism?: TraitValue;
+              literalism?: TraitValue;
+              empathy?: TraitValue;
+            };
           } = {};
 
           // Fix perspective
@@ -119,9 +126,13 @@ export function registerUpdateBankCommand(cli: CAC): void {
           }
 
           if (Object.keys(updates).length === 0) {
-            info("No updates specified. Use --fix-perspective or other options.");
+            info(
+              "No updates specified. Use --fix-perspective or other options.",
+            );
             console.log("\nOptions:");
-            console.log("  --fix-perspective     Fix 'User believes' → 'I believe'");
+            console.log(
+              "  --fix-perspective     Fix 'User believes' → 'I believe'",
+            );
             console.log("  --background <text>   Set custom background");
             console.log("  --skepticism <1-5>    Update skepticism trait");
             console.log("  --literalism <1-5>    Update literalism trait");
@@ -135,13 +146,16 @@ export function registerUpdateBankCommand(cli: CAC): void {
           console.log(`✓ Bank '${bankId}' updated`);
 
           if (updates.background) {
-            const preview = updates.background.length > 80
-              ? updates.background.substring(0, 80) + "..."
-              : updates.background;
+            const preview =
+              updates.background.length > 80
+                ? updates.background.substring(0, 80) + "..."
+                : updates.background;
             console.log(`  Background: ${preview}`);
           }
           if (updates.disposition) {
-            console.log(`  Disposition: ${JSON.stringify(updates.disposition)}`);
+            console.log(
+              `  Disposition: ${JSON.stringify(updates.disposition)}`,
+            );
           }
         } catch (error) {
           console.error(

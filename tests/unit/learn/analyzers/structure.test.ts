@@ -81,7 +81,9 @@ describe("structure analyzer", () => {
     });
 
     it("should skip node_modules", async () => {
-      await mkdir(join(tempDir, "node_modules", "package"), { recursive: true });
+      await mkdir(join(tempDir, "node_modules", "package"), {
+        recursive: true,
+      });
       await writeFile(join(tempDir, "node_modules", "package", "index.js"), "");
       await writeFile(join(tempDir, "index.ts"), "");
 

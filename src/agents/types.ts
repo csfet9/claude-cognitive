@@ -41,7 +41,10 @@ export interface AgentContext {
 /**
  * Built-in agent type identifiers.
  */
-export type BuiltInAgentType = "code-explorer" | "code-architect" | "code-reviewer";
+export type BuiltInAgentType =
+  | "code-explorer"
+  | "code-architect"
+  | "code-reviewer";
 
 /**
  * Options for preparing agent context.

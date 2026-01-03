@@ -5,6 +5,7 @@ This example demonstrates how to integrate claude-cognitive into a TypeScript pr
 ## Project Overview
 
 A simple todo application that uses:
+
 - TypeScript + Node.js
 - SQLite for storage
 - Express for API
@@ -29,6 +30,7 @@ claude-cognitive init
 ```
 
 This creates:
+
 - `.claudemindrc` - Configuration file
 - `.claude/memory.md` - Semantic memory (if not exists)
 
@@ -41,6 +43,7 @@ claude-cognitive learn --depth standard
 ```
 
 This extracts facts about:
+
 - Tech stack (from package.json)
 - Project structure
 - Code patterns
@@ -107,6 +110,7 @@ todo-app/
 ### Session Start
 
 When you start a Claude Code session, the inject-context hook:
+
 1. Loads `.claude/memory.md`
 2. Recalls relevant memories from Hindsight
 3. Injects context into Claude's system prompt
@@ -114,12 +118,14 @@ When you start a Claude Code session, the inject-context hook:
 ### During Session
 
 Claude can use MCP tools:
+
 - `memory_recall` - Search for relevant memories
 - `memory_reflect` - Reason about patterns
 
 ### Session End
 
 When you close the session, the process-session hook:
+
 1. Processes the full transcript
 2. Extracts memories via Hindsight
 3. Forms observations about patterns
@@ -128,6 +134,7 @@ When you close the session, the process-session hook:
 ## Example Workflow
 
 1. **Start coding session**
+
    ```
    Claude receives context about your project:
    - Tech stack: TypeScript, Express, SQLite
@@ -136,6 +143,7 @@ When you close the session, the process-session hook:
    ```
 
 2. **Ask Claude to add a feature**
+
    ```
    You: "Add a due date field to todos"
 
@@ -146,6 +154,7 @@ When you close the session, the process-session hook:
    ```
 
 3. **Claude implements with context**
+
    ```
    Claude uses recalled knowledge to:
    - Follow existing patterns
@@ -154,6 +163,7 @@ When you close the session, the process-session hook:
    ```
 
 4. **Session ends**
+
    ```
    Hindsight captures:
    - What was changed

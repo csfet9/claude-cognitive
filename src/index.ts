@@ -115,7 +115,12 @@ export type { HindsightErrorCode as HindsightErrorCodeType } from "./types.js";
 export type { MindOptions } from "./types.js";
 
 // Types - Learn
-export type { LearnOptions, LearnResult, LearnDepth, ExtractedFact } from "./types.js";
+export type {
+  LearnOptions,
+  LearnResult,
+  LearnDepth,
+  ExtractedFact,
+} from "./types.js";
 
 // Types - Agents
 export type {

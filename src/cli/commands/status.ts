@@ -32,7 +32,10 @@ interface StatusResult {
 export function registerStatusCommand(cli: CAC): void {
   cli
     .command("status", "Show connection and project status")
-    .option("--project <path>", "Project directory (default: current directory)")
+    .option(
+      "--project <path>",
+      "Project directory (default: current directory)",
+    )
     .option("--json", "Output as JSON")
     .option("--quiet", "Suppress output")
     .action(async (options: StatusOptions) => {

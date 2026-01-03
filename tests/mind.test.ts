@@ -4,46 +4,51 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { Mind } from "../src/mind.js";
 import type { MindOptions } from "../src/types.js";
 
-// Create mock functions
-const mockHealth = vi.fn();
-const mockEnsureBankExists = vi.fn();
-const mockGetBank = vi.fn();
-const mockCreateBank = vi.fn();
-const mockRecall = vi.fn();
-const mockRecent = vi.fn();
-const mockReflect = vi.fn();
-const mockRetain = vi.fn();
+// Use vi.hoisted to ensure mock functions are available at hoist time
+const {
+  mockHealth,
+  mockEnsureBankExists,
+  mockGetBank,
+  mockCreateBank,
+  mockRecall,
+  mockRecent,
+  mockReflect,
+  mockRetain,
+  mockLearn,
+} = vi.hoisted(() => ({
+  mockHealth: vi.fn(),
+  mockEnsureBankExists: vi.fn(),
+  mockGetBank: vi.fn(),
+  mockCreateBank: vi.fn(),
+  mockRecall: vi.fn(),
+  mockRecent: vi.fn(),
+  mockReflect: vi.fn(),
+  mockRetain: vi.fn(),
+  mockLearn: vi.fn(),
+}));
 
-// Mock the client module
+// Mock the client module with a class
 vi.mock("../src/client.js", () => {
   return {
-    HindsightClient: vi.fn().mockImplementation(() => ({
-      health: mockHealth,
-      ensureBankExists: mockEnsureBankExists,
-      getBank: mockGetBank,
-      createBank: mockCreateBank,
-      recall: mockRecall,
-      recent: mockRecent,
-      reflect: mockReflect,
-      retain: mockRetain,
-    })),
+    HindsightClient: class MockHindsightClient {
+      health = mockHealth;
+      ensureBankExists = mockEnsureBankExists;
+      getBank = mockGetBank;
+      createBank = mockCreateBank;
+      recall = mockRecall;
+      recent = mockRecent;
+      reflect = mockReflect;
+      retain = mockRetain;
+    },
   };
 });
 
 // Mock the learn module
 vi.mock("../src/learn/index.js", () => {
   return {
-    learn: vi.fn().mockResolvedValue({
-      summary: "Learned 10 facts from 5 files",
-      worldFacts: 10,
-      opinions: [],
-      entities: [],
-      filesAnalyzed: 5,
-      duration: 1000,
-    }),
+    learn: mockLearn,
   };
 });
 
@@ -53,6 +58,8 @@ vi.mock("../src/agents/loader.js", () => {
     loadCustomAgents: vi.fn().mockResolvedValue([]),
   };
 });
+
+import { Mind } from "../src/mind.js";
 
 describe("Mind", () => {
   const defaultOptions: MindOptions = {
@@ -64,6 +71,15 @@ describe("Mind", () => {
     vi.clearAllMocks();
     // Default to unhealthy to avoid initialization issues
     mockHealth.mockResolvedValue({ healthy: false, error: "Test" });
+    // Default learn mock
+    mockLearn.mockResolvedValue({
+      summary: "Learned 10 facts from 5 files",
+      worldFacts: 10,
+      opinions: [],
+      entities: [],
+      filesAnalyzed: 5,
+      duration: 1000,
+    });
   });
 
   /**

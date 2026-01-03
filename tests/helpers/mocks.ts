@@ -180,55 +180,57 @@ export function createMockMind(options: MockMindOptions = {}) {
 export function createMockFetch(
   responses: Map<string, { status: number; body: unknown }> = new Map(),
 ) {
-  return vi.fn().mockImplementation(async (url: string, options?: RequestInit) => {
-    const urlObj = new URL(url);
-    const path = urlObj.pathname;
-    const method = options?.method ?? "GET";
-    const key = `${method}:${path}`;
+  return vi
+    .fn()
+    .mockImplementation(async (url: string, options?: RequestInit) => {
+      const urlObj = new URL(url);
+      const path = urlObj.pathname;
+      const method = options?.method ?? "GET";
+      const key = `${method}:${path}`;
 
-    // Check for exact match first
-    if (responses.has(key)) {
-      const { status, body } = responses.get(key)!;
-      return createMockResponse(status, body);
-    }
+      // Check for exact match first
+      if (responses.has(key)) {
+        const { status, body } = responses.get(key)!;
+        return createMockResponse(status, body);
+      }
 
-    // Default responses based on path patterns
-    if (path === "/api/v1/health") {
-      return createMockResponse(200, {
-        healthy: true,
-        version: "1.0.0",
-        bank_count: 1,
-      });
-    }
+      // Default responses based on path patterns
+      if (path === "/api/v1/health") {
+        return createMockResponse(200, {
+          healthy: true,
+          version: "1.0.0",
+          bank_count: 1,
+        });
+      }
 
-    if (path.match(/\/api\/v1\/banks\/[^/]+$/) && method === "GET") {
-      return createMockResponse(200, {
-        bank_id: "test-bank",
-        disposition: { skepticism: 3, literalism: 3, empathy: 3 },
-        created_at: new Date().toISOString(),
-        memory_count: 10,
-      });
-    }
+      if (path.match(/\/api\/v1\/banks\/[^/]+$/) && method === "GET") {
+        return createMockResponse(200, {
+          bank_id: "test-bank",
+          disposition: { skepticism: 3, literalism: 3, empathy: 3 },
+          created_at: new Date().toISOString(),
+          memory_count: 10,
+        });
+      }
 
-    if (path.includes("/recall") && method === "POST") {
-      return createMockResponse(200, { memories: [] });
-    }
+      if (path.includes("/recall") && method === "POST") {
+        return createMockResponse(200, { memories: [] });
+      }
 
-    if (path.includes("/reflect") && method === "POST") {
-      return createMockResponse(200, {
-        text: "Reflection result",
-        opinions: [],
-        based_on: { world: [], experience: [], opinion: [] },
-      });
-    }
+      if (path.includes("/reflect") && method === "POST") {
+        return createMockResponse(200, {
+          text: "Reflection result",
+          opinions: [],
+          based_on: { world: [], experience: [], opinion: [] },
+        });
+      }
 
-    if (path.includes("/retain") && method === "POST") {
-      return createMockResponse(200, { memory_ids: ["mem-1"] });
-    }
+      if (path.includes("/retain") && method === "POST") {
+        return createMockResponse(200, { memory_ids: ["mem-1"] });
+      }
 
-    // Default 404
-    return createMockResponse(404, { error: "Not found" });
-  });
+      // Default 404
+      return createMockResponse(404, { error: "Not found" });
+    });
 }
 
 /**

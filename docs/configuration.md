@@ -44,36 +44,37 @@ Full configuration reference:
 
 Hindsight server connection settings.
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `host` | string | `"localhost"` | Hindsight server hostname |
-| `port` | number | `8888` | Hindsight server port |
-| `apiKey` | string | - | Optional API key for authentication |
-| `timeout` | number | `10000` | Request timeout in milliseconds |
+| Property  | Type   | Default       | Description                         |
+| --------- | ------ | ------------- | ----------------------------------- |
+| `host`    | string | `"localhost"` | Hindsight server hostname           |
+| `port`    | number | `8888`        | Hindsight server port               |
+| `apiKey`  | string | -             | Optional API key for authentication |
+| `timeout` | number | `10000`       | Request timeout in milliseconds     |
 
 ### bankId
 
-| Type | Default | Description |
-|------|---------|-------------|
+| Type   | Default                | Description                           |
+| ------ | ---------------------- | ------------------------------------- |
 | string | Project directory name | Unique identifier for the memory bank |
 
 ### disposition
 
 Personality traits that shape how `reflect()` reasons.
 
-| Property | Type | Range | Default | Description |
-|----------|------|-------|---------|-------------|
-| `skepticism` | number | 1-5 | 3 | How much to question claims |
-| `literalism` | number | 1-5 | 3 | How precisely to interpret |
-| `empathy` | number | 1-5 | 3 | How much to consider emotional context |
+| Property     | Type   | Range | Default | Description                            |
+| ------------ | ------ | ----- | ------- | -------------------------------------- |
+| `skepticism` | number | 1-5   | 3       | How much to question claims            |
+| `literalism` | number | 1-5   | 3       | How precisely to interpret             |
+| `empathy`    | number | 1-5   | 3       | How much to consider emotional context |
 
 ### background
 
-| Type | Default | Description |
-|------|---------|-------------|
-| string | - | Natural language identity/background for the bank |
+| Type   | Default | Description                                       |
+| ------ | ------- | ------------------------------------------------- |
+| string | -       | Natural language identity/background for the bank |
 
 Example:
+
 ```json
 {
   "background": "I am a developer assistant for a React Native mobile app. The project uses Expo SDK 51 with Supabase for backend. I prefer explicit patterns over magic."
@@ -84,9 +85,9 @@ Example:
 
 Semantic memory file settings.
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `path` | string | `".claude/memory.md"` | Path to semantic memory file |
+| Property | Type   | Default               | Description                  |
+| -------- | ------ | --------------------- | ---------------------------- |
+| `path`   | string | `".claude/memory.md"` | Path to semantic memory file |
 
 ---
 
@@ -94,14 +95,15 @@ Semantic memory file settings.
 
 Environment variables override file configuration.
 
-| Variable | Maps To | Example |
-|----------|---------|---------|
-| `HINDSIGHT_HOST` | `hindsight.host` | `localhost` |
-| `HINDSIGHT_PORT` | `hindsight.port` | `8888` |
-| `HINDSIGHT_API_KEY` | `hindsight.apiKey` | `your-api-key` |
-| `CLAUDEMIND_BANK_ID` | `bankId` | `my-project` |
+| Variable             | Maps To            | Example        |
+| -------------------- | ------------------ | -------------- |
+| `HINDSIGHT_HOST`     | `hindsight.host`   | `localhost`    |
+| `HINDSIGHT_PORT`     | `hindsight.port`   | `8888`         |
+| `HINDSIGHT_API_KEY`  | `hindsight.apiKey` | `your-api-key` |
+| `CLAUDEMIND_BANK_ID` | `bankId`           | `my-project`   |
 
 Example:
+
 ```bash
 export HINDSIGHT_HOST=localhost
 export HINDSIGHT_PORT=8888
@@ -168,10 +170,10 @@ Full integration configuration:
 claude-cognitive serve [options]
 ```
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--project <path>` | `.` | Project directory path |
-| `--port <port>` | - | HTTP port (enables HTTP transport) |
+| Option             | Default | Description                        |
+| ------------------ | ------- | ---------------------------------- |
+| `--project <path>` | `.`     | Project directory path             |
+| `--port <port>`    | -       | HTTP port (enables HTTP transport) |
 
 ---
 
@@ -179,21 +181,21 @@ claude-cognitive serve [options]
 
 ### Trait Descriptions
 
-| Trait | 1 (Low) | 5 (High) |
-|-------|---------|----------|
+| Trait          | 1 (Low)                          | 5 (High)                                    |
+| -------------- | -------------------------------- | ------------------------------------------- |
 | **Skepticism** | Trusts information at face value | Questions claims, looks for inconsistencies |
-| **Literalism** | Flexible, reads between lines | Precise, exact interpretation |
-| **Empathy** | Focuses on facts and data | Considers emotional context |
+| **Literalism** | Flexible, reads between lines    | Precise, exact interpretation               |
+| **Empathy**    | Focuses on facts and data        | Considers emotional context                 |
 
 ### Recommended Configurations
 
-| Use Case | Skepticism | Literalism | Empathy |
-|----------|------------|------------|---------|
-| Code Review | 4 | 5 | 2 |
-| Bug Investigation | 4 | 4 | 2 |
-| Documentation | 3 | 3 | 3 |
-| User Support | 2 | 2 | 5 |
-| Security Audit | 5 | 5 | 1 |
+| Use Case          | Skepticism | Literalism | Empathy |
+| ----------------- | ---------- | ---------- | ------- |
+| Code Review       | 4          | 5          | 2       |
+| Bug Investigation | 4          | 4          | 2       |
+| Documentation     | 3          | 3          | 3       |
+| User Support      | 2          | 2          | 5       |
+| Security Audit    | 5          | 5          | 1       |
 
 ---
 
@@ -207,27 +209,31 @@ The `.claude/memory.md` file is created with this structure:
 # Project Memory
 
 ## Tech Stack
+
 <!-- Add your tech stack here -->
 
 ## Key Decisions
+
 <!-- Document important architectural decisions -->
 
 ## Critical Paths
+
 <!-- List important code paths -->
 
 ## Observations
+
 <!-- Promoted insights from Hindsight -->
 ```
 
 ### Recommended Sections
 
-| Section | Purpose | Example Content |
-|---------|---------|-----------------|
-| Tech Stack | Frameworks, libraries | "React Native with Expo SDK 51" |
-| Key Decisions | Architectural choices | "Chose Zustand over Redux for simplicity" |
-| Critical Paths | Important code flows | "Auth: src/lib/supabase.ts → AuthProvider" |
-| Patterns | Coding conventions | "All API calls go through src/lib/api.ts" |
-| Observations | Promoted insights | "Auth changes require navigation updates" |
+| Section        | Purpose               | Example Content                            |
+| -------------- | --------------------- | ------------------------------------------ |
+| Tech Stack     | Frameworks, libraries | "React Native with Expo SDK 51"            |
+| Key Decisions  | Architectural choices | "Chose Zustand over Redux for simplicity"  |
+| Critical Paths | Important code flows  | "Auth: src/lib/supabase.ts → AuthProvider" |
+| Patterns       | Coding conventions    | "All API calls go through src/lib/api.ts"  |
+| Observations   | Promoted insights     | "Auth changes require navigation updates"  |
 
 ---
 
@@ -249,12 +255,12 @@ Custom timeouts for different operations:
 }
 ```
 
-| Operation | Default | Description |
-|-----------|---------|-------------|
-| `health` | 3000ms | Health check timeout |
-| `recall` | 15000ms | Memory search timeout |
-| `reflect` | 30000ms | LLM reasoning timeout |
-| `retain` | 10000ms | Memory storage timeout |
+| Operation | Default | Description            |
+| --------- | ------- | ---------------------- |
+| `health`  | 3000ms  | Health check timeout   |
+| `recall`  | 15000ms | Memory search timeout  |
+| `reflect` | 30000ms | LLM reasoning timeout  |
+| `retain`  | 10000ms | Memory storage timeout |
 
 ---
 
@@ -267,6 +273,7 @@ claude-cognitive config
 ```
 
 Output:
+
 ```
 Configuration:
   Bank ID: my-project

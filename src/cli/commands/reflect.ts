@@ -49,7 +49,10 @@ function formatReflection(result: ReflectResult): string {
 export function registerReflectCommand(cli: CAC): void {
   cli
     .command("reflect <query>", "Reason about accumulated knowledge")
-    .option("--project <path>", "Project directory (default: current directory)")
+    .option(
+      "--project <path>",
+      "Project directory (default: current directory)",
+    )
     .option("--json", "Output as JSON")
     .option("--quiet", "Suppress output")
     .action(async (query: string, options: ReflectOptions) => {

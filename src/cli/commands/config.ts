@@ -19,7 +19,10 @@ interface ConfigOptions {
 export function registerConfigCommand(cli: CAC): void {
   cli
     .command("config", "Show current configuration")
-    .option("--project <path>", "Project directory (default: current directory)")
+    .option(
+      "--project <path>",
+      "Project directory (default: current directory)",
+    )
     .option("--json", "Output as JSON")
     .option("--quiet", "Suppress output")
     .action(async (options: ConfigOptions) => {

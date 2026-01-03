@@ -8,7 +8,10 @@ import { writeFile, mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomBytes } from "node:crypto";
-import { analyzeSource, getSourceSummary } from "../../../../src/learn/analyzers/source.js";
+import {
+  analyzeSource,
+  getSourceSummary,
+} from "../../../../src/learn/analyzers/source.js";
 
 describe("source analyzer", () => {
   let tempDir: string;

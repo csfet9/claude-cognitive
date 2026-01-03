@@ -15,7 +15,10 @@ describe("SemanticMemory", () => {
 
   beforeEach(async () => {
     // Create a unique temp directory for each test
-    testDir = join(tmpdir(), `claude-cognitive-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    testDir = join(
+      tmpdir(),
+      `claude-cognitive-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    );
     await mkdir(testDir, { recursive: true });
     semanticPath = ".claude/memory.md";
   });
@@ -137,11 +140,7 @@ describe("SemanticMemory", () => {
     it("should preserve section order", async () => {
       const filePath = join(testDir, semanticPath);
       await mkdir(join(testDir, ".claude"), { recursive: true });
-      await writeFile(
-        filePath,
-        `## Zebra\n\n## Alpha\n\n## Middle\n`,
-        "utf-8",
-      );
+      await writeFile(filePath, `## Zebra\n\n## Alpha\n\n## Middle\n`, "utf-8");
 
       const semantic = new SemanticMemory(testDir);
       await semantic.load();

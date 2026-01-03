@@ -167,7 +167,9 @@ describe("PromotionManager", () => {
       const errorSemantic = {
         isLoaded: () => true,
         get: () => "",
-        promoteObservation: vi.fn().mockRejectedValue(new Error("Write failed")),
+        promoteObservation: vi
+          .fn()
+          .mockRejectedValue(new Error("Write failed")),
       } as unknown as SemanticMemory;
 
       const errorManager = new PromotionManager(errorSemantic, emitter);

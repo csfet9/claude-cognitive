@@ -138,7 +138,11 @@ function extractSetupInstructions(content: string): string[] {
 
     // Collect code blocks and list items in section
     if (inSection) {
-      if (line.includes("npm ") || line.includes("yarn ") || line.includes("npx ")) {
+      if (
+        line.includes("npm ") ||
+        line.includes("yarn ") ||
+        line.includes("npx ")
+      ) {
         instructions.push(line.trim().replace(/^[\s$]+/, ""));
       } else if (line.trim().startsWith("-") || line.trim().startsWith("*")) {
         instructions.push(line.trim().replace(/^[-*]\s*/, ""));
@@ -170,7 +174,10 @@ function extractFeatures(content: string): string[] {
       break;
     }
 
-    if (inSection && (line.trim().startsWith("-") || line.trim().startsWith("*"))) {
+    if (
+      inSection &&
+      (line.trim().startsWith("-") || line.trim().startsWith("*"))
+    ) {
       features.push(line.trim().replace(/^[-*]\s*/, ""));
     }
   }

@@ -10,7 +10,11 @@
  * Run with: npx tsx tests/perf/mind.bench.ts
  */
 
-import { runBenchmarkSuite, benchmark, formatResultsTable } from "./benchmark.js";
+import {
+  runBenchmarkSuite,
+  benchmark,
+  formatResultsTable,
+} from "./benchmark.js";
 import { Mind } from "../../src/mind.js";
 import { SemanticMemory } from "../../src/semantic.js";
 import { HindsightClient } from "../../src/client.js";
@@ -78,7 +82,10 @@ async function main() {
 
   try {
     // Run benchmarks
-    const results: Array<{ result: Awaited<ReturnType<typeof benchmark>>; target?: number }> = [];
+    const results: Array<{
+      result: Awaited<ReturnType<typeof benchmark>>;
+      target?: number;
+    }> = [];
 
     // 1. Config loading benchmark
     console.log("\n[1/6] Benchmarking config loading...");
@@ -90,7 +97,9 @@ async function main() {
       { iterations: 20 },
     );
     results.push({ result: configResult, target: TARGETS.CONFIG_LOAD });
-    console.log(`  Mean: ${configResult.mean.toFixed(2)}ms (target: <${TARGETS.CONFIG_LOAD}ms)`);
+    console.log(
+      `  Mean: ${configResult.mean.toFixed(2)}ms (target: <${TARGETS.CONFIG_LOAD}ms)`,
+    );
 
     // 2. Semantic memory load benchmark
     console.log("\n[2/6] Benchmarking semantic memory loading...");
@@ -103,7 +112,9 @@ async function main() {
       { iterations: 20 },
     );
     results.push({ result: semanticLoadResult, target: TARGETS.SEMANTIC_LOAD });
-    console.log(`  Mean: ${semanticLoadResult.mean.toFixed(2)}ms (target: <${TARGETS.SEMANTIC_LOAD}ms)`);
+    console.log(
+      `  Mean: ${semanticLoadResult.mean.toFixed(2)}ms (target: <${TARGETS.SEMANTIC_LOAD}ms)`,
+    );
 
     // 3. Semantic toContext benchmark
     console.log("\n[3/6] Benchmarking semantic context formatting...");
@@ -116,8 +127,13 @@ async function main() {
       },
       { iterations: 100 },
     );
-    results.push({ result: semanticFormatResult, target: TARGETS.SEMANTIC_FORMAT });
-    console.log(`  Mean: ${semanticFormatResult.mean.toFixed(2)}ms (target: <${TARGETS.SEMANTIC_FORMAT}ms)`);
+    results.push({
+      result: semanticFormatResult,
+      target: TARGETS.SEMANTIC_FORMAT,
+    });
+    console.log(
+      `  Mean: ${semanticFormatResult.mean.toFixed(2)}ms (target: <${TARGETS.SEMANTIC_FORMAT}ms)`,
+    );
 
     // 4. Mind initialization (without Hindsight)
     console.log("\n[4/6] Benchmarking Mind init (degraded mode)...");
@@ -131,7 +147,9 @@ async function main() {
       { iterations: 10 },
     );
     results.push({ result: mindInitResult, target: TARGETS.SESSION_START });
-    console.log(`  Mean: ${mindInitResult.mean.toFixed(2)}ms (target: <${TARGETS.SESSION_START}ms)`);
+    console.log(
+      `  Mean: ${mindInitResult.mean.toFixed(2)}ms (target: <${TARGETS.SESSION_START}ms)`,
+    );
 
     // 5. Session start (degraded mode - no Hindsight)
     console.log("\n[5/6] Benchmarking session start (degraded mode)...");
@@ -146,7 +164,9 @@ async function main() {
       { iterations: 20 },
     );
     results.push({ result: sessionStartResult, target: TARGETS.SESSION_START });
-    console.log(`  Mean: ${sessionStartResult.mean.toFixed(2)}ms (target: <${TARGETS.SESSION_START}ms)`);
+    console.log(
+      `  Mean: ${sessionStartResult.mean.toFixed(2)}ms (target: <${TARGETS.SESSION_START}ms)`,
+    );
 
     // 6. Recall (degraded mode)
     console.log("\n[6/6] Benchmarking recall (degraded mode)...");
@@ -158,7 +178,9 @@ async function main() {
       { iterations: 20 },
     );
     results.push({ result: recallResult, target: TARGETS.RECALL });
-    console.log(`  Mean: ${recallResult.mean.toFixed(2)}ms (target: <${TARGETS.RECALL}ms)`);
+    console.log(
+      `  Mean: ${recallResult.mean.toFixed(2)}ms (target: <${TARGETS.RECALL}ms)`,
+    );
 
     // Print summary table
     console.log("\n" + "=".repeat(80));
@@ -208,17 +230,24 @@ async function main() {
           },
           { iterations: 10 },
         );
-        console.log(`  Recall (Hindsight): ${recallHindsightResult.mean.toFixed(2)}ms (target: <${TARGETS.RECALL}ms) [${recallHindsightResult.mean <= TARGETS.RECALL ? "PASS" : "FAIL"}]`);
+        console.log(
+          `  Recall (Hindsight): ${recallHindsightResult.mean.toFixed(2)}ms (target: <${TARGETS.RECALL}ms) [${recallHindsightResult.mean <= TARGETS.RECALL ? "PASS" : "FAIL"}]`,
+        );
 
         // Benchmark reflect with Hindsight
         const reflectHindsightResult = await benchmark(
           "Reflect (Hindsight)",
           async () => {
-            await client.reflect(testBankId, "What do I know about the tech stack?");
+            await client.reflect(
+              testBankId,
+              "What do I know about the tech stack?",
+            );
           },
           { iterations: 5, warmup: 1 },
         );
-        console.log(`  Reflect (Hindsight): ${reflectHindsightResult.mean.toFixed(2)}ms (target: <${TARGETS.REFLECT}ms) [${reflectHindsightResult.mean <= TARGETS.REFLECT ? "PASS" : "FAIL"}]`);
+        console.log(
+          `  Reflect (Hindsight): ${reflectHindsightResult.mean.toFixed(2)}ms (target: <${TARGETS.REFLECT}ms) [${reflectHindsightResult.mean <= TARGETS.REFLECT ? "PASS" : "FAIL"}]`,
+        );
 
         // Full session start with Hindsight
         const mindFull = new Mind({ projectPath: tempDir });
@@ -230,7 +259,9 @@ async function main() {
           },
           { iterations: 10, warmup: 2 },
         );
-        console.log(`  Session Start (full): ${sessionFullResult.mean.toFixed(2)}ms (target: <${TARGETS.SESSION_START}ms) [${sessionFullResult.mean <= TARGETS.SESSION_START ? "PASS" : "FAIL"}]`);
+        console.log(
+          `  Session Start (full): ${sessionFullResult.mean.toFixed(2)}ms (target: <${TARGETS.SESSION_START}ms) [${sessionFullResult.mean <= TARGETS.SESSION_START ? "PASS" : "FAIL"}]`,
+        );
 
         // Clean up test bank
         try {
@@ -241,7 +272,9 @@ async function main() {
       }
     } catch (error) {
       console.log("\nHindsight not available - skipping full benchmarks");
-      console.log("To run full benchmarks, start Hindsight server on localhost:8888");
+      console.log(
+        "To run full benchmarks, start Hindsight server on localhost:8888",
+      );
     }
 
     // Final summary
