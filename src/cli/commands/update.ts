@@ -3,10 +3,75 @@
  * @module cli/commands/update
  */
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile, access } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import type { CAC } from "cac";
+
+/**
+ * Get the path to the stop hook wrapper script.
+ */
+function getStopHookScriptPath(): string {
+  return join(homedir(), ".local", "bin", "claude-cognitive-stop-hook.sh");
+}
+
+/**
+ * Create the stop hook wrapper script.
+ * Claude Code passes transcript_path via stdin JSON, not as env var.
+ */
+async function createStopHookScript(): Promise<string> {
+  const scriptPath = getStopHookScriptPath();
+  const scriptDir = join(homedir(), ".local", "bin");
+
+  // Ensure directory exists
+  await mkdir(scriptDir, { recursive: true });
+
+  const scriptContent = `#!/bin/bash
+# Claude Code Stop hook wrapper for claude-cognitive
+# Reads JSON from stdin, syncs to Hindsight, then cleans up
+
+# Read stdin
+INPUT=$(cat)
+
+# Extract transcript_path and cwd using jq (or fallback to grep/sed)
+if command -v jq &> /dev/null; then
+  TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // empty')
+  PROJECT_DIR=$(echo "$INPUT" | jq -r '.cwd // empty')
+else
+  TRANSCRIPT_PATH=$(echo "$INPUT" | grep -o '"transcript_path":"[^"]*"' | cut -d'"' -f4)
+  PROJECT_DIR=$(echo "$INPUT" | grep -o '"cwd":"[^"]*"' | cut -d'"' -f4)
+fi
+
+# Only process if we have a transcript path
+if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
+  # Sync to Hindsight
+  claude-cognitive process-session --transcript "$TRANSCRIPT_PATH"
+
+  # Clean up session buffer after successful sync
+  if [ -n "$PROJECT_DIR" ]; then
+    BUFFER_FILE="$PROJECT_DIR/.claude/.session-buffer.jsonl"
+    if [ -f "$BUFFER_FILE" ]; then
+      rm -f "$BUFFER_FILE"
+    fi
+  fi
+fi
+`;
+
+  await writeFile(scriptPath, scriptContent, { mode: 0o755 });
+  return scriptPath;
+}
+
+/**
+ * Check if the stop hook script exists.
+ */
+async function stopHookScriptExists(): Promise<boolean> {
+  try {
+    await access(getStopHookScriptPath());
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const COLORS = {
   reset: "\x1b[0m",
@@ -119,6 +184,7 @@ export function registerUpdateCommand(cli: CAC): void {
       // 3. Check/update hooks configuration
       const settings = await readJsonFile(settingsPath);
       const hooks = (settings.hooks as Record<string, unknown[]>) || {};
+      const scriptPath = getStopHookScriptPath();
 
       // Helper to check if a hook command exists
       const hasHookCommand = (
@@ -133,69 +199,62 @@ export function registerUpdateCommand(cli: CAC): void {
         );
       };
 
-      // Check/update Stop hook (process-session)
+      // Check/update Stop hook wrapper script
+      const scriptExists = await stopHookScriptExists();
       const stopHooks =
         (hooks.Stop as Array<{ matcher: string; hooks: unknown[] }>) || [];
+      const hasWrapperHook = hasHookCommand(stopHooks, "claude-cognitive-stop-hook.sh");
+      const hasOldStyleHook = hasHookCommand(stopHooks, '$TRANSCRIPT_PATH"');
 
-      if (!hasHookCommand(stopHooks, "claude-cognitive process-session")) {
+      if (!scriptExists || !hasWrapperHook || hasOldStyleHook) {
         updatesNeeded++;
         if (dryRun) {
-          printWarn("Stop hook not configured in ~/.claude/settings.json");
+          if (!scriptExists) {
+            printWarn("Stop hook wrapper script not found");
+          }
+          if (!hasWrapperHook) {
+            printWarn("Stop hook not using wrapper script");
+          }
+          if (hasOldStyleHook) {
+            printWarn("Old-style Stop hook needs migration (uses $TRANSCRIPT_PATH env var which doesn't work)");
+          }
         } else {
-          stopHooks.push({
-            matcher: "",
-            hooks: [
-              {
-                type: "command",
-                command:
-                  'claude-cognitive process-session --transcript "$TRANSCRIPT_PATH"',
-              },
-            ],
-          });
-          hooks.Stop = stopHooks;
-          printSuccess("Added Stop hook (process-session)");
+          // Create/update the wrapper script
+          await createStopHookScript();
+          printSuccess("Created/updated stop hook wrapper script");
+
+          // Remove old-style hooks that use $TRANSCRIPT_PATH env var
+          const filteredStopHooks = stopHooks.filter(
+            (entry) =>
+              !entry.hooks?.some((h: unknown) => {
+                const hook = h as { command?: string };
+                return hook.command?.includes('$TRANSCRIPT_PATH"');
+              }),
+          );
+
+          // Add wrapper script hook if not present
+          if (!hasHookCommand(filteredStopHooks, "claude-cognitive-stop-hook.sh")) {
+            filteredStopHooks.push({
+              matcher: "",
+              hooks: [
+                {
+                  type: "command",
+                  command: scriptPath,
+                },
+              ],
+            });
+          }
+
+          hooks.Stop = filteredStopHooks;
+          printSuccess("Updated Stop hook to use wrapper script");
           updatesApplied++;
         }
       } else {
-        // Check if existing hook has transcript path
-        const needsUpdate = stopHooks.some((entry) =>
-          entry.hooks?.some((h: unknown) => {
-            const hook = h as { command?: string };
-            return (
-              hook.command?.includes("claude-cognitive process-session") &&
-              !hook.command?.includes("TRANSCRIPT")
-            );
-          }),
-        );
-        if (needsUpdate) {
-          updatesNeeded++;
-          if (dryRun) {
-            printWarn("Stop hook missing transcript path");
-          } else {
-            // Update the hook command
-            for (const entry of stopHooks) {
-              for (const h of entry.hooks || []) {
-                const hook = h as { command?: string };
-                if (
-                  hook.command?.includes("claude-cognitive process-session") &&
-                  !hook.command?.includes("TRANSCRIPT")
-                ) {
-                  hook.command =
-                    'claude-cognitive process-session --transcript "$TRANSCRIPT_PATH"';
-                }
-              }
-            }
-            hooks.Stop = stopHooks;
-            printSuccess("Updated Stop hook with transcript path");
-            updatesApplied++;
-          }
-        } else {
-          printInfo("Stop hook already configured");
-        }
+        printInfo("Stop hook already configured correctly");
       }
 
-      // Note: PostToolUse buffer hook removed - was capturing agent activity
-      // Session sync now relies on Stop hook with $TRANSCRIPT_PATH
+      // Note: Claude Code passes transcript_path via stdin JSON, not as env var
+      // The wrapper script reads stdin and extracts the path
 
       // Write settings if any hooks were updated
       if (!dryRun && updatesApplied > 0) {
