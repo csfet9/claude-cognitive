@@ -7,7 +7,7 @@ import type { CAC } from "cac";
 import { loadConfig } from "../../config.js";
 import { HindsightClient } from "../../client.js";
 import type { TraitValue } from "../../types.js";
-import { info, warn } from "../utils/index.js";
+import { info, warn, CLIError, ExitCode } from "../utils/index.js";
 
 /** First-person perspective prefix */
 const FIRST_PERSON_PREFIX =
@@ -50,16 +50,20 @@ export function registerUpdateBankCommand(cli: CAC): void {
           // Check connection
           const health = await client.health();
           if (!health.healthy) {
-            console.error("Error: Hindsight is not available");
-            process.exit(1);
+            throw new CLIError(
+              "Hindsight is not available",
+              ExitCode.CONNECTION_ERROR,
+              "Make sure Hindsight is running and accessible.",
+            );
           }
 
           const bankId = config.bankId;
           if (!bankId) {
-            console.error(
-              "Error: No bankId configured. Run 'claude-cognitive init' first.",
+            throw new CLIError(
+              "No bankId configured",
+              ExitCode.CONFIG_ERROR,
+              "Run 'claude-cognitive init' first.",
             );
-            process.exit(1);
           }
 
           // Get current bank
@@ -67,8 +71,11 @@ export function registerUpdateBankCommand(cli: CAC): void {
           try {
             bank = await client.getBank(bankId);
           } catch {
-            console.error(`Error: Bank '${bankId}' not found`);
-            process.exit(1);
+            throw new CLIError(
+              `Bank '${bankId}' not found`,
+              ExitCode.NOT_FOUND,
+              "Run 'claude-cognitive init' to create the bank.",
+            );
           }
 
           const updates: {
@@ -158,10 +165,14 @@ export function registerUpdateBankCommand(cli: CAC): void {
             );
           }
         } catch (error) {
-          console.error(
-            `Error: ${error instanceof Error ? error.message : error}`,
+          // Re-throw CLIError as-is, wrap other errors
+          if (error instanceof CLIError) {
+            throw error;
+          }
+          throw new CLIError(
+            error instanceof Error ? error.message : String(error),
+            ExitCode.GENERAL_ERROR,
           );
-          process.exit(1);
         }
       },
     );

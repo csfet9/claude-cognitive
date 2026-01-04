@@ -457,6 +457,8 @@ export interface LearnResult {
   filesAnalyzed: number;
   /** Total duration in milliseconds */
   duration: number;
+  /** Reflection queries that failed (undefined if all succeeded) */
+  reflectionFailures?: string[];
 }
 
 /** Categories for extracted facts */

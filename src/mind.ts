@@ -98,6 +98,7 @@ export class Mind extends TypedEventEmitter {
 
   // State
   private initialized = false;
+  private initializing = false;
   private degraded = false;
   private sessionActive = false;
   /** Session start time. Used for duration tracking. */
@@ -135,112 +136,120 @@ export class Mind extends TypedEventEmitter {
    * 4. Creates bank if it doesn't exist
    * 5. Loads custom agent templates
    *
-   * @throws {Error} If init() is called twice
+   * @throws {Error} If init() is called twice or concurrently
    */
   async init(): Promise<void> {
     if (this.initialized) {
       throw new Error("Mind already initialized. Call init() only once.");
     }
+    if (this.initializing) {
+      throw new Error("Mind initialization already in progress.");
+    }
+    this.initializing = true;
 
-    // Build config overrides, only including defined values
-    const hindsightOverrides: Record<string, string | number> = {};
-    if (this.pendingOptions.host !== undefined) {
-      hindsightOverrides.host = this.pendingOptions.host;
-    }
-    if (this.pendingOptions.port !== undefined) {
-      hindsightOverrides.port = this.pendingOptions.port;
-    }
-    if (this.pendingOptions.apiKey !== undefined) {
-      hindsightOverrides.apiKey = this.pendingOptions.apiKey;
-    }
-
-    // Build overrides object, only including defined values
-    const overrides: Record<string, unknown> = {};
-    if (Object.keys(hindsightOverrides).length > 0) {
-      overrides.hindsight = hindsightOverrides;
-    }
-    if (this.pendingOptions.bankId !== undefined) {
-      overrides.bankId = this.pendingOptions.bankId;
-    }
-    if (this.pendingOptions.disposition !== undefined) {
-      overrides.disposition = this.pendingOptions.disposition;
-    }
-    if (this.pendingOptions.background !== undefined) {
-      overrides.background = this.pendingOptions.background;
-    }
-    if (this.pendingOptions.semanticPath !== undefined) {
-      overrides.semantic = { path: this.pendingOptions.semanticPath };
-    }
-
-    // Load config with pending options as overrides
-    const config = await loadConfig(this.projectPath, overrides);
-
-    // Resolve configuration
-    this.bankId = config.bankId ?? (await this.deriveBankId());
-    this.disposition = config.disposition ?? DEFAULT_DISPOSITION;
-    if (config.background) {
-      this.background = config.background;
-    }
-    this.semanticPath = config.semantic?.path ?? ".claude/memory.md";
-
-    // Create HindsightClient
-    const clientOptions: {
-      host: string;
-      port: number;
-      apiKey?: string;
-      timeouts?: Partial<TimeoutConfig>;
-    } = {
-      host: config.hindsight.host,
-      port: config.hindsight.port,
-    };
-    if (config.hindsight.apiKey) {
-      clientOptions.apiKey = config.hindsight.apiKey;
-    }
-    if (config.hindsight.timeouts) {
-      clientOptions.timeouts = config.hindsight.timeouts;
-    }
-    this.client = new HindsightClient(clientOptions);
-
-    // Health check
-    const health = await this.client.health();
-
-    if (!health.healthy) {
-      this.enterDegradedMode(
-        `Hindsight unavailable: ${health.error ?? "unknown"}`,
-      );
-    } else {
-      // Ensure bank exists
-      await this.ensureBank();
-    }
-
-    // Load custom agents from .claude/agents/
-    this.customAgents = await loadCustomAgents(this.projectPath);
-
-    // Load semantic memory
-    this.semantic = new SemanticMemory(this.projectPath, this.semanticPath);
     try {
-      await this.semantic.load();
-    } catch (error) {
-      // Semantic memory is optional - emit error but continue
-      this.emit(
-        "error",
-        error instanceof Error ? error : new Error(String(error)),
-      );
+      // Build config overrides, only including defined values
+      const hindsightOverrides: Record<string, string | number> = {};
+      if (this.pendingOptions.host !== undefined) {
+        hindsightOverrides.host = this.pendingOptions.host;
+      }
+      if (this.pendingOptions.port !== undefined) {
+        hindsightOverrides.port = this.pendingOptions.port;
+      }
+      if (this.pendingOptions.apiKey !== undefined) {
+        hindsightOverrides.apiKey = this.pendingOptions.apiKey;
+      }
+
+      // Build overrides object, only including defined values
+      const overrides: Record<string, unknown> = {};
+      if (Object.keys(hindsightOverrides).length > 0) {
+        overrides.hindsight = hindsightOverrides;
+      }
+      if (this.pendingOptions.bankId !== undefined) {
+        overrides.bankId = this.pendingOptions.bankId;
+      }
+      if (this.pendingOptions.disposition !== undefined) {
+        overrides.disposition = this.pendingOptions.disposition;
+      }
+      if (this.pendingOptions.background !== undefined) {
+        overrides.background = this.pendingOptions.background;
+      }
+      if (this.pendingOptions.semanticPath !== undefined) {
+        overrides.semantic = { path: this.pendingOptions.semanticPath };
+      }
+
+      // Load config with pending options as overrides
+      const config = await loadConfig(this.projectPath, overrides);
+
+      // Resolve configuration
+      this.bankId = config.bankId ?? (await this.deriveBankId());
+      this.disposition = config.disposition ?? DEFAULT_DISPOSITION;
+      if (config.background) {
+        this.background = config.background;
+      }
+      this.semanticPath = config.semantic?.path ?? ".claude/memory.md";
+
+      // Create HindsightClient
+      const clientOptions: {
+        host: string;
+        port: number;
+        apiKey?: string;
+        timeouts?: Partial<TimeoutConfig>;
+      } = {
+        host: config.hindsight.host,
+        port: config.hindsight.port,
+      };
+      if (config.hindsight.apiKey) {
+        clientOptions.apiKey = config.hindsight.apiKey;
+      }
+      if (config.hindsight.timeouts) {
+        clientOptions.timeouts = config.hindsight.timeouts;
+      }
+      this.client = new HindsightClient(clientOptions);
+
+      // Health check
+      const health = await this.client.health();
+
+      if (!health.healthy) {
+        this.enterDegradedMode(
+          `Hindsight unavailable: ${health.error ?? "unknown"}`,
+        );
+      } else {
+        // Ensure bank exists
+        await this.ensureBank();
+      }
+
+      // Load custom agents from .claude/agents/
+      this.customAgents = await loadCustomAgents(this.projectPath);
+
+      // Load semantic memory
+      this.semantic = new SemanticMemory(this.projectPath, this.semanticPath);
+      try {
+        await this.semantic.load();
+      } catch (error) {
+        // Semantic memory is optional - emit error but continue
+        this.emit(
+          "error",
+          error instanceof Error ? error : new Error(String(error)),
+        );
+      }
+
+      // Initialize promotion manager
+      if (this.semantic.isLoaded()) {
+        this.promotionManager = new PromotionManager(this.semantic, this, {
+          threshold: DEFAULT_PROMOTION_THRESHOLD,
+        });
+        this.promotionManager.startListening();
+      }
+
+      // Mark initialized
+      this.initialized = true;
+
+      // Emit ready event
+      this.emit("ready");
+    } finally {
+      this.initializing = false;
     }
-
-    // Initialize promotion manager
-    if (this.semantic.isLoaded()) {
-      this.promotionManager = new PromotionManager(this.semantic, this, {
-        threshold: DEFAULT_PROMOTION_THRESHOLD,
-      });
-      this.promotionManager.startListening();
-    }
-
-    // Mark initialized
-    this.initialized = true;
-
-    // Emit ready event
-    this.emit("ready");
   }
 
   /**
@@ -311,9 +320,13 @@ export class Mind extends TypedEventEmitter {
    * 3. Formats as context string
    *
    * @returns Formatted context string for injection
+   * @throws {Error} If a session is already active
    */
   async onSessionStart(): Promise<string> {
     this.assertInitialized();
+    if (this.sessionActive) {
+      throw new Error("Cannot start session: a session is already active.");
+    }
     this.sessionActive = true;
     this.sessionStartTime = new Date();
 
@@ -862,5 +875,36 @@ ${template.outputFormat}
     lines.push("");
 
     return lines.join("\n");
+  }
+
+  // ============================================
+  // Cleanup
+  // ============================================
+
+  /**
+   * Dispose of Mind resources.
+   *
+   * Call this when done with the Mind instance to clean up
+   * event listeners and prevent memory leaks.
+   *
+   * After calling dispose(), the Mind instance should not be used.
+   */
+  dispose(): void {
+    // Stop promotion manager event listeners
+    if (this.promotionManager) {
+      this.promotionManager.stopListening();
+      this.promotionManager = null;
+    }
+
+    // Clear references
+    this.semantic = null;
+    this.client = null;
+    this.customAgents = [];
+
+    // Reset state
+    this.initialized = false;
+    this.sessionActive = false;
+    this.sessionStartTime = null;
+    this.degraded = false;
   }
 }

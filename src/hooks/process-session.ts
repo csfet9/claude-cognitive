@@ -114,7 +114,8 @@ const NOISE_PATTERNS: FilterPattern[] = [
   },
   // Stack traces (keep first line, filter rest)
   {
-    pattern: /((?:Error|Exception|TypeError|ReferenceError|SyntaxError)[^\n]*)\n(?:\s+at [^\n]+\n?)+/g,
+    pattern:
+      /((?:Error|Exception|TypeError|ReferenceError|SyntaxError)[^\n]*)\n(?:\s+at [^\n]+\n?)+/g,
     replacement: "$1 [stack trace filtered]",
   },
   // XML/HTML blocks (more than 500 chars)
@@ -250,7 +251,6 @@ function shouldSkipSession(
 
   return { skip: false };
 }
-
 
 // ============================================
 // Transcript Parsing

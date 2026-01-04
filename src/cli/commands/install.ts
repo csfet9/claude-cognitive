@@ -282,28 +282,35 @@ fi
 claude-cognitive process-session --project "$PROJECT_DIR" --transcript "$TRANSCRIPT_PATH"
 
 # Clean up ONLY this session's entries from buffer (not other ongoing sessions)
+# Use flock to prevent race conditions when multiple sessions end simultaneously
 if [ -n "$SESSION_ID" ]; then
   BUFFER_FILE="$PROJECT_DIR/.claude/.session-buffer.jsonl"
+  LOCK_FILE="$BUFFER_FILE.lock"
   if [ -f "$BUFFER_FILE" ]; then
-    if command -v jq &> /dev/null; then
-      # Filter out entries matching this session_id
-      TEMP_FILE=$(mktemp)
-      jq -c "select(.session_id != \\"$SESSION_ID\\")" "$BUFFER_FILE" > "$TEMP_FILE" 2>/dev/null || true
-      if [ -s "$TEMP_FILE" ]; then
-        mv "$TEMP_FILE" "$BUFFER_FILE"
+    # Wrap cleanup in flock to ensure atomic read-filter-write
+    (
+      flock -x 200 2>/dev/null || true  # Acquire exclusive lock, continue if flock unavailable
+      if command -v jq &> /dev/null; then
+        # Filter out entries matching this session_id
+        TEMP_FILE=$(mktemp)
+        jq -c "select(.session_id != \\"$SESSION_ID\\")" "$BUFFER_FILE" > "$TEMP_FILE" 2>/dev/null || true
+        if [ -s "$TEMP_FILE" ]; then
+          mv "$TEMP_FILE" "$BUFFER_FILE"
+        else
+          rm -f "$BUFFER_FILE" "$TEMP_FILE"
+        fi
       else
-        rm -f "$BUFFER_FILE" "$TEMP_FILE"
+        # Without jq, use grep to filter (less reliable but works)
+        TEMP_FILE=$(mktemp)
+        grep -v "\\"session_id\\":\\"$SESSION_ID\\"" "$BUFFER_FILE" > "$TEMP_FILE" 2>/dev/null || true
+        if [ -s "$TEMP_FILE" ]; then
+          mv "$TEMP_FILE" "$BUFFER_FILE"
+        else
+          rm -f "$BUFFER_FILE" "$TEMP_FILE"
+        fi
       fi
-    else
-      # Without jq, use grep to filter (less reliable but works)
-      TEMP_FILE=$(mktemp)
-      grep -v "\\"session_id\\":\\"$SESSION_ID\\"" "$BUFFER_FILE" > "$TEMP_FILE" 2>/dev/null || true
-      if [ -s "$TEMP_FILE" ]; then
-        mv "$TEMP_FILE" "$BUFFER_FILE"
-      else
-        rm -f "$BUFFER_FILE" "$TEMP_FILE"
-      fi
-    fi
+    ) 200>"$LOCK_FILE"
+    rm -f "$LOCK_FILE" 2>/dev/null || true
   fi
 fi
 `;
@@ -316,7 +323,9 @@ fi
  * Configure hooks in project-local Claude Code settings.
  * Hooks are stored in PROJECT/.claude/settings.json to keep them project-specific.
  */
-async function configureHooks(projectPath: string): Promise<{ settingsPath: string; legacyGlobalHookExists: boolean }> {
+async function configureHooks(
+  projectPath: string,
+): Promise<{ settingsPath: string; legacyGlobalHookExists: boolean }> {
   const settingsPath = getProjectSettingsPath(projectPath);
   const settings = await readSettings(settingsPath);
 

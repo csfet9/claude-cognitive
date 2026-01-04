@@ -155,9 +155,16 @@ export class SemanticMemory {
         // Try to create directory and file with template
         try {
           await this.createWithTemplate();
-        } catch {
-          // If we can't create the file, just initialize with empty sections
-          // This allows the system to continue even if the directory doesn't exist
+        } catch (createError) {
+          // Log creation failure for debugging visibility
+          console.warn(
+            `[SemanticMemory] Failed to create ${this.filePath}: ${
+              createError instanceof Error
+                ? createError.message
+                : String(createError)
+            }. Using empty sections.`,
+          );
+          // Initialize with empty sections to allow system to continue
           this.sections = new Map();
           this.sectionOrder = [];
           this.preamble = "";
@@ -173,7 +180,7 @@ export class SemanticMemory {
    * Save the semantic memory file.
    *
    * Uses atomic write (temp file + rename) to prevent corruption.
-   * Thread-safe via internal lock.
+   * Thread-safe via internal lock that serializes concurrent calls.
    *
    * @throws {Error} If file cannot be written
    */
@@ -186,15 +193,18 @@ export class SemanticMemory {
       return; // No changes to save
     }
 
-    // Wait for any pending write to complete
-    if (this.writeLock) {
+    // Wait for any pending write to complete (loop handles concurrent arrivals)
+    while (this.writeLock) {
       await this.writeLock;
     }
 
-    // Create new write lock
+    // Now we're the only writer - create new write lock
     this.writeLock = this.performSave();
-    await this.writeLock;
-    this.writeLock = null;
+    try {
+      await this.writeLock;
+    } finally {
+      this.writeLock = null;
+    }
   }
 
   /**
@@ -344,8 +354,8 @@ export class SemanticMemory {
   ): Promise<void> {
     this.assertLoaded();
 
-    const date = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-    const entry = `- ${observation.text} (promoted: ${date}, confidence: ${observation.confidence.toFixed(2)})`;
+    const timestamp = new Date().toISOString(); // Full ISO timestamp for ordering
+    const entry = `- ${observation.text} (promoted: ${timestamp}, confidence: ${observation.confidence.toFixed(2)})`;
 
     this.append("Observations", entry);
 

@@ -4,7 +4,7 @@
  */
 
 import { readFile } from "node:fs/promises";
-import { extname } from "node:path";
+import { extname, resolve } from "node:path";
 
 /**
  * Code pattern detected in source.
@@ -103,9 +103,20 @@ export async function analyzeSource(
 
   let filesAnalyzed = 0;
 
+  const normalizedProject = resolve(projectPath);
+
   for (const filePath of filePaths) {
     try {
-      const fullPath = `${projectPath}/${filePath}`;
+      // Safely resolve the path and validate it's within the project
+      const fullPath = resolve(projectPath, filePath);
+      if (
+        !fullPath.startsWith(normalizedProject + "/") &&
+        fullPath !== normalizedProject
+      ) {
+        // Skip files outside the project directory (path traversal protection)
+        continue;
+      }
+
       const content = await readFile(fullPath, "utf-8");
       const ext = extname(filePath).toLowerCase();
 

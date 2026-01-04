@@ -1,6 +1,6 @@
 {
   "name": "claude-cognitive",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Human-inspired memory system for Claude. LLM thinks. Hindsight remembers. Together = mind.",
   "type": "module",
   "main": "dist/index.js",

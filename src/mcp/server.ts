@@ -114,23 +114,35 @@ export class ClaudeMindMcpServer {
 
   /**
    * Stop the MCP server.
+   *
+   * Always cleans up state even if close fails.
+   * Throws after cleanup if there was an error.
    */
   async stop(): Promise<void> {
     if (!this.running) return;
 
+    let closeError: Error | null = null;
+
     if (this.httpServer) {
-      await new Promise<void>((resolve, reject) => {
-        this.httpServer!.close((err) => {
-          if (err) reject(err);
-          else resolve();
+      try {
+        await new Promise<void>((resolve, reject) => {
+          this.httpServer!.close((err) => {
+            if (err) reject(err);
+            else resolve();
+          });
         });
-      });
+      } catch (err) {
+        closeError = err instanceof Error ? err : new Error(String(err));
+      }
       this.httpServer = null;
       this.expressApp = null;
     }
 
     this.mcpServer = null;
     this.running = false;
+
+    // Re-throw error after cleanup is complete
+    if (closeError) throw closeError;
   }
 
   /**
@@ -176,12 +188,32 @@ export class ClaudeMindMcpServer {
         type: recallInputSchema.shape.type,
       },
       async (args) => {
-        const input = {
-          query: args.query as string,
-          ...(args.type
-            ? { type: args.type as "world" | "experience" | "opinion" | "all" }
-            : {}),
+        // Validate input with Zod for type safety
+        const parsed = recallInputSchema.safeParse({
+          query: args.query,
+          ...(args.type ? { type: args.type } : {}),
+        });
+
+        if (!parsed.success) {
+          return {
+            content: [
+              { type: "text", text: `Invalid input: ${parsed.error.message}` },
+            ],
+            isError: true,
+          };
+        }
+
+        // Build input without undefined values (exactOptionalPropertyTypes compliance)
+        const input: {
+          query: string;
+          type?: "world" | "experience" | "opinion" | "all";
+        } = {
+          query: parsed.data.query,
         };
+        if (parsed.data.type) {
+          input.type = parsed.data.type;
+        }
+
         const result = await handleRecall(this.mind, input);
         return {
           content: result.content,
@@ -198,8 +230,22 @@ export class ClaudeMindMcpServer {
         query: reflectInputSchema.shape.query,
       },
       async (args) => {
+        // Validate input with Zod for type safety
+        const parsed = reflectInputSchema.safeParse({
+          query: args.query,
+        });
+
+        if (!parsed.success) {
+          return {
+            content: [
+              { type: "text", text: `Invalid input: ${parsed.error.message}` },
+            ],
+            isError: true,
+          };
+        }
+
         const result = await handleReflect(this.mind, {
-          query: args.query as string,
+          query: parsed.data.query,
         });
         return {
           content: result.content,

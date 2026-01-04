@@ -6,6 +6,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-01-04
+
+### Security
+
+- **Fixed path traversal vulnerability** in source analyzer
+  (`src/learn/analyzers/source.ts`) - Now validates all file paths are within
+  project directory before reading
+
+### Fixed
+
+- **Mind initialization race condition** - Added `initializing` flag to prevent
+  concurrent `init()` calls from corrupting state
+- **Session lifecycle race condition** - `onSessionStart()` now throws if a
+  session is already active instead of silently corrupting state
+- **SemanticMemory write lock** - Fixed race condition where concurrent
+  `save()` calls could interleave; now properly serializes writes
+- **MCP server stop() resource leak** - Always cleans up HTTP server and state
+  even when close fails, re-throws error after cleanup
+- **Learn reflection error handling** - Now tracks and reports reflection query
+  failures in `LearnResult.reflectionFailures` instead of silently ignoring
+- **SemanticMemory creation warning** - Logs warning when file creation fails
+  instead of silently using empty sections
+- **MCP tool type safety** - Added Zod schema validation to tool handlers for
+  proper input validation and error messages
+- **CLI error handling** - Replaced `process.exit(1)` calls in `update-bank`
+  command with proper `CLIError` throws
+
+### Added
+
+- **`Mind.dispose()` method** - Proper cleanup of event listeners and resources
+  to prevent memory leaks when Mind instances are discarded
+- **`NOT_FOUND` exit code** - Added to CLI error codes for consistency
+
+### Changed
+
+- **Stop hook buffer cleanup** - Now uses `flock` for atomic file operations to
+  prevent race conditions between concurrent session ends
+- **Timestamp precision** - Observation promotion now uses full ISO timestamps
+  instead of date-only format for better ordering
+
 ## [0.3.1] - 2026-01-04
 
 ### Changed
@@ -201,6 +241,8 @@ and this project adheres to
   - Unit, integration, and E2E tests
   - Performance benchmarks
 
+[0.3.2]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.3.2
+[0.3.1]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.3.1
 [0.3.0]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.3.0
 [0.2.7]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.2.7
 [0.2.0]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.2.0

@@ -82,6 +82,7 @@ export async function learn(
   const opinions: Opinion[] = [];
   const entities: Entity[] = [];
   const entitySet = new Set<string>();
+  const reflectionFailures: string[] = [];
 
   const reflectionQueries = getReflectionQueries(opts.depth);
 
@@ -104,20 +105,23 @@ export async function learn(
           }
         }
       }
-    } catch {
-      // Reflection failed, continue without opinions for this query
+    } catch (error) {
+      // Track reflection failures for visibility
+      const msg = error instanceof Error ? error.message : String(error);
+      reflectionFailures.push(`${query}: ${msg}`);
     }
   }
 
   const duration = Date.now() - startTime;
 
-  return {
+  const result: LearnResult = {
     summary: generateSummary(
       worldFacts,
       opinions,
       analysis.filesAnalyzed,
       duration,
       failedFacts,
+      reflectionFailures,
     ),
     worldFacts,
     opinions,
@@ -125,6 +129,13 @@ export async function learn(
     filesAnalyzed: analysis.filesAnalyzed,
     duration,
   };
+
+  // Only add reflectionFailures if there are any (exactOptionalPropertyTypes compliance)
+  if (reflectionFailures.length > 0) {
+    result.reflectionFailures = reflectionFailures;
+  }
+
+  return result;
 }
 
 /**
@@ -219,6 +230,7 @@ function generateSummary(
   filesAnalyzed: number,
   duration: number,
   failedFacts: string[],
+  reflectionFailures: string[],
 ): string {
   const parts: string[] = [];
 
@@ -236,6 +248,10 @@ function generateSummary(
 
   if (failedFacts.length > 0) {
     parts.push(`(${failedFacts.length} facts failed to store)`);
+  }
+
+  if (reflectionFailures.length > 0) {
+    parts.push(`(${reflectionFailures.length} reflection queries failed)`);
   }
 
   return parts.join("; ");

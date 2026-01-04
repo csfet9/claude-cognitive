@@ -15,6 +15,7 @@ export const ExitCode = {
   GENERAL_ERROR: 1,
   CONFIG_ERROR: 2,
   CONNECTION_ERROR: 3,
+  NOT_FOUND: 4,
 } as const;
 
 export type ExitCode = (typeof ExitCode)[keyof typeof ExitCode];

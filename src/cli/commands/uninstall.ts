@@ -240,7 +240,9 @@ export function registerUninstallCommand(cli: CAC): void {
               // If settings is now empty (or just has empty objects), delete file
               if (Object.keys(settings).length === 0) {
                 await unlink(projectSettingsPath);
-                printSuccess("Removed PROJECT/.claude/settings.json (was empty)");
+                printSuccess(
+                  "Removed PROJECT/.claude/settings.json (was empty)",
+                );
               } else {
                 await writeFile(
                   projectSettingsPath,
