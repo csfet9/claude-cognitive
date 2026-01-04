@@ -78,6 +78,12 @@ function mergeConfig(
     if (source.hindsight.timeout !== undefined) {
       result.hindsight.timeout = source.hindsight.timeout;
     }
+    if (source.hindsight.timeouts !== undefined) {
+      result.hindsight.timeouts = {
+        ...result.hindsight.timeouts,
+        ...source.hindsight.timeouts,
+      };
+    }
   }
 
   // Merge semantic settings

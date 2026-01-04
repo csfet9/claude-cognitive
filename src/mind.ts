@@ -29,6 +29,7 @@ import type {
   MindOptions,
   RecallOptions,
   ReflectResult,
+  TimeoutConfig,
 } from "./types.js";
 
 // ============================================
@@ -183,12 +184,20 @@ export class Mind extends TypedEventEmitter {
     this.semanticPath = config.semantic?.path ?? ".claude/memory.md";
 
     // Create HindsightClient
-    const clientOptions: { host: string; port: number; apiKey?: string } = {
+    const clientOptions: {
+      host: string;
+      port: number;
+      apiKey?: string;
+      timeouts?: Partial<TimeoutConfig>;
+    } = {
       host: config.hindsight.host,
       port: config.hindsight.port,
     };
     if (config.hindsight.apiKey) {
       clientOptions.apiKey = config.hindsight.apiKey;
+    }
+    if (config.hindsight.timeouts) {
+      clientOptions.timeouts = config.hindsight.timeouts;
     }
     this.client = new HindsightClient(clientOptions);
 

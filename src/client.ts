@@ -29,7 +29,7 @@ import type {
 const DEFAULT_TIMEOUTS: TimeoutConfig = {
   default: 10_000, // 10 seconds
   health: 3_000, // 3 seconds - quick check
-  recall: 15_000, // 15 seconds - 4-way search
+  recall: 30_000, // 30 seconds - 4-way search + reranking (increased for local LLMs)
   reflect: 60_000, // 60 seconds - involves LLM (increased for complex sessions)
   retain: 30_000, // 30 seconds - write operation (increased for large transcripts)
 };

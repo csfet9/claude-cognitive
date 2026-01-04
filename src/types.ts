@@ -274,7 +274,10 @@ export interface ClaudeMindConfig {
     host: string;
     port: number;
     apiKey?: string;
+    /** @deprecated Use timeouts.default instead */
     timeout?: number;
+    /** Operation-specific timeouts (ms) */
+    timeouts?: Partial<TimeoutConfig>;
   };
   /** Memory bank identifier */
   bankId?: string;
