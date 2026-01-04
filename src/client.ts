@@ -25,13 +25,14 @@ import type {
 
 /**
  * Default timeout configuration (milliseconds).
+ * Increased for slower LLMs like Gemini that need more thinking time.
  */
 const DEFAULT_TIMEOUTS: TimeoutConfig = {
-  default: 10_000, // 10 seconds
-  health: 3_000, // 3 seconds - quick check
-  recall: 30_000, // 30 seconds - 4-way search + reranking (increased for local LLMs)
-  reflect: 60_000, // 60 seconds - involves LLM (increased for complex sessions)
-  retain: 30_000, // 30 seconds - write operation (increased for large transcripts)
+  default: 30_000, // 30 seconds
+  health: 10_000, // 10 seconds - health check with LLM warmup
+  recall: 120_000, // 2 minutes - 4-way search + reranking (Gemini needs more time)
+  reflect: 180_000, // 3 minutes - involves LLM reasoning (Gemini thinking time)
+  retain: 90_000, // 1.5 minutes - write operation with LLM extraction
 };
 
 /**

@@ -204,6 +204,13 @@ function getStopHookScriptPath(projectPath: string): string {
 }
 
 /**
+ * Get the path to the start hook wrapper script (project-local).
+ */
+function getStartHookScriptPath(projectPath: string): string {
+  return join(projectPath, ".claude", "hooks", "start-hook.sh");
+}
+
+/**
  * Get the path to the legacy global stop hook script.
  * Used for cleanup of old installations.
  */
@@ -222,6 +229,50 @@ async function checkAndWarnLegacyGlobalHook(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Create the start hook wrapper script (project-local).
+ * Claude Code passes context via stdin JSON including cwd.
+ *
+ * This script:
+ * - Reads cwd from stdin JSON
+ * - Skips projects without .claudemindrc
+ * - Calls inject-context to output context to stdout
+ */
+async function createStartHookScript(projectPath: string): Promise<string> {
+  const scriptPath = getStartHookScriptPath(projectPath);
+  const scriptDir = join(projectPath, ".claude", "hooks");
+
+  // Ensure directory exists
+  await mkdir(scriptDir, { recursive: true });
+
+  const scriptContent = `#!/bin/bash
+# Claude Code UserPromptSubmit hook wrapper for claude-cognitive (project-local)
+# Injects context from Hindsight at session start
+# Skips projects without .claudemindrc
+
+# Read stdin
+INPUT=$(cat)
+
+# Extract cwd using jq (or fallback to grep/sed)
+if command -v jq &> /dev/null; then
+  PROJECT_DIR=$(echo "$INPUT" | jq -r '.cwd // empty')
+else
+  PROJECT_DIR=$(echo "$INPUT" | grep -o '"cwd":"[^"]*"' | cut -d'"' -f4)
+fi
+
+# Skip if no project dir or no .claudemindrc
+if [ -z "$PROJECT_DIR" ] || [ ! -f "$PROJECT_DIR/.claudemindrc" ]; then
+  exit 0
+fi
+
+# Inject context (outputs to stdout which Claude Code injects)
+claude-cognitive inject-context --project "$PROJECT_DIR"
+`;
+
+  await writeFile(scriptPath, scriptContent, { mode: 0o755 });
+  return scriptPath;
 }
 
 /**
@@ -322,6 +373,10 @@ fi
 /**
  * Configure hooks in project-local Claude Code settings.
  * Hooks are stored in PROJECT/.claude/settings.json to keep them project-specific.
+ *
+ * Configures two hooks:
+ * - Stop: Processes session transcript at session end (calls process-session)
+ * - UserPromptSubmit: Injects context at session start (calls inject-context)
  */
 async function configureHooks(
   projectPath: string,
@@ -332,13 +387,16 @@ async function configureHooks(
   // Check for legacy global hook
   const legacyGlobalHookExists = await checkAndWarnLegacyGlobalHook();
 
-  // Create the stop hook wrapper script (project-local)
-  const scriptPath = await createStopHookScript(projectPath);
+  // Create the hook wrapper scripts (project-local)
+  const stopScriptPath = await createStopHookScript(projectPath);
+  const startScriptPath = await createStartHookScript(projectPath);
 
   // Get or create hooks object
   const hooks = (settings.hooks as Record<string, unknown[]>) || {};
 
-  // Get or create Stop hooks array
+  // ============================================
+  // Configure Stop hook (session end)
+  // ============================================
   const stopHooks =
     (hooks.Stop as Array<{ matcher: string; hooks: unknown[] }>) || [];
 
@@ -358,13 +416,45 @@ async function configureHooks(
       hooks: [
         {
           type: "command",
-          command: scriptPath,
+          command: stopScriptPath,
         },
       ],
     });
   }
 
   hooks.Stop = filteredStopHooks;
+
+  // ============================================
+  // Configure UserPromptSubmit hook (session start / context injection)
+  // ============================================
+  let userPromptHooks =
+    (hooks.UserPromptSubmit as Array<{ matcher: string; hooks: unknown[] }>) ||
+    [];
+
+  // Remove old-style hooks that use $CWD env var (doesn't work)
+  userPromptHooks = userPromptHooks.filter(
+    (entry) =>
+      !entry.hooks?.some((h: unknown) => {
+        const hook = h as { command?: string };
+        return hook.command?.includes("$CWD");
+      }),
+  );
+
+  // Add start hook script if not already present
+  if (!hasHookCommand(userPromptHooks, "start-hook.sh")) {
+    userPromptHooks.push({
+      matcher: "",
+      hooks: [
+        {
+          type: "command",
+          command: startScriptPath,
+        },
+      ],
+    });
+  }
+
+  hooks.UserPromptSubmit = userPromptHooks;
+
   settings.hooks = hooks;
 
   // Ensure project .claude directory exists
