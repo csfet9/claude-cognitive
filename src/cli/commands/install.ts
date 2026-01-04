@@ -196,29 +196,55 @@ function hasHookCommand(
 }
 
 /**
- * Get the path to the stop hook wrapper script.
+ * Get the path to the stop hook wrapper script (project-local).
+ * This ensures the hook only exists within configured projects.
  */
-function getStopHookScriptPath(): string {
+function getStopHookScriptPath(projectPath: string): string {
+  return join(projectPath, ".claude", "hooks", "stop-hook.sh");
+}
+
+/**
+ * Get the path to the legacy global stop hook script.
+ * Used for cleanup of old installations.
+ */
+function getLegacyGlobalHookPath(): string {
   return join(homedir(), ".local", "bin", "claude-cognitive-stop-hook.sh");
 }
 
 /**
- * Create the stop hook wrapper script.
+ * Check if a legacy global hook exists and warn the user.
+ */
+async function checkAndWarnLegacyGlobalHook(): Promise<boolean> {
+  const legacyPath = getLegacyGlobalHookPath();
+  try {
+    await access(legacyPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Create the stop hook wrapper script (project-local).
  * Claude Code passes transcript_path via stdin JSON, not as env var.
  *
  * This script filters out:
  * - Agent sessions (filename starts with "agent-")
  * - Projects without .claudemindrc
+ *
+ * IMPORTANT: The script is now stored in PROJECT/.claude/hooks/ to ensure
+ * it only affects this specific project, preventing unintended API calls
+ * when using Claude in other directories.
  */
-async function createStopHookScript(): Promise<string> {
-  const scriptPath = getStopHookScriptPath();
-  const scriptDir = join(homedir(), ".local", "bin");
+async function createStopHookScript(projectPath: string): Promise<string> {
+  const scriptPath = getStopHookScriptPath(projectPath);
+  const scriptDir = join(projectPath, ".claude", "hooks");
 
   // Ensure directory exists
   await mkdir(scriptDir, { recursive: true });
 
   const scriptContent = `#!/bin/bash
-# Claude Code Stop hook wrapper for claude-cognitive
+# Claude Code Stop hook wrapper for claude-cognitive (project-local)
 # Only processes MAIN sessions in projects with .claudemindrc
 # Skips agent sessions and unconfigured projects
 
@@ -290,12 +316,15 @@ fi
  * Configure hooks in project-local Claude Code settings.
  * Hooks are stored in PROJECT/.claude/settings.json to keep them project-specific.
  */
-async function configureHooks(projectPath: string): Promise<string> {
+async function configureHooks(projectPath: string): Promise<{ settingsPath: string; legacyGlobalHookExists: boolean }> {
   const settingsPath = getProjectSettingsPath(projectPath);
   const settings = await readSettings(settingsPath);
 
-  // Create the stop hook wrapper script
-  const scriptPath = await createStopHookScript();
+  // Check for legacy global hook
+  const legacyGlobalHookExists = await checkAndWarnLegacyGlobalHook();
+
+  // Create the stop hook wrapper script (project-local)
+  const scriptPath = await createStopHookScript(projectPath);
 
   // Get or create hooks object
   const hooks = (settings.hooks as Record<string, unknown[]>) || {};
@@ -314,7 +343,7 @@ async function configureHooks(projectPath: string): Promise<string> {
   );
 
   // Add wrapper script hook on Stop (session end)
-  if (!hasHookCommand(filteredStopHooks, "claude-cognitive-stop-hook.sh")) {
+  if (!hasHookCommand(filteredStopHooks, "stop-hook.sh")) {
     filteredStopHooks.push({
       matcher: "",
       hooks: [
@@ -333,7 +362,7 @@ async function configureHooks(projectPath: string): Promise<string> {
   await mkdir(join(projectPath, ".claude"), { recursive: true });
 
   await writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n");
-  return settingsPath;
+  return { settingsPath, legacyGlobalHookExists };
 }
 
 /**
@@ -590,11 +619,41 @@ export function registerInstallCommand(cli: CAC): void {
           printInfo(mcpConfigPath);
 
           // Configure hooks for session-to-session memory (project-local)
-          const hooksPath = await configureHooks(answers.projectPath);
+          const { settingsPath: hooksPath, legacyGlobalHookExists } =
+            await configureHooks(answers.projectPath);
           printSuccess(
             "Configured session hooks: project (.claude/settings.json)",
           );
           printInfo(hooksPath);
+
+          // Warn about legacy global hook if it exists
+          if (legacyGlobalHookExists) {
+            print("");
+            print(
+              color(
+                "  ⚠ WARNING: Legacy global hook detected at ~/.local/bin/",
+                "yellow",
+              ),
+            );
+            print(
+              color(
+                "  This may cause unintended API calls for ALL Claude sessions.",
+                "yellow",
+              ),
+            );
+            print(
+              color(
+                "  To remove: rm ~/.local/bin/claude-cognitive-stop-hook.sh",
+                "yellow",
+              ),
+            );
+            print(
+              color(
+                "  Also check ~/.config/claude/settings.json for global hooks.",
+                "yellow",
+              ),
+            );
+          }
         }
 
         // Inject memory instructions into CLAUDE.md

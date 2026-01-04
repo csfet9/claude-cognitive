@@ -16,14 +16,13 @@ import type {
  * Controls what transcript content gets filtered before retention.
  */
 export const DEFAULT_RETAIN_FILTER: RetainFilterConfig = {
-  maxTranscriptLength: 50000,
+  maxTranscriptLength: 25000,
   filterToolResults: true,
   filterFileContents: true,
-  maxCodeBlockLines: 500,
-  maxLineLength: 2000,
-  minSessionLength: 200,
+  maxCodeBlockLines: 30,
+  maxLineLength: 1000,
+  minSessionLength: 500,
   skipToolOnlySessions: true,
-  summarizeThreshold: 20000,
 };
 
 /**

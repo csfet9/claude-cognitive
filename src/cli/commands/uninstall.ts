@@ -3,7 +3,7 @@
  * @module cli/commands/uninstall
  */
 
-import { readFile, writeFile, unlink, access } from "node:fs/promises";
+import { readFile, writeFile, unlink, access, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import type { CAC } from "cac";
@@ -56,6 +56,10 @@ export function registerUninstallCommand(cli: CAC): void {
     .option("--keep-memory", "Keep .claude/memory.md file")
     .option("--keep-claude-md", "Don't remove memory section from CLAUDE.md")
     .option("--delete-bank", "Delete the memory bank from Hindsight")
+    .option(
+      "--clean-global",
+      "Remove legacy global hooks from ~/.local/bin and ~/.claude/",
+    )
     .action(
       async (options: {
         project?: string;
@@ -63,6 +67,7 @@ export function registerUninstallCommand(cli: CAC): void {
         keepMemory?: boolean;
         keepClaudeMd?: boolean;
         deleteBank?: boolean;
+        cleanGlobal?: boolean;
       }) => {
         const projectPath = options.project ?? process.cwd();
 
@@ -189,6 +194,105 @@ export function registerUninstallCommand(cli: CAC): void {
             }
           } catch {
             printWarn("Could not update ~/.claude/settings.json");
+          }
+        }
+
+        // 2c. Remove project-local hooks from PROJECT/.claude/settings.json
+        const projectSettingsPath = join(
+          projectPath,
+          ".claude",
+          "settings.json",
+        );
+        if (await fileExists(projectSettingsPath)) {
+          try {
+            const content = await readFile(projectSettingsPath, "utf-8");
+            const settings = JSON.parse(content);
+            let modified = false;
+
+            // Remove claude-cognitive from Stop hooks
+            if (settings.hooks?.Stop) {
+              const stopHooks = settings.hooks.Stop as Array<{
+                matcher: string;
+                hooks: Array<{ type: string; command?: string }>;
+              }>;
+
+              settings.hooks.Stop = stopHooks.filter((entry) => {
+                const hasCognitive = entry.hooks?.some((h) =>
+                  h.command?.includes("claude-cognitive"),
+                );
+                return !hasCognitive;
+              });
+
+              // Clean up empty Stop array
+              if (settings.hooks.Stop.length === 0) {
+                delete settings.hooks.Stop;
+              }
+
+              // Clean up empty hooks object
+              if (Object.keys(settings.hooks).length === 0) {
+                delete settings.hooks;
+              }
+
+              modified = true;
+            }
+
+            if (modified) {
+              // If settings is now empty (or just has empty objects), delete file
+              if (Object.keys(settings).length === 0) {
+                await unlink(projectSettingsPath);
+                printSuccess("Removed PROJECT/.claude/settings.json (was empty)");
+              } else {
+                await writeFile(
+                  projectSettingsPath,
+                  JSON.stringify(settings, null, 2) + "\n",
+                );
+                printSuccess(
+                  "Removed hooks from PROJECT/.claude/settings.json",
+                );
+              }
+            }
+          } catch {
+            printWarn("Could not update PROJECT/.claude/settings.json");
+          }
+        }
+
+        // 2d. Remove project-local hook script directory
+        const projectHooksDir = join(projectPath, ".claude", "hooks");
+        if (await fileExists(projectHooksDir)) {
+          try {
+            await rm(projectHooksDir, { recursive: true });
+            printSuccess("Removed PROJECT/.claude/hooks/ directory");
+          } catch {
+            printWarn("Could not remove PROJECT/.claude/hooks/");
+          }
+        }
+
+        // 2e. Clean up legacy global hook (if --clean-global or always warn)
+        const legacyGlobalHookPath = join(
+          homedir(),
+          ".local",
+          "bin",
+          "claude-cognitive-stop-hook.sh",
+        );
+        if (await fileExists(legacyGlobalHookPath)) {
+          if (options.cleanGlobal) {
+            try {
+              await unlink(legacyGlobalHookPath);
+              printSuccess(
+                "Removed legacy global hook ~/.local/bin/claude-cognitive-stop-hook.sh",
+              );
+            } catch {
+              printWarn(
+                "Could not remove legacy global hook. Remove manually: rm ~/.local/bin/claude-cognitive-stop-hook.sh",
+              );
+            }
+          } else {
+            printWarn(
+              "Legacy global hook exists at ~/.local/bin/claude-cognitive-stop-hook.sh",
+            );
+            printInfo(
+              "Use --clean-global to remove, or: rm ~/.local/bin/claude-cognitive-stop-hook.sh",
+            );
           }
         }
 

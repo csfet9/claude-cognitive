@@ -3,19 +3,89 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+and this project adheres to
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.3.1] - 2026-01-04
+
+### Changed
+
+- **Optimized transcript filtering defaults** - Reduced payload sizes by ~80%
+  - `maxTranscriptLength`: 50,000 → 25,000 chars
+  - `maxCodeBlockLines`: 500 → 30 lines
+  - `maxLineLength`: 2,000 → 1,000 chars
+  - `minSessionLength`: 200 → 500 chars (skip more trivial sessions)
+
+### Removed
+
+- **Removed Claude API summarization** - No longer spawns `claude --print` for
+  long transcripts
+  - Eliminates external API dependency on session end
+  - Simplifies code by ~80 lines
+  - Relies on improved filtering + Hindsight for memory extraction
+
+### Added
+
+- **New noise filter patterns** for better transcript cleaning:
+  - `<system-reminder>` blocks (Claude Code injected content)
+  - Base64 encoded data (images, binaries)
+  - Large JSON objects (>500 chars)
+  - Diff/patch content
+  - Stack traces (keeps error message, filters trace)
+  - Large XML/HTML blocks (>500 chars)
+- **Whitespace cleanup** - Collapses excessive blank lines
+
+### Fixed
+
+- **Hook duplicate detection** - Fixed check that prevented reinstall from
+  adding duplicate hooks (was checking wrong script name)
+
+## [0.3.0] - 2026-01-04
+
+### Changed
+
+- **⚠️ BREAKING: Installation is now strictly project-local**
+  - Stop hook script is now created at `PROJECT/.claude/hooks/stop-hook.sh`
+    instead of `~/.local/bin/`
+  - This prevents unintended API calls when using Claude in other directories
+  - **Important**: If you previously installed globally, you should remove the
+    legacy hook:
+    ```bash
+    rm ~/.local/bin/claude-cognitive-stop-hook.sh
+    ```
+  - Also check and clean `~/.config/claude/settings.json` or
+    `~/.claude/settings.json` for global hooks
+
+### Added
+
+- **Legacy global hook detection** - `install` command now warns if a legacy
+  global hook exists
+- **`--clean-global` flag for `uninstall`** - Removes legacy global hooks from
+  `~/.local/bin/`
+- **Project-local hooks cleanup** - `uninstall` now removes
+  `PROJECT/.claude/hooks/` directory
+
+### Fixed
+
+- **Version mismatch** - CLI version constant now matches package.json (was
+  hardcoded at 0.2.7)
 
 ## [0.2.7] - 2026-01-03
 
 ### Fixed
 
-- **Stop hook now works correctly** - Claude Code passes `transcript_path` via stdin JSON, not as `$TRANSCRIPT_PATH` environment variable
-  - Created wrapper script at `~/.local/bin/claude-cognitive-stop-hook.sh` that reads stdin and extracts the transcript path
+- **Stop hook now works correctly** - Claude Code passes `transcript_path` via
+  stdin JSON, not as `$TRANSCRIPT_PATH` environment variable
+  - Created wrapper script at `~/.local/bin/claude-cognitive-stop-hook.sh` that
+    reads stdin and extracts the transcript path
   - `install` and `update` commands now create this wrapper script automatically
-  - Old-style hooks using `$TRANSCRIPT_PATH` are migrated to the new wrapper script
+  - Old-style hooks using `$TRANSCRIPT_PATH` are migrated to the new wrapper
+    script
 
-- **Automatic cleanup after sync** - Session buffer files are now cleaned up after successful sync
-  - Removes `.claude/.session-buffer.jsonl` after syncing to prevent re-syncing old data
+- **Automatic cleanup after sync** - Session buffer files are now cleaned up
+  after successful sync
+  - Removes `.claude/.session-buffer.jsonl` after syncing to prevent re-syncing
+    old data
 
 ### Changed
 
@@ -51,14 +121,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **MCP configuration path** - Now correctly uses `~/.claude/mcp.json` instead of `~/.claude.json`
-- **Automatic hooks setup** - `install` command now configures session hooks in `~/.claude/settings.json`
-- **Global configuration** - MCP server and hooks work for all projects with `.claudemindrc`
-- **Transcript parsing** - `process-session` hook now properly parses JSONL transcripts:
+- **MCP configuration path** - Now correctly uses `~/.claude/mcp.json` instead
+  of `~/.claude.json`
+- **Automatic hooks setup** - `install` command now configures session hooks in
+  `~/.claude/settings.json`
+- **Global configuration** - MCP server and hooks work for all projects with
+  `.claudemindrc`
+- **Transcript parsing** - `process-session` hook now properly parses JSONL
+  transcripts:
   - Extracts only meaningful user/assistant messages
   - Filters out session metadata (session IDs, paths, permissions)
   - Skips system reminders and empty messages
-  - Filters CLI commands (`/exit`, `/clear`, `/help`, `/compact`, `/config`) to reduce API costs
+  - Filters CLI commands (`/exit`, `/clear`, `/help`, `/compact`, `/config`) to
+    reduce API costs
   - Results in higher quality memories about actual project work
 
 ### Changed
@@ -78,7 +153,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Core**
   - `HindsightClient` - TypeScript client for Hindsight memory API
   - `Mind` - Orchestrator class for session lifecycle management
-  - `SemanticMemory` - Local `.claude/memory.md` management with observation promotion
+  - `SemanticMemory` - Local `.claude/memory.md` management with observation
+    promotion
   - Graceful degradation when Hindsight is unavailable
 
 - **Operations**
@@ -125,5 +201,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Unit, integration, and E2E tests
   - Performance benchmarks
 
+[0.3.0]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.3.0
+[0.2.7]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.2.7
 [0.2.0]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.2.0
 [0.1.0]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.1.0

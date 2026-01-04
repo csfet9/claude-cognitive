@@ -7,13 +7,11 @@
  * - The stop hook script also filters agent sessions by filename
  * - Content filtering removes noise (tool results, file contents, long code blocks)
  * - Session skip logic filters low-value sessions
- * - Pre-summarization reduces API costs for long transcripts
  */
 
 import { readFile, access } from "node:fs/promises";
 import { createInterface } from "node:readline";
 import { join } from "node:path";
-import { spawn } from "node:child_process";
 import type { CAC } from "cac";
 import { Mind } from "../mind.js";
 import { loadConfig, DEFAULT_RETAIN_FILTER } from "../config.js";
@@ -91,6 +89,42 @@ const FILE_CONTENT_PATTERNS: FilterPattern[] = [
 ];
 
 /**
+ * Additional noise patterns to filter.
+ */
+const NOISE_PATTERNS: FilterPattern[] = [
+  // System reminders injected by Claude Code
+  {
+    pattern: /<system-reminder>[\s\S]*?<\/system-reminder>/g,
+    replacement: "",
+  },
+  // Base64 encoded content (images, binaries)
+  {
+    pattern: /data:[a-z]+\/[a-z+.-]+;base64,[A-Za-z0-9+/=]{100,}/g,
+    replacement: "[Base64 data filtered]",
+  },
+  // Long JSON objects (more than 500 chars)
+  {
+    pattern: /\{(?:[^{}]|\{[^{}]*\}){500,}\}/g,
+    replacement: "[Large JSON filtered]",
+  },
+  // Diff/patch content
+  {
+    pattern: /^[-+]{3} [ab]\/.*$[\s\S]*?(?=^[-+]{3} |$(?![\s\S]))/gm,
+    replacement: "[Diff filtered]",
+  },
+  // Stack traces (keep first line, filter rest)
+  {
+    pattern: /((?:Error|Exception|TypeError|ReferenceError|SyntaxError)[^\n]*)\n(?:\s+at [^\n]+\n?)+/g,
+    replacement: "$1 [stack trace filtered]",
+  },
+  // XML/HTML blocks (more than 500 chars)
+  {
+    pattern: /<[a-z][a-z0-9-]*(?:\s[^>]*)?>[\s\S]{500,}?<\/[a-z][a-z0-9-]*>/gi,
+    replacement: "[Large XML/HTML filtered]",
+  },
+];
+
+/**
  * Summarize long code blocks while preserving shorter ones.
  * Replaces code blocks exceeding maxLines with a placeholder showing language and line count.
  */
@@ -140,17 +174,25 @@ function applyFilters(content: string, config: RetainFilterConfig): string {
     }
   }
 
+  // Filter noise patterns (system reminders, base64, large JSON, etc.)
+  for (const { pattern, replacement } of NOISE_PATTERNS) {
+    filtered = filtered.replace(pattern, replacement);
+  }
+
   // Summarize long code blocks
-  const maxCodeBlockLines = config.maxCodeBlockLines ?? 500;
+  const maxCodeBlockLines = config.maxCodeBlockLines ?? 30;
   if (maxCodeBlockLines > 0) {
     filtered = summarizeLongCodeBlocks(filtered, maxCodeBlockLines);
   }
 
   // Truncate long lines
-  const maxLineLength = config.maxLineLength ?? 2000;
+  const maxLineLength = config.maxLineLength ?? 1000;
   if (maxLineLength > 0) {
     filtered = truncateLongLines(filtered, maxLineLength);
   }
+
+  // Clean up excessive whitespace
+  filtered = filtered.replace(/\n{4,}/g, "\n\n\n");
 
   return filtered;
 }
@@ -209,87 +251,6 @@ function shouldSkipSession(
   return { skip: false };
 }
 
-// ============================================
-// Pre-Summarization
-// ============================================
-
-/**
- * Default prompt for summarizing long transcripts.
- */
-const DEFAULT_SUMMARIZE_PROMPT = `Summarize this conversation for memory storage.
-Focus on: decisions made, problems solved, key learnings, user preferences.
-Omit: file contents, code details, tool outputs, verbose explanations.
-Keep it concise (under 5000 characters).`;
-
-/**
- * Summarize a long transcript using Claude CLI.
- * Returns the original transcript if summarization fails.
- */
-async function summarizeTranscript(
-  transcript: string,
-  config: RetainFilterConfig,
-): Promise<string> {
-  const threshold = config.summarizeThreshold ?? 20000;
-
-  // Don't summarize if below threshold
-  if (transcript.length <= threshold) {
-    return transcript;
-  }
-
-  const prompt = config.summarizePrompt ?? DEFAULT_SUMMARIZE_PROMPT;
-
-  try {
-    // Use claude CLI with --print flag for non-interactive mode
-    // Pass transcript via stdin to avoid shell escaping issues
-    const summary = await new Promise<string>((resolve, reject) => {
-      const child = spawn("claude", ["--print", prompt], {
-        stdio: ["pipe", "pipe", "pipe"],
-        timeout: 60000,
-      });
-
-      let stdout = "";
-      let stderr = "";
-
-      child.stdout.on("data", (data) => {
-        stdout += data.toString();
-      });
-
-      child.stderr.on("data", (data) => {
-        stderr += data.toString();
-      });
-
-      child.on("close", (code) => {
-        if (code === 0) {
-          resolve(stdout.trim());
-        } else {
-          reject(new Error(`Claude CLI exited with code ${code}: ${stderr}`));
-        }
-      });
-
-      child.on("error", (err) => {
-        reject(err);
-      });
-
-      // Write transcript to stdin and close
-      child.stdin.write(transcript);
-      child.stdin.end();
-    });
-
-    // Verify we got a reasonable summary
-    if (summary.length > 100 && summary.length < transcript.length) {
-      return `[Summarized from ${transcript.length} chars]\n\n${summary}`;
-    }
-
-    // Fall back to original if summary is too short or longer
-    return transcript;
-  } catch (error) {
-    // Log error but don't fail - return original transcript
-    console.error(
-      `process-session: Summarization failed: ${error instanceof Error ? error.message : error}`,
-    );
-    return transcript;
-  }
-}
 
 // ============================================
 // Transcript Parsing
@@ -492,11 +453,8 @@ export function registerProcessSessionCommand(cli: CAC): void {
           return;
         }
 
-        // Step 3: Pre-summarize if too long
-        transcript = await summarizeTranscript(transcript, filterConfig);
-
-        // Step 4: Truncate if still too long
-        const maxLength = filterConfig.maxTranscriptLength ?? 50000;
+        // Step 3: Truncate if too long
+        const maxLength = filterConfig.maxTranscriptLength ?? 25000;
         if (transcript.length > maxLength) {
           transcript = transcript.slice(0, maxLength) + "\n[Truncated]";
         }

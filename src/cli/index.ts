@@ -26,7 +26,7 @@ import { registerProcessSessionCommand } from "../hooks/process-session.js";
 import { registerBufferMessageCommand } from "../hooks/buffer-message.js";
 
 // Get version from package.json
-const VERSION = "0.2.7";
+const VERSION = "0.3.1";
 
 /**
  * Create and configure the CLI.
