@@ -252,8 +252,8 @@ if [ -z "$PROJECT_DIR" ] || [ ! -f "$PROJECT_DIR/.claudemindrc" ]; then
   exit 0
 fi
 
-# Process main session
-claude-cognitive process-session --transcript "$TRANSCRIPT_PATH"
+# Process main session (pass project dir to ensure correct context)
+claude-cognitive process-session --project "$PROJECT_DIR" --transcript "$TRANSCRIPT_PATH"
 
 # Clean up ONLY this session's entries from buffer (not other ongoing sessions)
 if [ -n "$SESSION_ID" ]; then

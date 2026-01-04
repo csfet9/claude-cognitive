@@ -28,7 +28,8 @@ async function createStopHookScript(): Promise<string> {
 
   const scriptContent = `#!/bin/bash
 # Claude Code Stop hook wrapper for claude-cognitive
-# Reads JSON from stdin, syncs to Hindsight, then cleans up only this session's data
+# Only processes MAIN sessions in projects with .claudemindrc
+# Skips agent sessions and unconfigured projects
 
 # Read stdin
 INPUT=$(cat)
@@ -44,35 +45,46 @@ else
   SESSION_ID=$(echo "$INPUT" | grep -o '"session_id":"[^"]*"' | cut -d'"' -f4)
 fi
 
-# Only process if we have a transcript path
-if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
-  # Sync to Hindsight
-  claude-cognitive process-session --transcript "$TRANSCRIPT_PATH"
+# Exit early if no transcript path
+if [ -z "$TRANSCRIPT_PATH" ] || [ ! -f "$TRANSCRIPT_PATH" ]; then
+  exit 0
+fi
 
-  # Clean up ONLY this session's entries from buffer (not other ongoing sessions)
-  if [ -n "$PROJECT_DIR" ] && [ -n "$SESSION_ID" ]; then
-    BUFFER_FILE="$PROJECT_DIR/.claude/.session-buffer.jsonl"
-    if [ -f "$BUFFER_FILE" ]; then
-      if command -v jq &> /dev/null; then
-        # Filter out entries matching this session_id
-        TEMP_FILE=$(mktemp)
-        jq -c "select(.session_id != \\"$SESSION_ID\\")" "$BUFFER_FILE" > "$TEMP_FILE" 2>/dev/null || true
-        if [ -s "$TEMP_FILE" ]; then
-          # Buffer has other sessions' data, keep only those
-          mv "$TEMP_FILE" "$BUFFER_FILE"
-        else
-          # Buffer is empty after filtering, delete it
-          rm -f "$BUFFER_FILE" "$TEMP_FILE"
-        fi
+# FILTER 1: Skip agent sessions (filename starts with "agent-")
+FILENAME=$(basename "$TRANSCRIPT_PATH")
+if [[ "$FILENAME" == agent-* ]]; then
+  exit 0
+fi
+
+# FILTER 2: Skip projects without .claudemindrc
+if [ -z "$PROJECT_DIR" ] || [ ! -f "$PROJECT_DIR/.claudemindrc" ]; then
+  exit 0
+fi
+
+# Process main session (pass project dir to ensure correct context)
+claude-cognitive process-session --project "$PROJECT_DIR" --transcript "$TRANSCRIPT_PATH"
+
+# Clean up ONLY this session's entries from buffer (not other ongoing sessions)
+if [ -n "$SESSION_ID" ]; then
+  BUFFER_FILE="$PROJECT_DIR/.claude/.session-buffer.jsonl"
+  if [ -f "$BUFFER_FILE" ]; then
+    if command -v jq &> /dev/null; then
+      # Filter out entries matching this session_id
+      TEMP_FILE=$(mktemp)
+      jq -c "select(.session_id != \\"$SESSION_ID\\")" "$BUFFER_FILE" > "$TEMP_FILE" 2>/dev/null || true
+      if [ -s "$TEMP_FILE" ]; then
+        mv "$TEMP_FILE" "$BUFFER_FILE"
       else
-        # Without jq, use grep to filter (less reliable but works)
-        TEMP_FILE=$(mktemp)
-        grep -v "\\"session_id\\":\\"$SESSION_ID\\"" "$BUFFER_FILE" > "$TEMP_FILE" 2>/dev/null || true
-        if [ -s "$TEMP_FILE" ]; then
-          mv "$TEMP_FILE" "$BUFFER_FILE"
-        else
-          rm -f "$BUFFER_FILE" "$TEMP_FILE"
-        fi
+        rm -f "$BUFFER_FILE" "$TEMP_FILE"
+      fi
+    else
+      # Without jq, use grep to filter (less reliable but works)
+      TEMP_FILE=$(mktemp)
+      grep -v "\\"session_id\\":\\"$SESSION_ID\\"" "$BUFFER_FILE" > "$TEMP_FILE" 2>/dev/null || true
+      if [ -s "$TEMP_FILE" ]; then
+        mv "$TEMP_FILE" "$BUFFER_FILE"
+      else
+        rm -f "$BUFFER_FILE" "$TEMP_FILE"
       fi
     fi
   fi
