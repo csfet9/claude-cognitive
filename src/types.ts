@@ -267,6 +267,36 @@ export interface HindsightClientOptions {
 // Configuration Types
 // ============================================
 
+/**
+ * Configuration for filtering transcript content before retention.
+ * Reduces API costs and improves memory quality by removing noise.
+ */
+export interface RetainFilterConfig {
+  // Content filtering
+  /** Maximum transcript length before truncation (default: 50000) */
+  maxTranscriptLength?: number;
+  /** Filter tool result blocks (default: true) */
+  filterToolResults?: boolean;
+  /** Filter file content blocks (default: true) */
+  filterFileContents?: boolean;
+  /** Summarize code blocks exceeding this line count (default: 500) */
+  maxCodeBlockLines?: number;
+  /** Truncate lines exceeding this character count (default: 2000) */
+  maxLineLength?: number;
+
+  // Session skip logic
+  /** Minimum session length to retain - skip shorter sessions (default: 200) */
+  minSessionLength?: number;
+  /** Skip sessions that are mostly tool outputs (default: true) */
+  skipToolOnlySessions?: boolean;
+
+  // Pre-summarization
+  /** Summarize transcripts exceeding this character count (default: 20000) */
+  summarizeThreshold?: number;
+  /** Custom prompt for summarization */
+  summarizePrompt?: string;
+}
+
 /** Full configuration schema for claude-cognitive */
 export interface ClaudeMindConfig {
   /** Hindsight server connection settings */
@@ -289,6 +319,8 @@ export interface ClaudeMindConfig {
   semantic?: {
     path: string;
   };
+  /** Transcript filtering configuration for session retention */
+  retainFilter?: RetainFilterConfig;
 }
 
 // ============================================

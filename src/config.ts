@@ -5,7 +5,26 @@
 
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { ClaudeMindConfig, Disposition } from "./types.js";
+import type {
+  ClaudeMindConfig,
+  Disposition,
+  RetainFilterConfig,
+} from "./types.js";
+
+/**
+ * Default retain filter configuration.
+ * Controls what transcript content gets filtered before retention.
+ */
+export const DEFAULT_RETAIN_FILTER: RetainFilterConfig = {
+  maxTranscriptLength: 50000,
+  filterToolResults: true,
+  filterFileContents: true,
+  maxCodeBlockLines: 500,
+  maxLineLength: 2000,
+  minSessionLength: 200,
+  skipToolOnlySessions: true,
+  summarizeThreshold: 20000,
+};
 
 /**
  * Default configuration values.
@@ -19,6 +38,7 @@ const DEFAULT_CONFIG: ClaudeMindConfig = {
   semantic: {
     path: ".claude/memory.md",
   },
+  retainFilter: DEFAULT_RETAIN_FILTER,
 };
 
 /**
@@ -63,6 +83,9 @@ function mergeConfig(
   if (target.background !== undefined) {
     result.background = target.background;
   }
+  if (target.retainFilter !== undefined) {
+    result.retainFilter = { ...target.retainFilter };
+  }
 
   // Merge hindsight settings
   if (source.hindsight) {
@@ -105,6 +128,14 @@ function mergeConfig(
   }
   if (source.background !== undefined) {
     result.background = source.background;
+  }
+
+  // Merge retainFilter settings
+  if (source.retainFilter !== undefined) {
+    result.retainFilter = {
+      ...result.retainFilter,
+      ...source.retainFilter,
+    };
   }
 
   return result;
@@ -180,6 +211,9 @@ function applyEnvConfig(config: ClaudeMindConfig): ClaudeMindConfig {
   if (config.background !== undefined) {
     result.background = config.background;
   }
+  if (config.retainFilter !== undefined) {
+    result.retainFilter = { ...config.retainFilter };
+  }
 
   // Hindsight connection settings
   const host = process.env["HINDSIGHT_HOST"];
@@ -254,6 +288,9 @@ function cloneConfig(config: ClaudeMindConfig): ClaudeMindConfig {
   }
   if (config.background !== undefined) {
     result.background = config.background;
+  }
+  if (config.retainFilter !== undefined) {
+    result.retainFilter = { ...config.retainFilter };
   }
 
   return result;

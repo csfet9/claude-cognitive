@@ -38,8 +38,12 @@ function formatSyncSessionResult(result: SyncSessionResult): string {
     lines.push("No session data to sync.");
     lines.push("The session buffer is empty - nothing to sync.");
     lines.push("");
-    lines.push("Tip: The buffer captures tool interactions during your session.");
-    lines.push("     Use /clear only after running 'claude-cognitive sync-session'.");
+    lines.push(
+      "Tip: The buffer captures tool interactions during your session.",
+    );
+    lines.push(
+      "     Use /clear only after running 'claude-cognitive sync-session'.",
+    );
     return lines.join("\n");
   }
 

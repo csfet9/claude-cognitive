@@ -591,7 +591,9 @@ export function registerInstallCommand(cli: CAC): void {
 
           // Configure hooks for session-to-session memory (project-local)
           const hooksPath = await configureHooks(answers.projectPath);
-          printSuccess("Configured session hooks: project (.claude/settings.json)");
+          printSuccess(
+            "Configured session hooks: project (.claude/settings.json)",
+          );
           printInfo(hooksPath);
         }
 
@@ -734,7 +736,10 @@ You are the **orchestrator**. For non-trivial tasks, delegate to specialized age
         }
         print("");
         print(
-          color("Tip: Use /exit instead of /clear to sync session to Hindsight", "dim"),
+          color(
+            "Tip: Use /exit instead of /clear to sync session to Hindsight",
+            "dim",
+          ),
         );
         print("");
       } finally {

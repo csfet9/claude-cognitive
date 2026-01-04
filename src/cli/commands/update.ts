@@ -225,7 +225,10 @@ export function registerUpdateCommand(cli: CAC): void {
       const scriptExists = await stopHookScriptExists();
       const stopHooks =
         (hooks.Stop as Array<{ matcher: string; hooks: unknown[] }>) || [];
-      const hasWrapperHook = hasHookCommand(stopHooks, "claude-cognitive-stop-hook.sh");
+      const hasWrapperHook = hasHookCommand(
+        stopHooks,
+        "claude-cognitive-stop-hook.sh",
+      );
       const hasOldStyleHook = hasHookCommand(stopHooks, '$TRANSCRIPT_PATH"');
 
       if (!scriptExists || !hasWrapperHook || hasOldStyleHook) {
@@ -238,7 +241,9 @@ export function registerUpdateCommand(cli: CAC): void {
             printWarn("Stop hook not using wrapper script");
           }
           if (hasOldStyleHook) {
-            printWarn("Old-style Stop hook needs migration (uses $TRANSCRIPT_PATH env var which doesn't work)");
+            printWarn(
+              "Old-style Stop hook needs migration (uses $TRANSCRIPT_PATH env var which doesn't work)",
+            );
           }
         } else {
           // Create/update the wrapper script
@@ -255,7 +260,9 @@ export function registerUpdateCommand(cli: CAC): void {
           );
 
           // Add wrapper script hook if not present
-          if (!hasHookCommand(filteredStopHooks, "claude-cognitive-stop-hook.sh")) {
+          if (
+            !hasHookCommand(filteredStopHooks, "claude-cognitive-stop-hook.sh")
+          ) {
             filteredStopHooks.push({
               matcher: "",
               hooks: [
@@ -281,10 +288,7 @@ export function registerUpdateCommand(cli: CAC): void {
       // Write settings if any hooks were updated
       if (!dryRun && updatesApplied > 0) {
         settings.hooks = hooks;
-        await writeFile(
-          settingsPath,
-          JSON.stringify(settings, null, 2) + "\n",
-        );
+        await writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n");
       }
 
       // Summary
