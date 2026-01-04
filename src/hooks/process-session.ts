@@ -1,10 +1,15 @@
 /**
  * Session end hook - process transcript and extract memories.
  * @module hooks/process-session
+ *
+ * Safety filters:
+ * - Only processes projects with .claudemindrc
+ * - The stop hook script also filters agent sessions by filename
  */
 
-import { readFile } from "node:fs/promises";
+import { readFile, access } from "node:fs/promises";
 import { createInterface } from "node:readline";
+import { join } from "node:path";
 import type { CAC } from "cac";
 import { Mind } from "../mind.js";
 
@@ -163,6 +168,18 @@ async function readTranscript(
  * - Log to stderr only
  * - NEVER fail (always exit 0)
  */
+/**
+ * Check if a file exists.
+ */
+async function fileExists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function registerProcessSessionCommand(cli: CAC): void {
   cli
     .command("process-session", "Process session transcript (hook)")
@@ -182,6 +199,15 @@ export function registerProcessSessionCommand(cli: CAC): void {
       };
 
       try {
+        // Safety check: Only process if .claudemindrc exists in project
+        const configPath = join(projectPath, ".claudemindrc");
+        if (!(await fileExists(configPath))) {
+          result.error = "No .claudemindrc found (skipping)";
+          outputResult(result, options.json);
+          process.exit(0);
+          return;
+        }
+
         // Read transcript
         const transcript = await readTranscript(options.transcript);
 

@@ -17,7 +17,6 @@ interface InstallAnswers {
   disposition: Disposition;
   background: string;
   configureClaudeCode: boolean;
-  globalInstall: boolean;
   runLearn: boolean;
   learnDepth: "quick" | "standard" | "full";
 }
@@ -156,22 +155,17 @@ async function fileExists(path: string): Promise<boolean> {
 }
 
 /**
- * Get the Claude Code MCP config path.
- * - Global: ~/.claude/mcp.json
- * - Project: .mcp.json in project root
+ * Get the Claude Code MCP config path (always project-local).
  */
-function getMcpConfigPath(global: boolean, projectPath: string): string {
-  if (global) {
-    return join(homedir(), ".claude", "mcp.json");
-  }
+function getMcpConfigPath(projectPath: string): string {
   return join(projectPath, ".mcp.json");
 }
 
 /**
- * Get the Claude Code settings path.
+ * Get the project-local Claude Code settings path.
  */
-function getSettingsPath(): string {
-  return join(homedir(), ".claude", "settings.json");
+function getProjectSettingsPath(projectPath: string): string {
+  return join(projectPath, ".claude", "settings.json");
 }
 
 /**
@@ -211,6 +205,10 @@ function getStopHookScriptPath(): string {
 /**
  * Create the stop hook wrapper script.
  * Claude Code passes transcript_path via stdin JSON, not as env var.
+ *
+ * This script filters out:
+ * - Agent sessions (filename starts with "agent-")
+ * - Projects without .claudemindrc
  */
 async function createStopHookScript(): Promise<string> {
   const scriptPath = getStopHookScriptPath();
@@ -221,7 +219,8 @@ async function createStopHookScript(): Promise<string> {
 
   const scriptContent = `#!/bin/bash
 # Claude Code Stop hook wrapper for claude-cognitive
-# Reads JSON from stdin, syncs to Hindsight, then cleans up only this session's data
+# Only processes MAIN sessions in projects with .claudemindrc
+# Skips agent sessions and unconfigured projects
 
 # Read stdin
 INPUT=$(cat)
@@ -237,35 +236,46 @@ else
   SESSION_ID=$(echo "$INPUT" | grep -o '"session_id":"[^"]*"' | cut -d'"' -f4)
 fi
 
-# Only process if we have a transcript path
-if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
-  # Sync to Hindsight
-  claude-cognitive process-session --transcript "$TRANSCRIPT_PATH"
+# Exit early if no transcript path
+if [ -z "$TRANSCRIPT_PATH" ] || [ ! -f "$TRANSCRIPT_PATH" ]; then
+  exit 0
+fi
 
-  # Clean up ONLY this session's entries from buffer (not other ongoing sessions)
-  if [ -n "$PROJECT_DIR" ] && [ -n "$SESSION_ID" ]; then
-    BUFFER_FILE="$PROJECT_DIR/.claude/.session-buffer.jsonl"
-    if [ -f "$BUFFER_FILE" ]; then
-      if command -v jq &> /dev/null; then
-        # Filter out entries matching this session_id
-        TEMP_FILE=$(mktemp)
-        jq -c "select(.session_id != \\"$SESSION_ID\\")" "$BUFFER_FILE" > "$TEMP_FILE" 2>/dev/null || true
-        if [ -s "$TEMP_FILE" ]; then
-          # Buffer has other sessions' data, keep only those
-          mv "$TEMP_FILE" "$BUFFER_FILE"
-        else
-          # Buffer is empty after filtering, delete it
-          rm -f "$BUFFER_FILE" "$TEMP_FILE"
-        fi
+# FILTER 1: Skip agent sessions (filename starts with "agent-")
+FILENAME=$(basename "$TRANSCRIPT_PATH")
+if [[ "$FILENAME" == agent-* ]]; then
+  exit 0
+fi
+
+# FILTER 2: Skip projects without .claudemindrc
+if [ -z "$PROJECT_DIR" ] || [ ! -f "$PROJECT_DIR/.claudemindrc" ]; then
+  exit 0
+fi
+
+# Process main session
+claude-cognitive process-session --transcript "$TRANSCRIPT_PATH"
+
+# Clean up ONLY this session's entries from buffer (not other ongoing sessions)
+if [ -n "$SESSION_ID" ]; then
+  BUFFER_FILE="$PROJECT_DIR/.claude/.session-buffer.jsonl"
+  if [ -f "$BUFFER_FILE" ]; then
+    if command -v jq &> /dev/null; then
+      # Filter out entries matching this session_id
+      TEMP_FILE=$(mktemp)
+      jq -c "select(.session_id != \\"$SESSION_ID\\")" "$BUFFER_FILE" > "$TEMP_FILE" 2>/dev/null || true
+      if [ -s "$TEMP_FILE" ]; then
+        mv "$TEMP_FILE" "$BUFFER_FILE"
       else
-        # Without jq, use grep to filter (less reliable but works)
-        TEMP_FILE=$(mktemp)
-        grep -v "\\"session_id\\":\\"$SESSION_ID\\"" "$BUFFER_FILE" > "$TEMP_FILE" 2>/dev/null || true
-        if [ -s "$TEMP_FILE" ]; then
-          mv "$TEMP_FILE" "$BUFFER_FILE"
-        else
-          rm -f "$BUFFER_FILE" "$TEMP_FILE"
-        fi
+        rm -f "$BUFFER_FILE" "$TEMP_FILE"
+      fi
+    else
+      # Without jq, use grep to filter (less reliable but works)
+      TEMP_FILE=$(mktemp)
+      grep -v "\\"session_id\\":\\"$SESSION_ID\\"" "$BUFFER_FILE" > "$TEMP_FILE" 2>/dev/null || true
+      if [ -s "$TEMP_FILE" ]; then
+        mv "$TEMP_FILE" "$BUFFER_FILE"
+      else
+        rm -f "$BUFFER_FILE" "$TEMP_FILE"
       fi
     fi
   fi
@@ -277,10 +287,11 @@ fi
 }
 
 /**
- * Configure hooks in Claude Code settings.
+ * Configure hooks in project-local Claude Code settings.
+ * Hooks are stored in PROJECT/.claude/settings.json to keep them project-specific.
  */
-async function configureHooks(): Promise<string> {
-  const settingsPath = getSettingsPath();
+async function configureHooks(projectPath: string): Promise<string> {
+  const settingsPath = getProjectSettingsPath(projectPath);
   const settings = await readSettings(settingsPath);
 
   // Create the stop hook wrapper script
@@ -318,8 +329,8 @@ async function configureHooks(): Promise<string> {
   hooks.Stop = filteredStopHooks;
   settings.hooks = hooks;
 
-  // Ensure .claude directory exists
-  await mkdir(join(homedir(), ".claude"), { recursive: true });
+  // Ensure project .claude directory exists
+  await mkdir(join(projectPath, ".claude"), { recursive: true });
 
   await writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n");
   return settingsPath;
@@ -378,7 +389,6 @@ export function registerInstallCommand(cli: CAC): void {
           disposition: { skepticism: 3, literalism: 3, empathy: 3 },
           background: "",
           configureClaudeCode: true,
-          globalInstall: false,
           runLearn: false,
           learnDepth: "standard",
         };
@@ -459,18 +469,17 @@ export function registerInstallCommand(cli: CAC): void {
 
         // Step 3: Claude Code integration
         printStep(3, 5, "Claude Code Integration");
-
-        answers.configureClaudeCode = await prompt.confirm(
-          "Configure Claude Code MCP server?",
-          true,
+        print(
+          color(
+            "  MCP server and hooks will be configured for this project only.",
+            "dim",
+          ),
         );
 
-        if (answers.configureClaudeCode) {
-          answers.globalInstall = await prompt.confirm(
-            "Install globally (for all projects)?",
-            true,
-          );
-        }
+        answers.configureClaudeCode = await prompt.confirm(
+          "Configure Claude Code integration?",
+          true,
+        );
 
         // Step 4: Learn
         printStep(4, 5, "Bootstrap Memory");
@@ -552,22 +561,13 @@ export function registerInstallCommand(cli: CAC): void {
           printInfo(`${semanticPath} already exists, skipping`);
         }
 
-        // Configure Claude Code MCP
+        // Configure Claude Code MCP (always project-local)
         if (answers.configureClaudeCode) {
-          const mcpConfigPath = getMcpConfigPath(
-            answers.globalInstall,
-            answers.projectPath,
-          );
-
-          // Ensure ~/.claude directory exists for global install
-          if (answers.globalInstall) {
-            await mkdir(join(homedir(), ".claude"), { recursive: true });
-          }
+          const mcpConfigPath = getMcpConfigPath(answers.projectPath);
 
           const existing = await readMcpConfig(mcpConfigPath);
           const serveCmd = await getServeCommand();
 
-          // MCP config structure is the same for both global and project
           const mcpServers =
             (existing.mcpServers as Record<string, unknown>) || {};
 
@@ -586,14 +586,12 @@ export function registerInstallCommand(cli: CAC): void {
             JSON.stringify(newConfig, null, 2) + "\n",
           );
 
-          printSuccess(
-            `Configured MCP server: ${answers.globalInstall ? "global (~/.claude/mcp.json)" : "project (.mcp.json)"}`,
-          );
+          printSuccess("Configured MCP server: project (.mcp.json)");
           printInfo(mcpConfigPath);
 
-          // Configure hooks for session-to-session memory
-          const hooksPath = await configureHooks();
-          printSuccess("Configured session hooks for memory persistence");
+          // Configure hooks for session-to-session memory (project-local)
+          const hooksPath = await configureHooks(answers.projectPath);
+          printSuccess("Configured session hooks: project (.claude/settings.json)");
           printInfo(hooksPath);
         }
 
