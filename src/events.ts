@@ -62,6 +62,11 @@ export interface MindEventMap {
   /** Emitted when offline memories are synced to Hindsight */
   "offline:synced": [info: { count: number }];
 
+  /** Emitted when feedback is processed at session end */
+  "feedback:processed": [
+    info: { sessionId: string; summary: { used: number; ignored: number; uncertain: number } },
+  ];
+
   /** Emitted on errors (non-fatal, allows continued operation) */
   error: [error: Error];
 }

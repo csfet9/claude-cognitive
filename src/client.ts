@@ -15,16 +15,18 @@ import type {
   Disposition,
   FactType,
   FactUsefulnessStats,
+  FactStatsInput,
   HealthStatus,
   HindsightClientOptions,
   Memory,
-  RecallOptions,
-  RetainOptions,
-  SignalItem,
-  SignalResult,
-  TraitValue,
+  RecallInput,
+  ReflectInput,
   ReflectResult,
+  RetainInput,
+  SignalInput,
+  SignalResult,
   TimeoutConfig,
+  TraitValue,
 } from "./types.js";
 
 /**
@@ -72,17 +74,39 @@ interface RequestOptions {
  * });
  *
  * // Store a memory
- * await client.retain(
- *   'my-project',
- *   'Fixed auth redirect by moving AuthProvider to root',
- *   'User was experiencing infinite redirects'
- * );
+ * await client.retain({
+ *   bankId: 'my-project',
+ *   content: 'Fixed auth redirect by moving AuthProvider to root',
+ *   context: 'User was experiencing infinite redirects'
+ * });
  *
  * // Recall memories
- * const memories = await client.recall('my-project', 'authentication issues');
+ * const memories = await client.recall({
+ *   bankId: 'my-project',
+ *   query: 'authentication issues'
+ * });
+ *
+ * // Recall with usefulness boosting
+ * const boosted = await client.recall({
+ *   bankId: 'my-project',
+ *   query: 'authentication issues',
+ *   boostByUsefulness: true,
+ *   usefulnessWeight: 0.3
+ * });
  *
  * // Reflect and form opinions
- * const reflection = await client.reflect('my-project', 'What patterns have I noticed?');
+ * const reflection = await client.reflect({
+ *   bankId: 'my-project',
+ *   query: 'What patterns have I noticed?'
+ * });
+ *
+ * // Submit feedback signals
+ * await client.signal({
+ *   bankId: 'my-project',
+ *   signals: [
+ *     { factId: memories[0].id, signalType: 'used', query: 'auth issues' }
+ *   ]
+ * });
  * ```
  */
 export class HindsightClient {
@@ -245,19 +269,20 @@ export class HindsightClient {
    * Hindsight automatically extracts entities, relationships, and metadata.
    * You can optionally provide user-defined entities to combine with auto-extracted ones.
    *
-   * @param bankId - Bank identifier
-   * @param content - Content to store
-   * @param context - Optional additional context
-   * @param options - Retain options (async mode, user-provided entities)
+   * @param input - Retain input with bankId, content, and optional context/entities
    * @returns Number of items processed
    * @throws {HindsightError} If bank doesn't exist
+   *
+   * @example
+   * ```typescript
+   * await client.retain({
+   *   bankId: 'my-project',
+   *   content: 'Fixed auth redirect by moving AuthProvider to root',
+   *   context: 'User was experiencing infinite redirects'
+   * });
+   * ```
    */
-  async retain(
-    bankId: string,
-    content: string,
-    context?: string,
-    options?: RetainOptions,
-  ): Promise<number> {
+  async retain(input: RetainInput): Promise<number> {
     interface RetainApiResponse {
       success: boolean;
       bank_id: string;
@@ -265,16 +290,16 @@ export class HindsightClient {
       async: boolean;
     }
     // Use async mode for content > 2KB to avoid timeout from LLM extraction
-    const useAsync = options?.async ?? content.length > 2000;
+    const useAsync = input.async ?? input.content.length > 2000;
 
     // Build item with optional entities
-    const item: Record<string, unknown> = { content };
-    if (context) {
-      item.context = context;
+    const item: Record<string, unknown> = { content: input.content };
+    if (input.context) {
+      item.context = input.context;
     }
 
-    if (options?.entities && options.entities.length > 0) {
-      item.entities = options.entities.map((e) => {
+    if (input.entities && input.entities.length > 0) {
+      item.entities = input.entities.map((e) => {
         const entity: { text: string; type?: string } = { text: e.text };
         if (e.type) {
           entity.type = e.type;
@@ -285,7 +310,7 @@ export class HindsightClient {
 
     const response = await this.request<RetainApiResponse>(
       "POST",
-      `/v1/default/banks/${encodeURIComponent(bankId)}/memories`,
+      `/v1/default/banks/${encodeURIComponent(input.bankId)}/memories`,
       {
         body: {
           items: [item],
@@ -309,17 +334,30 @@ export class HindsightClient {
    * Results are fused using Reciprocal Rank Fusion (RRF),
    * then reranked with a neural cross-encoder.
    *
-   * @param bankId - Bank identifier
-   * @param query - Search query
-   * @param options - Search options
+   * Optionally boost results by usefulness score (based on feedback signals).
+   *
+   * @param input - Recall input with bankId, query, and optional search options
    * @returns Ranked list of matching memories
    * @throws {HindsightError} If bank doesn't exist
+   *
+   * @example
+   * ```typescript
+   * // Basic recall
+   * const memories = await client.recall({
+   *   bankId: 'my-project',
+   *   query: 'authentication issues'
+   * });
+   *
+   * // With usefulness boosting
+   * const boosted = await client.recall({
+   *   bankId: 'my-project',
+   *   query: 'authentication issues',
+   *   boostByUsefulness: true,
+   *   usefulnessWeight: 0.3
+   * });
+   * ```
    */
-  async recall(
-    bankId: string,
-    query: string,
-    options: RecallOptions = {},
-  ): Promise<Memory[]> {
+  async recall(input: RecallInput): Promise<Memory[]> {
     interface RecallResult {
       id: string;
       text: string;
@@ -333,16 +371,39 @@ export class HindsightClient {
     interface RecallApiResponse {
       results: RecallResult[];
     }
+
+    // Build request body
+    const body: Record<string, unknown> = {
+      query: input.query,
+      budget: input.budget ?? "mid",
+    };
+
+    // Add type filter if not 'all'
+    if (input.factType && input.factType !== "all") {
+      body.type = input.factType;
+    }
+
+    // Add max tokens if specified
+    if (input.maxTokens !== undefined) {
+      body.max_tokens = input.maxTokens;
+    }
+
+    // Add usefulness boosting parameters
+    if (input.boostByUsefulness) {
+      body.boost_by_usefulness = true;
+      if (input.usefulnessWeight !== undefined) {
+        body.usefulness_weight = input.usefulnessWeight;
+      }
+      if (input.minUsefulness !== undefined) {
+        body.min_usefulness = input.minUsefulness;
+      }
+    }
+
     const response = await this.request<RecallApiResponse>(
       "POST",
-      `/v1/default/banks/${encodeURIComponent(bankId)}/memories/recall`,
+      `/v1/default/banks/${encodeURIComponent(input.bankId)}/memories/recall`,
       {
-        body: {
-          query,
-          budget: options.budget ?? "mid",
-          type: options.factType !== "all" ? options.factType : undefined,
-          max_tokens: options.maxTokens,
-        },
+        body,
         timeout: this.timeouts.recall,
       },
     );
@@ -371,17 +432,19 @@ export class HindsightClient {
    * 5. Stores opinions asynchronously (influences future reflects)
    * 6. Returns reasoned response with citations
    *
-   * @param bankId - Bank identifier
-   * @param query - What to think about or reason through
-   * @param context - Optional additional context
+   * @param input - Reflect input with bankId, query, and optional context
    * @returns Reflection result with text, opinions, and citations
    * @throws {HindsightError} If bank doesn't exist
+   *
+   * @example
+   * ```typescript
+   * const reflection = await client.reflect({
+   *   bankId: 'my-project',
+   *   query: 'What patterns have I noticed in the codebase?'
+   * });
+   * ```
    */
-  async reflect(
-    bankId: string,
-    query: string,
-    context?: string,
-  ): Promise<ReflectResult> {
+  async reflect(input: ReflectInput): Promise<ReflectResult> {
     interface ReflectFact {
       id: string;
       text: string;
@@ -394,9 +457,9 @@ export class HindsightClient {
     }
     const response = await this.request<ReflectApiResponse>(
       "POST",
-      `/v1/default/banks/${encodeURIComponent(bankId)}/reflect`,
+      `/v1/default/banks/${encodeURIComponent(input.bankId)}/reflect`,
       {
-        body: { query, context },
+        body: { query: input.query, context: input.context },
         timeout: this.timeouts.reflect,
       },
     );
@@ -551,12 +614,22 @@ export class HindsightClient {
    * - `helpful`: Explicit positive feedback (weight: +1.5)
    * - `not_helpful`: Explicit negative feedback (weight: -1.0)
    *
-   * @param bankId - Bank identifier
-   * @param signals - Array of signal items
+   * @param input - Signal input with bankId and array of signals
    * @returns Result with number of signals processed
    * @throws {HindsightError} If bank doesn't exist
+   *
+   * @example
+   * ```typescript
+   * await client.signal({
+   *   bankId: 'my-project',
+   *   signals: [
+   *     { factId: 'fact-1', signalType: 'used', query: 'auth issues', confidence: 1.0 },
+   *     { factId: 'fact-2', signalType: 'ignored', query: 'auth issues', confidence: 0.5 }
+   *   ]
+   * });
+   * ```
    */
-  async signal(bankId: string, signals: SignalItem[]): Promise<SignalResult> {
+  async signal(input: SignalInput): Promise<SignalResult> {
     interface SignalApiResponse {
       success: boolean;
       signals_processed: number;
@@ -564,10 +637,10 @@ export class HindsightClient {
     }
     const response = await this.request<SignalApiResponse>(
       "POST",
-      `/v1/default/banks/${encodeURIComponent(bankId)}/signal`,
+      `/v1/default/banks/${encodeURIComponent(input.bankId)}/signal`,
       {
         body: {
-          signals: signals.map((s) => ({
+          signals: input.signals.map((s) => ({
             fact_id: s.factId,
             signal_type: s.signalType,
             confidence: s.confidence ?? 1.0,
@@ -587,15 +660,20 @@ export class HindsightClient {
   /**
    * Get usefulness statistics for a specific fact.
    *
-   * @param bankId - Bank identifier
-   * @param factId - Fact UUID
+   * @param input - Input with bankId and factId
    * @returns Usefulness statistics for the fact
    * @throws {HindsightError} If bank or fact doesn't exist
+   *
+   * @example
+   * ```typescript
+   * const stats = await client.getFactStats({
+   *   bankId: 'my-project',
+   *   factId: 'fact-123'
+   * });
+   * console.log(`Usefulness: ${stats.usefulnessScore}`);
+   * ```
    */
-  async getFactStats(
-    bankId: string,
-    factId: string,
-  ): Promise<FactUsefulnessStats> {
+  async getFactStats(input: FactStatsInput): Promise<FactUsefulnessStats> {
     interface FactStatsApiResponse {
       fact_id: string;
       usefulness_score: number;
@@ -606,7 +684,7 @@ export class HindsightClient {
     }
     const response = await this.request<FactStatsApiResponse>(
       "GET",
-      `/v1/default/banks/${encodeURIComponent(bankId)}/facts/${encodeURIComponent(factId)}/stats`,
+      `/v1/default/banks/${encodeURIComponent(input.bankId)}/facts/${encodeURIComponent(input.factId)}/stats`,
     );
     const result: FactUsefulnessStats = {
       factId: response.fact_id,

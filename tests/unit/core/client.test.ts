@@ -287,7 +287,10 @@ describe("HindsightClient", () => {
         }),
       );
 
-      const count = await client.retain("my-bank", "Test content");
+      const count = await client.retain({
+        bankId: "my-bank",
+        content: "Test content",
+      });
 
       expect(count).toBe(1);
       expect(mockFetch).toHaveBeenCalledWith(
@@ -295,7 +298,7 @@ describe("HindsightClient", () => {
         expect.objectContaining({
           method: "POST",
           body: JSON.stringify({
-            items: [{ content: "Test content", context: undefined }],
+            items: [{ content: "Test content" }],
             async: false,
           }),
         }),
@@ -312,7 +315,11 @@ describe("HindsightClient", () => {
         }),
       );
 
-      await client.retain("my-bank", "Content", "Additional context");
+      await client.retain({
+        bankId: "my-bank",
+        content: "Content",
+        context: "Additional context",
+      });
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
@@ -341,7 +348,10 @@ describe("HindsightClient", () => {
         }),
       );
 
-      const memories = await client.recall("my-bank", "test query");
+      const memories = await client.recall({
+        bankId: "my-bank",
+        query: "test query",
+      });
 
       expect(memories).toHaveLength(1);
       expect(memories[0].id).toBe("mem-1");
@@ -352,7 +362,7 @@ describe("HindsightClient", () => {
     it("should call the correct endpoint", async () => {
       mockFetch.mockResolvedValueOnce(createResponse(200, { results: [] }));
 
-      await client.recall("my-bank", "query");
+      await client.recall({ bankId: "my-bank", query: "query" });
 
       expect(mockFetch).toHaveBeenCalledWith(
         "http://localhost:8888/v1/default/banks/my-bank/memories/recall",
@@ -363,7 +373,9 @@ describe("HindsightClient", () => {
     it("should include recall options in request", async () => {
       mockFetch.mockResolvedValueOnce(createResponse(200, { results: [] }));
 
-      await client.recall("my-bank", "query", {
+      await client.recall({
+        bankId: "my-bank",
+        query: "query",
         budget: "high",
         factType: "experience",
         maxTokens: 1000,
@@ -399,7 +411,7 @@ describe("HindsightClient", () => {
         }),
       );
 
-      const memories = await client.recall("my-bank", "query");
+      const memories = await client.recall({ bankId: "my-bank", query: "query" });
       const mem = memories[0];
 
       expect(mem.id).toBe("mem-1");
@@ -408,6 +420,31 @@ describe("HindsightClient", () => {
       expect(mem.context).toBe("Some context");
       expect(mem.occurredStart).toBe("2024-01-01");
       expect(mem.occurredEnd).toBe("2024-01-02");
+    });
+
+    it("should include usefulness boosting params in request", async () => {
+      mockFetch.mockResolvedValueOnce(createResponse(200, { results: [] }));
+
+      await client.recall({
+        bankId: "my-bank",
+        query: "query",
+        boostByUsefulness: true,
+        usefulnessWeight: 0.3,
+        minUsefulness: 0.2,
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          body: JSON.stringify({
+            query: "query",
+            budget: "mid",
+            boost_by_usefulness: true,
+            usefulness_weight: 0.3,
+            min_usefulness: 0.2,
+          }),
+        }),
+      );
     });
   });
 
@@ -423,7 +460,10 @@ describe("HindsightClient", () => {
         }),
       );
 
-      const result = await client.reflect("my-bank", "What patterns exist?");
+      const result = await client.reflect({
+        bankId: "my-bank",
+        query: "What patterns exist?",
+      });
 
       expect(result.text).toBe("Reflection text");
       expect(result.opinions).toEqual([]); // API doesn't return opinions
@@ -441,7 +481,7 @@ describe("HindsightClient", () => {
         }),
       );
 
-      await client.reflect("my-bank", "query");
+      await client.reflect({ bankId: "my-bank", query: "query" });
 
       expect(mockFetch).toHaveBeenCalledWith(
         "http://localhost:8888/v1/default/banks/my-bank/reflect",
@@ -457,7 +497,11 @@ describe("HindsightClient", () => {
         }),
       );
 
-      await client.reflect("my-bank", "query", "Additional context");
+      await client.reflect({
+        bankId: "my-bank",
+        query: "query",
+        context: "Additional context",
+      });
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
@@ -531,9 +575,9 @@ describe("HindsightClient", () => {
         createResponse(400, { message: "Bad request" }),
       );
 
-      await expect(client.recall("my-bank", "query")).rejects.toThrow(
-        HindsightError,
-      );
+      await expect(
+        client.recall({ bankId: "my-bank", query: "query" }),
+      ).rejects.toThrow(HindsightError);
     });
 
     it("should throw with RATE_LIMITED on 429", async () => {
@@ -542,7 +586,7 @@ describe("HindsightClient", () => {
       );
 
       try {
-        await client.recall("my-bank", "query");
+        await client.recall({ bankId: "my-bank", query: "query" });
       } catch (error) {
         expect((error as HindsightError).code).toBe("RATE_LIMITED");
         expect((error as HindsightError).isRetryable).toBe(true);
@@ -555,7 +599,7 @@ describe("HindsightClient", () => {
       );
 
       try {
-        await client.recall("my-bank", "query");
+        await client.recall({ bankId: "my-bank", query: "query" });
       } catch (error) {
         expect((error as HindsightError).code).toBe("SERVER_ERROR");
         expect((error as HindsightError).isRetryable).toBe(true);
@@ -568,7 +612,7 @@ describe("HindsightClient", () => {
       );
 
       try {
-        await client.recall("my-bank", "query");
+        await client.recall({ bankId: "my-bank", query: "query" });
       } catch (error) {
         expect(HindsightError.isHindsightError(error)).toBe(true);
         expect((error as HindsightError).code).toBe("HINDSIGHT_UNAVAILABLE");
@@ -581,7 +625,7 @@ describe("HindsightClient", () => {
       mockFetch.mockRejectedValueOnce(timeoutError);
 
       try {
-        await client.recall("my-bank", "query");
+        await client.recall({ bankId: "my-bank", query: "query" });
       } catch (error) {
         expect((error as HindsightError).code).toBe("CONNECTION_TIMEOUT");
       }

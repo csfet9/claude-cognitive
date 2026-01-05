@@ -154,3 +154,65 @@ export type {
   HttpTransportConfig,
   ToolResult,
 } from "./mcp/index.js";
+
+// Feedback Loop
+export { FeedbackService, createFeedbackService } from "./feedback/index.js";
+export {
+  // Detection pipeline
+  runDetectionPipeline,
+  detectExplicitReferences,
+  detectSemanticMatches,
+  detectBehavioralSignals,
+  detectNegativeSignals,
+  // Scoring
+  aggregateDetections,
+  calculateVerdict,
+  prepareFeedback,
+  summarizeFeedback,
+  // Session tracking
+  createRecallSession,
+  trackRecall,
+  loadRecallSession,
+  saveRecallSession,
+  // Similarity
+  calculateSimilarity,
+  jaccardSimilarity,
+  // Constants
+  DEFAULT_FEEDBACK_CONFIG,
+  EXPLICIT_TRIGGERS,
+} from "./feedback/index.js";
+export type {
+  // Service types
+  ProcessFeedbackOptions,
+  TrackRecallResult,
+  StatsResult,
+  // Detection types
+  Detection,
+  NegativeSignal,
+  DetectionResults,
+  SessionActivity,
+  // Scoring types
+  FactScore,
+  FeedbackSummary,
+  FeedbackResult,
+  Verdict,
+  // Tracker types
+  RecallSession,
+  RecalledFact,
+  SessionStats,
+} from "./feedback/index.js";
+
+// Types - Feedback Configuration
+export type {
+  FeedbackConfig,
+  FeedbackDetectionConfig,
+  FeedbackHindsightConfig,
+} from "./types.js";
+
+// Types - API Inputs (object-based)
+export type {
+  RecallInput,
+  SignalInput,
+  RetainInput,
+  ReflectInput,
+} from "./types.js";

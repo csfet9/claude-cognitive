@@ -27,6 +27,11 @@ interface ProcessResult {
   processed: boolean;
   transcriptLength: number;
   opinionsFormed: number;
+  feedbackSignals?: {
+    used: number;
+    ignored: number;
+    uncertain: number;
+  };
   error?: string;
 }
 
@@ -465,6 +470,11 @@ export function registerProcessSessionCommand(cli: CAC): void {
         const mind = new Mind({ projectPath });
         await mind.init();
 
+        // Listen for feedback processing event
+        mind.on("feedback:processed", (info) => {
+          result.feedbackSignals = info.summary;
+        });
+
         // Process session end (works in both online and offline mode)
         const reflectResult = await mind.onSessionEnd(transcript);
 
@@ -496,9 +506,15 @@ function outputResult(result: ProcessResult, json?: boolean): void {
     if (result.error) {
       console.error(`process-session: ${result.error}`);
     } else if (result.processed) {
-      console.error(
-        `process-session: Processed ${result.transcriptLength} chars, formed ${result.opinionsFormed} opinions`,
-      );
+      let message = `process-session: Processed ${result.transcriptLength} chars, formed ${result.opinionsFormed} opinions`;
+      if (result.feedbackSignals) {
+        const { used, ignored, uncertain } = result.feedbackSignals;
+        const total = used + ignored + uncertain;
+        if (total > 0) {
+          message += `, feedback: ${used} used, ${ignored} ignored, ${uncertain} uncertain`;
+        }
+      }
+      console.error(message);
     }
   }
 }

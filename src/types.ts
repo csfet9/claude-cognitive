@@ -173,7 +173,7 @@ export interface Memory {
 /** Search budget affecting thoroughness */
 export type RecallBudget = "low" | "mid" | "high";
 
-/** Filter options for recall() */
+/** Filter options for recall() - used internally by Mind */
 export interface RecallOptions {
   /**
    * Search thoroughness:
@@ -188,6 +188,90 @@ export interface RecallOptions {
   maxTokens?: number;
   /** Include entity metadata in results */
   includeEntities?: boolean;
+  /** Enable usefulness boosting (default: false) */
+  boostByUsefulness?: boolean;
+  /** Weight for usefulness vs semantic (0.0-1.0, default: 0.3) */
+  usefulnessWeight?: number;
+  /** Minimum usefulness score threshold (default: 0.0) */
+  minUsefulness?: number;
+}
+
+/**
+ * Input for HindsightClient.recall() operation.
+ * Uses object-based parameters for cleaner API.
+ */
+export interface RecallInput {
+  /** Memory bank identifier */
+  bankId: string;
+  /** Search query */
+  query: string;
+  /**
+   * Search thoroughness:
+   * - low: ~2048 tokens, 1 graph hop
+   * - mid: ~4096 tokens, 2 graph hops (default)
+   * - high: ~8192 tokens, 3+ graph hops
+   */
+  budget?: RecallBudget;
+  /** Filter by memory type ('all' returns all types) */
+  factType?: FactType | "all";
+  /** Maximum tokens in response */
+  maxTokens?: number;
+  /** Include entity metadata in results */
+  includeEntities?: boolean;
+  /** Enable usefulness boosting (default: false) */
+  boostByUsefulness?: boolean;
+  /** Weight for usefulness vs semantic (0.0-1.0, default: 0.3) */
+  usefulnessWeight?: number;
+  /** Minimum usefulness score threshold (default: 0.0) */
+  minUsefulness?: number;
+}
+
+/**
+ * Input for HindsightClient.retain() operation.
+ */
+export interface RetainInput {
+  /** Memory bank identifier */
+  bankId: string;
+  /** Content to store */
+  content: string;
+  /** Optional additional context */
+  context?: string;
+  /** Use async mode for processing (default: auto based on content length) */
+  async?: boolean;
+  /** User-provided entities to combine with auto-extracted entities */
+  entities?: EntityInput[];
+}
+
+/**
+ * Input for HindsightClient.reflect() operation.
+ */
+export interface ReflectInput {
+  /** Memory bank identifier */
+  bankId: string;
+  /** What to think about or reason through */
+  query: string;
+  /** Optional additional context */
+  context?: string;
+}
+
+/**
+ * Input for HindsightClient.signal() operation.
+ */
+export interface SignalInput {
+  /** Memory bank identifier */
+  bankId: string;
+  /** Array of feedback signals */
+  signals: SignalItem[];
+}
+
+/**
+ * Input for HindsightClient.getFactStats() operation.
+ */
+export interface FactStatsInput {
+  /** Memory bank identifier */
+  bankId: string;
+  /** Fact UUID */
+  factId: string;
 }
 
 // ============================================
@@ -234,8 +318,8 @@ export interface SignalItem {
   signalType: SignalType;
   /** Confidence in the signal (0.0-1.0), default 1.0 */
   confidence?: number;
-  /** The query associated with this signal (for pattern tracking) */
-  query?: string;
+  /** The query that triggered the recall (required for query-context aware scoring) */
+  query: string;
   /** Optional context about the signal */
   context?: string;
 }
@@ -358,6 +442,44 @@ export interface RetainFilterConfig {
   skipToolOnlySessions?: boolean;
 }
 
+// ============================================
+// Feedback Configuration Types
+// ============================================
+
+/** Detection method configuration for feedback loop */
+export interface FeedbackDetectionConfig {
+  /** Enable explicit reference detection (default: true) */
+  explicit?: boolean;
+  /** Enable semantic similarity matching (default: true) */
+  semantic?: boolean;
+  /** Enable behavioral signal detection (default: true) */
+  behavioral?: boolean;
+  /** Jaccard similarity threshold for semantic matching (default: 0.5) */
+  semanticThreshold?: number;
+}
+
+/** Hindsight API integration settings for feedback */
+export interface FeedbackHindsightConfig {
+  /** Send feedback signals to Hindsight API (default: true) */
+  sendFeedback?: boolean;
+  /** Enable usefulness boosting in recalls (default: true) */
+  boostByUsefulness?: boolean;
+  /** Default usefulness weight for boosted recalls (default: 0.3) */
+  boostWeight?: number;
+}
+
+/** Full feedback loop configuration */
+export interface FeedbackConfig {
+  /** Enable feedback loop (default: false) */
+  enabled?: boolean;
+  /** Detection method configuration */
+  detection?: FeedbackDetectionConfig;
+  /** Hindsight API integration settings */
+  hindsight?: FeedbackHindsightConfig;
+  /** Enable debug logging (default: false) */
+  debug?: boolean;
+}
+
 /** Full configuration schema for claude-cognitive */
 export interface ClaudeMindConfig {
   /** Hindsight server connection settings */
@@ -387,6 +509,8 @@ export interface ClaudeMindConfig {
     /** Maximum number of recent memories to inject (default: 3) */
     recentMemoryLimit?: number;
   };
+  /** Feedback loop configuration for tracking fact usefulness */
+  feedback?: FeedbackConfig;
 }
 
 // ============================================

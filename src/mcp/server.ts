@@ -9,11 +9,12 @@ import express, { type Express, type Request, type Response } from "express";
 import type { Server } from "node:http";
 import { randomUUID } from "node:crypto";
 import type { Mind } from "../mind.js";
-import { handleRecall, handleReflect } from "./handlers.js";
+import { handleRecall, handleReflect, handleSignal } from "./handlers.js";
 import {
   TOOL_DEFINITIONS,
   recallInputSchema,
   reflectInputSchema,
+  signalInputSchema,
 } from "./tools.js";
 import type {
   HttpTransportConfig,
@@ -253,6 +254,38 @@ export class ClaudeMindMcpServer {
         };
       },
     );
+
+    // Register memory_signal
+    this.mcpServer.tool(
+      TOOL_DEFINITIONS.memory_signal.name,
+      TOOL_DEFINITIONS.memory_signal.description,
+      {
+        signals: signalInputSchema.shape.signals,
+        query: signalInputSchema.shape.query,
+      },
+      async (args) => {
+        // Validate input with Zod for type safety
+        const parsed = signalInputSchema.safeParse({
+          signals: args.signals,
+          query: args.query,
+        });
+
+        if (!parsed.success) {
+          return {
+            content: [
+              { type: "text", text: `Invalid input: ${parsed.error.message}` },
+            ],
+            isError: true,
+          };
+        }
+
+        const result = await handleSignal(this.mind, parsed.data);
+        return {
+          content: result.content,
+          ...(result.isError ? { isError: result.isError } : {}),
+        };
+      },
+    );
   }
 
   /**
@@ -320,6 +353,10 @@ export class ClaudeMindMcpServer {
             name: TOOL_DEFINITIONS.memory_reflect.name,
             description: TOOL_DEFINITIONS.memory_reflect.description,
           },
+          {
+            name: TOOL_DEFINITIONS.memory_signal.name,
+            description: TOOL_DEFINITIONS.memory_signal.description,
+          },
         ],
       });
     });
@@ -358,6 +395,17 @@ export class ClaudeMindMcpServer {
               return;
             }
             const result = await handleReflect(this.mind, parsed.data);
+            res.json({ sessionId, ...result });
+          } else if (toolName === "memory_signal") {
+            const parsed = signalInputSchema.safeParse(req.body);
+            if (!parsed.success) {
+              res.status(400).json({
+                error: "Invalid input",
+                details: parsed.error.errors,
+              });
+              return;
+            }
+            const result = await handleSignal(this.mind, parsed.data);
             res.json({ sessionId, ...result });
           } else {
             res.status(404).json({ error: `Unknown tool: ${toolName}` });

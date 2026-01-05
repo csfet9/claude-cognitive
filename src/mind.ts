@@ -18,6 +18,7 @@ import { HindsightClient } from "./client.js";
 import { loadConfig } from "./config.js";
 import { HindsightError } from "./errors.js";
 import { TypedEventEmitter } from "./events.js";
+import { FeedbackService, createFeedbackService } from "./feedback/index.js";
 import { OfflineMemoryStore } from "./offline.js";
 import type {
   Bank,
@@ -29,6 +30,8 @@ import type {
   MindOptions,
   RecallOptions,
   ReflectResult,
+  SignalItem,
+  SignalResult,
   TimeoutConfig,
 } from "./types.js";
 
@@ -97,6 +100,9 @@ export class Mind extends TypedEventEmitter {
   // Offline memory store (always available)
   private offlineStore: OfflineMemoryStore | null = null;
 
+  // Feedback service (optional, enabled via config)
+  private feedbackService: FeedbackService | null = null;
+
   // State
   private initialized = false;
   private initializing = false;
@@ -104,6 +110,8 @@ export class Mind extends TypedEventEmitter {
   private sessionActive = false;
   /** Session start time. Used for duration tracking. */
   private sessionStartTime: Date | null = null;
+  /** Current session ID for feedback tracking */
+  private sessionId: string | null = null;
 
   // Agent templates (loaded in init())
   private customAgents: AgentTemplate[] = [];
@@ -223,6 +231,11 @@ export class Mind extends TypedEventEmitter {
         projectPath: this.projectPath,
       });
 
+      // Initialize feedback service if enabled
+      if (config.feedback?.enabled) {
+        this.feedbackService = createFeedbackService(config.feedback, this.projectPath);
+      }
+
       // Mark initialized
       this.initialized = true;
 
@@ -310,6 +323,7 @@ export class Mind extends TypedEventEmitter {
     }
     this.sessionActive = true;
     this.sessionStartTime = new Date();
+    this.sessionId = `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
     const contextParts: string[] = [];
 
@@ -381,11 +395,11 @@ export class Mind extends TypedEventEmitter {
       if (!this.degraded && this.client) {
         // Online mode: store to Hindsight
         try {
-          await this.client.retain(
-            this.bankId,
-            transcript,
-            "Session transcript",
-          );
+          await this.client.retain({
+            bankId: this.bankId,
+            content: transcript,
+            context: "Session transcript",
+          });
           this.emit("memory:retained", transcript);
         } catch (error) {
           this.handleError(error, "onSessionEnd retain");
@@ -413,14 +427,42 @@ export class Mind extends TypedEventEmitter {
       }
     }
 
+    // Process feedback if enabled
+    if (this.feedbackService && this.sessionId && transcript && !this.degraded && this.client) {
+      try {
+        const feedbackResult = await this.feedbackService.processFeedback(this.sessionId, {
+          conversationText: transcript,
+        });
+
+        if (feedbackResult.success && feedbackResult.feedback.length > 0) {
+          // Submit feedback signals to Hindsight
+          await this.client.signal({
+            bankId: this.bankId,
+            signals: feedbackResult.feedback,
+          });
+
+          this.emit("feedback:processed", {
+            sessionId: this.sessionId,
+            summary: feedbackResult.summary,
+          });
+        }
+      } catch (error) {
+        // Silently ignore feedback processing errors - non-critical
+        this.emit(
+          "error",
+          error instanceof Error ? error : new Error("Feedback processing failed"),
+        );
+      }
+    }
+
     // Reflect on session (if not degraded)
     let result: ReflectResult | null = null;
     if (!this.degraded && this.client) {
       try {
-        result = await this.client.reflect(
-          this.bankId,
-          "What insights can I draw from this session?",
-        );
+        result = await this.client.reflect({
+          bankId: this.bankId,
+          query: "What insights can I draw from this session?",
+        });
 
         // Emit opinion events
         for (const opinion of result.opinions) {
@@ -434,6 +476,7 @@ export class Mind extends TypedEventEmitter {
     // Reset session state
     this.sessionActive = false;
     this.sessionStartTime = null;
+    this.sessionId = null;
 
     return result;
   }
@@ -457,8 +500,47 @@ export class Mind extends TypedEventEmitter {
     // Online mode: use Hindsight
     if (!this.degraded && this.client) {
       try {
-        const memories = await this.client.recall(this.bankId, query, options);
+        // Build recall input, only including defined properties
+        const recallInput: {
+          bankId: string;
+          query: string;
+          budget?: "low" | "mid" | "high";
+          factType?: FactType | "all";
+          maxTokens?: number;
+          includeEntities?: boolean;
+          boostByUsefulness?: boolean;
+          usefulnessWeight?: number;
+          minUsefulness?: number;
+        } = {
+          bankId: this.bankId,
+          query,
+        };
+        if (options?.budget !== undefined) recallInput.budget = options.budget;
+        if (options?.factType !== undefined)
+          recallInput.factType = options.factType;
+        if (options?.maxTokens !== undefined)
+          recallInput.maxTokens = options.maxTokens;
+        if (options?.includeEntities !== undefined)
+          recallInput.includeEntities = options.includeEntities;
+        if (options?.boostByUsefulness !== undefined)
+          recallInput.boostByUsefulness = options.boostByUsefulness;
+        if (options?.usefulnessWeight !== undefined)
+          recallInput.usefulnessWeight = options.usefulnessWeight;
+        if (options?.minUsefulness !== undefined)
+          recallInput.minUsefulness = options.minUsefulness;
+
+        const memories = await this.client.recall(recallInput);
         this.emit("memory:recalled", memories);
+
+        // Track recall for feedback if enabled
+        if (this.feedbackService && this.sessionId && memories.length > 0) {
+          try {
+            await this.feedbackService.trackRecall(this.sessionId, query, memories);
+          } catch {
+            // Silently ignore feedback tracking errors
+          }
+        }
+
         return memories;
       } catch (error) {
         this.handleError(error, "recall");
@@ -514,7 +596,10 @@ export class Mind extends TypedEventEmitter {
       );
     }
 
-    const result = await this.client.reflect(this.bankId, query);
+    const result = await this.client.reflect({
+      bankId: this.bankId,
+      query,
+    });
 
     // Emit opinion events
     for (const opinion of result.opinions) {
@@ -522,6 +607,30 @@ export class Mind extends TypedEventEmitter {
     }
 
     return result;
+  }
+
+  /**
+   * Submit feedback signals for recalled facts.
+   *
+   * @param signals - Array of signal items with factId, signalType, etc.
+   * @returns Signal result
+   * @throws {HindsightError} If in degraded mode (signal requires Hindsight)
+   */
+  async signal(signals: SignalItem[]): Promise<SignalResult> {
+    this.assertInitialized();
+
+    if (this.degraded || !this.client) {
+      throw new HindsightError(
+        "signal() requires Hindsight connection",
+        "HINDSIGHT_UNAVAILABLE",
+        { isRetryable: false },
+      );
+    }
+
+    return this.client.signal({
+      bankId: this.bankId,
+      signals,
+    });
   }
 
   /**
@@ -543,7 +652,18 @@ export class Mind extends TypedEventEmitter {
     // Online mode: use Hindsight
     if (!this.degraded && this.client) {
       try {
-        await this.client.retain(this.bankId, content, context);
+        // Build retain input, only including defined properties
+        const retainInput: {
+          bankId: string;
+          content: string;
+          context?: string;
+        } = {
+          bankId: this.bankId,
+          content,
+        };
+        if (context !== undefined) retainInput.context = context;
+
+        await this.client.retain(retainInput);
         this.emit("memory:retained", content);
         return;
       } catch (error) {
@@ -765,7 +885,18 @@ ${template.outputFormat}
 
       for (const memory of unsynced) {
         try {
-          await this.client.retain(this.bankId, memory.text, memory.context);
+          // Build retain input, only including defined properties
+          const retainInput: {
+            bankId: string;
+            content: string;
+            context?: string;
+          } = {
+            bankId: this.bankId,
+            content: memory.text,
+          };
+          if (memory.context !== undefined) retainInput.context = memory.context;
+
+          await this.client.retain(retainInput);
           syncedIds.push(memory.id);
         } catch (error) {
           // Stop on error - don't want to skip memories
@@ -1012,12 +1143,14 @@ ${template.outputFormat}
     // Clear references
     this.client = null;
     this.offlineStore = null;
+    this.feedbackService = null;
     this.customAgents = [];
 
     // Reset state
     this.initialized = false;
     this.sessionActive = false;
     this.sessionStartTime = null;
+    this.sessionId = null;
     this.degraded = false;
   }
 }

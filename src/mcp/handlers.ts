@@ -4,8 +4,8 @@
  */
 
 import type { Mind } from "../mind.js";
-import type { Memory, ReflectResult } from "../types.js";
-import type { RecallToolInput, ReflectToolInput, ToolResult } from "./types.js";
+import type { Memory, ReflectResult, SignalResult } from "../types.js";
+import type { RecallToolInput, ReflectToolInput, SignalToolInput, ToolResult } from "./types.js";
 
 // ============================================
 // Formatters
@@ -151,6 +151,94 @@ export async function handleReflect(
 
     return {
       content: [{ type: "text", text: `Error reflecting: ${message}` }],
+      isError: true,
+    };
+  }
+}
+
+/**
+ * Format signal result as readable text for Claude.
+ */
+function formatSignalResult(result: SignalResult, signalCount: number): string {
+  const lines: string[] = [];
+
+  lines.push(`Submitted ${signalCount} feedback signal${signalCount === 1 ? "" : "s"}.`);
+  lines.push("");
+
+  if (result.signalsProcessed > 0) {
+    lines.push(`Processed: ${result.signalsProcessed} signals`);
+  }
+
+  if (result.updatedFacts.length > 0) {
+    lines.push(`Updated ${result.updatedFacts.length} facts`);
+  }
+
+  lines.push("");
+  lines.push(
+    "The feedback will be used to improve future memory recall by boosting useful facts and deprioritizing ignored ones.",
+  );
+
+  return lines.join("\n").trim();
+}
+
+/**
+ * Handle memory_signal tool invocation.
+ *
+ * @param mind - Mind instance to use for signaling
+ * @param input - Tool input with signals array and query
+ * @returns Tool result with confirmation
+ */
+export async function handleSignal(
+  mind: Mind,
+  input: SignalToolInput,
+): Promise<ToolResult> {
+  try {
+    // Transform input signals to SignalItem format
+    // Handle exactOptionalPropertyTypes by conditionally adding optional fields
+    const signals = input.signals.map((s) => {
+      const signal: {
+        factId: string;
+        signalType: "used" | "ignored" | "helpful" | "not_helpful";
+        confidence: number;
+        query: string;
+        context?: string;
+      } = {
+        factId: s.factId,
+        signalType: s.signalType,
+        confidence: s.confidence ?? 1.0,
+        query: input.query,
+      };
+      if (s.context !== undefined) {
+        signal.context = s.context;
+      }
+      return signal;
+    });
+
+    const result = await mind.signal(signals);
+    const text = formatSignalResult(result, signals.length);
+
+    return {
+      content: [{ type: "text", text }],
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unknown error occurred";
+
+    // Check if this is a degraded mode error
+    if (message.includes("requires Hindsight connection")) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Cannot submit signals: Hindsight server is unavailable. Memory operations are in degraded mode.",
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [{ type: "text", text: `Error submitting signals: ${message}` }],
       isError: true,
     };
   }
