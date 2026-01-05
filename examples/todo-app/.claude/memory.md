@@ -41,3 +41,11 @@
 ## Observations
 
 <!-- High-confidence insights promoted from Hindsight will appear here -->
+
+## Feedback Stats
+
+<!-- Memory usefulness metrics tracked by the feedback loop -->
+
+- Feedback loop: enabled
+- Signal types: used, ignored, helpful, not_helpful
+- Usefulness boosting: enabled (weight: 0.3)

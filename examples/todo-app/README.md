@@ -51,7 +51,7 @@ This extracts facts about:
 
 ### 4. Configure Claude Code
 
-Add to your Claude Code settings:
+Add to your Claude Code settings (`.claude/settings.json`):
 
 ```json
 {
@@ -130,6 +130,16 @@ When you close the session, the process-session hook:
 2. Extracts memories via Hindsight
 3. Forms observations about patterns
 4. Promotes high-confidence observations to semantic memory
+5. **Sends feedback signals** about which recalled facts were actually used
+
+### Feedback Loop (New in v0.4.0)
+
+The feedback system tracks which memories Claude actually uses:
+
+1. **Detection** - Identifies when Claude references recalled facts
+2. **Scoring** - Calculates usefulness based on explicit references, semantic similarity, and behavioral signals
+3. **Signaling** - Sends `used`/`ignored`/`helpful`/`not_helpful` signals to Hindsight
+4. **Boosting** - Future recalls prioritize memories that proved useful
 
 ## Example Workflow
 
@@ -169,6 +179,7 @@ When you close the session, the process-session hook:
    - What was changed
    - Decisions made
    - Problems solved
+   - Which memories were helpful (feedback signals)
    ```
 
 5. **Next session**
@@ -177,6 +188,7 @@ When you close the session, the process-session hook:
    - The due date feature
    - How it was implemented
    - Any issues encountered
+   - (Useful memories are boosted in recall)
    ```
 
 ## CLI Commands
@@ -187,6 +199,9 @@ claude-cognitive status
 
 # Search memories
 claude-cognitive recall "database schema"
+
+# Search with usefulness boosting
+claude-cognitive recall "database schema" --boost
 
 # Reason about patterns
 claude-cognitive reflect "What patterns does this codebase use?"
@@ -209,7 +224,11 @@ See `.claudemindrc` for all options:
 {
   "hindsight": {
     "host": "localhost",
-    "port": 8888
+    "port": 8888,
+    "timeouts": {
+      "recall": 120000,
+      "reflect": 180000
+    }
   },
   "bankId": "todo-app",
   "disposition": {
@@ -217,7 +236,26 @@ See `.claudemindrc` for all options:
     "literalism": 4,
     "empathy": 2
   },
-  "background": "A simple todo application for task management"
+  "background": "A simple todo application for task management",
+  "semantic": {
+    "path": ".claude/memory.md"
+  },
+  "context": {
+    "recentMemoryLimit": 3
+  },
+  "feedback": {
+    "enabled": true,
+    "detection": {
+      "explicit": true,
+      "semantic": true,
+      "behavioral": true
+    },
+    "hindsight": {
+      "sendFeedback": true,
+      "boostByUsefulness": true,
+      "boostWeight": 0.3
+    }
+  }
 }
 ```
 
@@ -229,9 +267,20 @@ See `.claudemindrc` for all options:
 
 For code-focused projects, higher literalism and lower empathy work well.
 
+### Feedback Configuration
+
+- **enabled**: Turn feedback loop on/off
+- **detection.explicit**: Detect phrases like "based on the context"
+- **detection.semantic**: Detect paraphrased usage via similarity
+- **detection.behavioral**: Detect usage from file edits, commands
+- **hindsight.sendFeedback**: Send signals to Hindsight API
+- **hindsight.boostByUsefulness**: Prioritize useful memories in recalls
+- **hindsight.boostWeight**: How much to weight usefulness (0.0-1.0)
+
 ## Tips
 
 1. **Keep semantic memory curated**: Edit `.claude/memory.md` to add important decisions
 2. **Run learn after major changes**: Re-bootstrap to update tech stack knowledge
 3. **Check status periodically**: Verify Hindsight connection is healthy
 4. **Review promoted observations**: Check what patterns Claude is learning
+5. **Enable feedback loop**: Helps Claude learn which memories are actually useful

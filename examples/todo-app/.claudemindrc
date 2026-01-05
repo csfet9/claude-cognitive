@@ -1,7 +1,11 @@
 {
   "hindsight": {
     "host": "localhost",
-    "port": 8888
+    "port": 8888,
+    "timeouts": {
+      "recall": 120000,
+      "reflect": 180000
+    }
   },
   "bankId": "todo-app",
   "disposition": {
@@ -12,5 +16,21 @@
   "background": "A simple todo application built with TypeScript and Express. Uses SQLite for storage. Follows REST API conventions.",
   "semantic": {
     "path": ".claude/memory.md"
+  },
+  "context": {
+    "recentMemoryLimit": 3
+  },
+  "feedback": {
+    "enabled": true,
+    "detection": {
+      "explicit": true,
+      "semantic": true,
+      "behavioral": true
+    },
+    "hindsight": {
+      "sendFeedback": true,
+      "boostByUsefulness": true,
+      "boostWeight": 0.3
+    }
   }
 }
