@@ -14,10 +14,14 @@ import type {
   BankResponseDTO,
   Disposition,
   FactType,
+  FactUsefulnessStats,
   HealthStatus,
   HindsightClientOptions,
   Memory,
   RecallOptions,
+  RetainOptions,
+  SignalItem,
+  SignalResult,
   TraitValue,
   ReflectResult,
   TimeoutConfig,
@@ -239,10 +243,12 @@ export class HindsightClient {
    * Store content with automatic extraction.
    *
    * Hindsight automatically extracts entities, relationships, and metadata.
+   * You can optionally provide user-defined entities to combine with auto-extracted ones.
    *
    * @param bankId - Bank identifier
    * @param content - Content to store
    * @param context - Optional additional context
+   * @param options - Retain options (async mode, user-provided entities)
    * @returns Number of items processed
    * @throws {HindsightError} If bank doesn't exist
    */
@@ -250,7 +256,7 @@ export class HindsightClient {
     bankId: string,
     content: string,
     context?: string,
-    options?: { async?: boolean },
+    options?: RetainOptions,
   ): Promise<number> {
     interface RetainApiResponse {
       success: boolean;
@@ -260,12 +266,29 @@ export class HindsightClient {
     }
     // Use async mode for content > 2KB to avoid timeout from LLM extraction
     const useAsync = options?.async ?? content.length > 2000;
+
+    // Build item with optional entities
+    const item: Record<string, unknown> = { content };
+    if (context) {
+      item.context = context;
+    }
+
+    if (options?.entities && options.entities.length > 0) {
+      item.entities = options.entities.map((e) => {
+        const entity: { text: string; type?: string } = { text: e.text };
+        if (e.type) {
+          entity.type = e.type;
+        }
+        return entity;
+      });
+    }
+
     const response = await this.request<RetainApiResponse>(
       "POST",
       `/v1/default/banks/${encodeURIComponent(bankId)}/memories`,
       {
         body: {
-          items: [{ content, context }],
+          items: [item],
           async: useAsync,
         },
         timeout: useAsync ? 5000 : this.timeouts.retain, // Quick return for async
@@ -513,6 +536,109 @@ export class HindsightClient {
    */
   async forget(bankId: string, _memoryId?: string): Promise<void> {
     await this.forgetAll(bankId);
+  }
+
+  // ============================================
+  // Feedback Signal Operations
+  // ============================================
+
+  /**
+   * Submit feedback signals for recalled facts.
+   *
+   * Signal types and their weights:
+   * - `used`: Fact was referenced in response (weight: +1.0)
+   * - `ignored`: Fact was recalled but not used (weight: -0.5)
+   * - `helpful`: Explicit positive feedback (weight: +1.5)
+   * - `not_helpful`: Explicit negative feedback (weight: -1.0)
+   *
+   * @param bankId - Bank identifier
+   * @param signals - Array of signal items
+   * @returns Result with number of signals processed
+   * @throws {HindsightError} If bank doesn't exist
+   */
+  async signal(bankId: string, signals: SignalItem[]): Promise<SignalResult> {
+    interface SignalApiResponse {
+      success: boolean;
+      signals_processed: number;
+      updated_facts: string[];
+    }
+    const response = await this.request<SignalApiResponse>(
+      "POST",
+      `/v1/default/banks/${encodeURIComponent(bankId)}/signal`,
+      {
+        body: {
+          signals: signals.map((s) => ({
+            fact_id: s.factId,
+            signal_type: s.signalType,
+            confidence: s.confidence ?? 1.0,
+            query: s.query,
+            context: s.context,
+          })),
+        },
+      },
+    );
+    return {
+      success: response.success,
+      signalsProcessed: response.signals_processed,
+      updatedFacts: response.updated_facts,
+    };
+  }
+
+  /**
+   * Get usefulness statistics for a specific fact.
+   *
+   * @param bankId - Bank identifier
+   * @param factId - Fact UUID
+   * @returns Usefulness statistics for the fact
+   * @throws {HindsightError} If bank or fact doesn't exist
+   */
+  async getFactStats(
+    bankId: string,
+    factId: string,
+  ): Promise<FactUsefulnessStats> {
+    interface FactStatsApiResponse {
+      fact_id: string;
+      usefulness_score: number;
+      signal_count: number;
+      signal_breakdown: Record<string, number>;
+      last_signal_at: string | null;
+      created_at: string;
+    }
+    const response = await this.request<FactStatsApiResponse>(
+      "GET",
+      `/v1/default/banks/${encodeURIComponent(bankId)}/facts/${encodeURIComponent(factId)}/stats`,
+    );
+    const result: FactUsefulnessStats = {
+      factId: response.fact_id,
+      usefulnessScore: response.usefulness_score,
+      signalCount: response.signal_count,
+      signalBreakdown: response.signal_breakdown as Record<
+        "used" | "ignored" | "helpful" | "not_helpful",
+        number
+      >,
+      createdAt: response.created_at,
+    };
+    if (response.last_signal_at) {
+      result.lastSignalAt = response.last_signal_at;
+    }
+    return result;
+  }
+
+  // ============================================
+  // Bank Listing
+  // ============================================
+
+  /**
+   * List all memory banks.
+   *
+   * @returns Array of all banks
+   */
+  async listBanks(): Promise<Bank[]> {
+    const response = await this.request<{ banks: BankResponseDTO[] }>(
+      "GET",
+      "/v1/default/banks",
+    );
+    return response.banks.map((b) => this.mapBankResponse(b));
   }
 
   // ============================================

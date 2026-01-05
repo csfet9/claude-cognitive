@@ -108,6 +108,17 @@ export type { RecallOptions, RecallBudget } from "./types.js";
 // Types - Reflect
 export type { ReflectResult, Opinion } from "./types.js";
 
+// Types - Feedback Signals
+export type {
+  SignalType,
+  SignalItem,
+  SignalResult,
+  FactUsefulnessStats,
+} from "./types.js";
+
+// Types - Retain Options
+export type { RetainOptions, EntityInput } from "./types.js";
+
 // Types - Health
 export type { HealthStatus } from "./types.js";
 

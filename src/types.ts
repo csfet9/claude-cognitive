@@ -220,6 +220,73 @@ export interface ReflectResult {
 }
 
 // ============================================
+// Feedback Signal Types
+// ============================================
+
+/** Types of usefulness signals for facts */
+export type SignalType = "used" | "ignored" | "helpful" | "not_helpful";
+
+/** A single feedback signal for a fact */
+export interface SignalItem {
+  /** UUID of the fact to signal */
+  factId: string;
+  /** Type of signal */
+  signalType: SignalType;
+  /** Confidence in the signal (0.0-1.0), default 1.0 */
+  confidence?: number;
+  /** The query associated with this signal (for pattern tracking) */
+  query?: string;
+  /** Optional context about the signal */
+  context?: string;
+}
+
+/** Result from submitting feedback signals */
+export interface SignalResult {
+  /** Whether the operation succeeded */
+  success: boolean;
+  /** Number of signals processed */
+  signalsProcessed: number;
+  /** Fact IDs that were updated */
+  updatedFacts: string[];
+}
+
+/** Usefulness statistics for a single fact */
+export interface FactUsefulnessStats {
+  /** Fact UUID */
+  factId: string;
+  /** Current usefulness score (0.0-1.0) */
+  usefulnessScore: number;
+  /** Total number of signals received */
+  signalCount: number;
+  /** Count of signals by type */
+  signalBreakdown: Record<SignalType, number>;
+  /** When the last signal was received (ISO 8601) */
+  lastSignalAt?: string;
+  /** When the fact was created (ISO 8601) */
+  createdAt: string;
+}
+
+// ============================================
+// Entity Input Types
+// ============================================
+
+/** Entity to associate with retained content */
+export interface EntityInput {
+  /** The entity name/text */
+  text: string;
+  /** Optional entity type (e.g., 'PERSON', 'ORG', 'CONCEPT') */
+  type?: string;
+}
+
+/** Options for retain operation */
+export interface RetainOptions {
+  /** Use async mode for processing */
+  async?: boolean;
+  /** User-provided entities to combine with auto-extracted entities */
+  entities?: EntityInput[];
+}
+
+// ============================================
 // Health Types
 // ============================================
 
