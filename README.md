@@ -116,6 +116,8 @@ claude-cognitive reflect "query"        # Reason about knowledge
 claude-cognitive config                 # Show configuration
 claude-cognitive update                 # Update global configuration
 claude-cognitive update --check         # Check what needs updating
+claude-cognitive feedback-stats         # Show feedback queue statistics
+claude-cognitive feedback-sync          # Sync pending feedback signals
 claude-cognitive uninstall              # Remove from project
 ```
 
@@ -175,6 +177,53 @@ When Hindsight becomes available again, offline memories are automatically synce
 
 ---
 
+## Feedback Signals
+
+claude-cognitive automatically tracks which recalled memories are useful and submits feedback to Hindsight. This enables **query-context aware scoring** - frequently used facts rank higher in future recalls.
+
+### How It Works
+
+1. **Track** - Recalls are tracked during sessions
+2. **Detect** - 4 detection strategies identify which facts Claude used
+3. **Score** - Signals are aggregated into used/ignored verdicts
+4. **Submit** - Feedback is sent to Hindsight (or queued offline)
+5. **Boost** - Future recalls prioritize frequently-used facts
+
+### Detection Strategies
+
+| Strategy | Confidence | Description |
+|----------|------------|-------------|
+| Explicit Reference | 0.9 | "I remember...", "As mentioned before..." |
+| Semantic Similarity | 0.7 | Word overlap between response and facts |
+| File Access | 0.4 | Fact mentions files Claude accessed |
+| Task Correlation | 0.5 | Fact topics match completed tasks |
+
+### Configuration
+
+```json
+{
+  "feedback": {
+    "enabled": true,
+    "detection": {
+      "explicit": true,
+      "semantic": true,
+      "behavioral": true
+    }
+  }
+}
+```
+
+### CLI Commands
+
+```bash
+claude-cognitive feedback-stats    # Show queue statistics
+claude-cognitive feedback-sync     # Sync pending signals
+```
+
+See [Feedback Signals](./docs/feedback-signals.md) for full documentation.
+
+---
+
 ## API Usage
 
 ```typescript
@@ -220,6 +269,7 @@ Without Hindsight, claude-cognitive works in offline mode - memories are stored 
 - **[Concepts](./docs/concepts.md)** - Memory networks, operations, architecture
 - **[Configuration](./docs/configuration.md)** - Full configuration reference
 - **[API Reference](./docs/api-reference.md)** - Complete API documentation
+- **[Feedback Signals](./docs/feedback-signals.md)** - Automatic usage tracking
 - **[Performance](./docs/performance.md)** - Benchmarks and optimization
 
 ---

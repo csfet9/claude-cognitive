@@ -6,6 +6,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-01-05
+
+### Added
+
+- **Feedback signals system** - Automatic tracking of which recalled facts are
+  useful to improve future retrieval quality
+  - 4 detection strategies: explicit reference, semantic similarity, file
+    access correlation, task topic correlation
+  - Score aggregation with used/ignored/uncertain verdicts
+  - Query-context aware scoring in Hindsight
+  - Full documentation in `docs/feedback-signals.md`
+
+- **Offline feedback queue** - Feedback signals are queued locally when
+  Hindsight is unavailable
+  - New `OfflineFeedbackQueue` class (`src/feedback/offline-queue.ts`)
+  - Signals stored in `.claude/offline-feedback.json`
+  - Auto-sync when connection is restored via `attemptRecovery()`
+
+- **New CLI commands**:
+  - `feedback-stats` - Show feedback queue and processing statistics
+  - `feedback-sync` - Manually sync pending offline feedback signals
+
+- **New events** for feedback operations:
+  - `feedback:processed` - Emitted when feedback is sent to Hindsight
+  - `feedback:queued` - Emitted when signals are queued offline
+  - `feedback:synced` - Emitted when offline signals are synced
+
+- **Agent orchestration enforcement** - Main Claude instance now acts as
+  orchestrator only, delegating ALL code writing to agents
+  - Critical rule injected at session start via `formatAgentInstructions()`
+  - Custom project agents listed from `.claude/agents/`
+  - Exception only when no agents are available
+
+### Changed
+
+- **Mind.onSessionEnd()** - Now processes feedback automatically when enabled
+- **Mind.attemptRecovery()** - Now syncs offline feedback alongside memories
+- **Session context injection** - Includes agent orchestration enforcement rules
+
 ## [0.3.4] - 2026-01-05
 
 ### Added
@@ -272,6 +311,7 @@ and this project adheres to
   - Unit, integration, and E2E tests
   - Performance benchmarks
 
+[0.4.0]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.4.0
 [0.3.4]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.3.4
 [0.3.2]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.3.2
 [0.3.1]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.3.1
