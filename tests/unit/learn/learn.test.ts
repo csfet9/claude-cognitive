@@ -93,11 +93,11 @@ describe("learn()", () => {
       await learn(mockClient, "test-bank", "/test/project", { depth: "quick" });
 
       expect(mockClient.retain).toHaveBeenCalledTimes(3);
-      expect(mockClient.retain).toHaveBeenCalledWith(
-        "test-bank",
-        "Project uses React framework",
-        "From package.json",
-      );
+      expect(mockClient.retain).toHaveBeenCalledWith({
+        bankId: "test-bank",
+        content: "Project uses React framework",
+        context: "From package.json",
+      });
     });
 
     it("should form opinions via reflect()", async () => {

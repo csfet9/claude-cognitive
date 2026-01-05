@@ -69,7 +69,11 @@ export async function learn(
 
   for (const fact of facts) {
     try {
-      await client.retain(bankId, fact.content, fact.context);
+      await client.retain({
+        bankId,
+        content: fact.content,
+        context: fact.context,
+      });
       worldFacts++;
     } catch (error) {
       // Log but continue - don't fail entire learn on single fact
@@ -88,7 +92,7 @@ export async function learn(
 
   for (const query of reflectionQueries) {
     try {
-      const result = await client.reflect(bankId, query);
+      const result = await client.reflect({ bankId, query });
       opinions.push(...result.opinions);
 
       // Collect entities from basedOn memories

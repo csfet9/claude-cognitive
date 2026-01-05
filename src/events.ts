@@ -67,6 +67,12 @@ export interface MindEventMap {
     info: { sessionId: string; summary: { used: number; ignored: number; uncertain: number } },
   ];
 
+  /** Emitted when feedback signals are queued offline (degraded mode) */
+  "feedback:queued": [info: { sessionId: string; count: number }];
+
+  /** Emitted when offline feedback signals are synced to Hindsight */
+  "feedback:synced": [info: { count: number }];
+
   /** Emitted on errors (non-fatal, allows continued operation) */
   error: [error: Error];
 }

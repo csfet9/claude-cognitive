@@ -4,7 +4,7 @@
  */
 
 import type { HindsightClient } from "../client.js";
-import type { Memory, RecallOptions } from "../types.js";
+import type { Memory } from "../types.js";
 import type {
   AgentContext,
   AgentTemplate,
@@ -33,16 +33,15 @@ export async function getAgentContext(
 ): Promise<AgentContext> {
   const { budget = "mid", additionalContext, maxMemories = 10 } = options;
 
-  // Recall memories relevant to the task
-  const recallOptions: RecallOptions = {
-    budget,
-    factType: "all", // Agent benefits from all memory types
-    includeEntities: true,
-  };
-
   let memories: Memory[] = [];
   try {
-    memories = await client.recall(bankId, task, recallOptions);
+    memories = await client.recall({
+      bankId,
+      query: task,
+      budget,
+      factType: "all", // Agent benefits from all memory types
+      includeEntities: true,
+    });
     // Limit to maxMemories
     memories = memories.slice(0, maxMemories);
   } catch {

@@ -19,6 +19,7 @@ import { loadConfig } from "./config.js";
 import { HindsightError } from "./errors.js";
 import { TypedEventEmitter } from "./events.js";
 import { FeedbackService, createFeedbackService } from "./feedback/index.js";
+import { OfflineFeedbackQueue } from "./feedback/offline-queue.js";
 import { OfflineMemoryStore } from "./offline.js";
 import type {
   Bank,
@@ -102,6 +103,9 @@ export class Mind extends TypedEventEmitter {
 
   // Feedback service (optional, enabled via config)
   private feedbackService: FeedbackService | null = null;
+
+  // Offline feedback queue (for degraded mode)
+  private feedbackQueue: OfflineFeedbackQueue | null = null;
 
   // State
   private initialized = false;
@@ -234,6 +238,10 @@ export class Mind extends TypedEventEmitter {
       // Initialize feedback service if enabled
       if (config.feedback?.enabled) {
         this.feedbackService = createFeedbackService(config.feedback, this.projectPath);
+        // Initialize offline feedback queue alongside the service
+        this.feedbackQueue = new OfflineFeedbackQueue({
+          projectPath: this.projectPath,
+        });
       }
 
       // Mark initialized
@@ -428,23 +436,33 @@ export class Mind extends TypedEventEmitter {
     }
 
     // Process feedback if enabled
-    if (this.feedbackService && this.sessionId && transcript && !this.degraded && this.client) {
+    if (this.feedbackService && this.sessionId && transcript) {
       try {
         const feedbackResult = await this.feedbackService.processFeedback(this.sessionId, {
           conversationText: transcript,
         });
 
         if (feedbackResult.success && feedbackResult.feedback.length > 0) {
-          // Submit feedback signals to Hindsight
-          await this.client.signal({
-            bankId: this.bankId,
-            signals: feedbackResult.feedback,
-          });
+          if (!this.degraded && this.client) {
+            // Online mode: Submit feedback signals to Hindsight
+            await this.client.signal({
+              bankId: this.bankId,
+              signals: feedbackResult.feedback,
+            });
 
-          this.emit("feedback:processed", {
-            sessionId: this.sessionId,
-            summary: feedbackResult.summary,
-          });
+            this.emit("feedback:processed", {
+              sessionId: this.sessionId,
+              summary: feedbackResult.summary,
+            });
+          } else if (this.feedbackQueue) {
+            // Degraded mode: Queue signals for later sync
+            await this.feedbackQueue.enqueueBatch(feedbackResult.feedback);
+
+            this.emit("feedback:queued", {
+              sessionId: this.sessionId,
+              count: feedbackResult.feedback.length,
+            });
+          }
         }
       } catch (error) {
         // Silently ignore feedback processing errors - non-critical
@@ -856,6 +874,9 @@ ${template.outputFormat}
       // Auto-sync offline memories
       await this.syncOfflineMemories();
 
+      // Auto-sync offline feedback signals
+      await this.syncOfflineFeedback();
+
       return true;
     }
 
@@ -926,6 +947,61 @@ ${template.outputFormat}
       );
       return 0;
     }
+  }
+
+  /**
+   * Sync offline feedback signals to Hindsight.
+   * Called automatically on recovery from degraded mode.
+   *
+   * @returns Number of feedback signals synced
+   */
+  async syncOfflineFeedback(): Promise<number> {
+    if (!this.client || this.degraded || !this.feedbackQueue) {
+      return 0;
+    }
+
+    try {
+      await this.feedbackQueue.recordSyncAttempt();
+      const unsynced = await this.feedbackQueue.getUnsynced();
+
+      if (unsynced.length === 0) {
+        return 0;
+      }
+
+      // Convert offline signals back to SignalItem format
+      const signals: SignalItem[] = unsynced.map(
+        OfflineFeedbackQueue.toSignalItem,
+      );
+
+      // Submit all signals in one batch
+      await this.client.signal({
+        bankId: this.bankId,
+        signals,
+      });
+
+      // Mark all as synced
+      const ids = unsynced.map((s) => s.id);
+      await this.feedbackQueue.markSynced(ids);
+      this.emit("feedback:synced", { count: ids.length });
+
+      // Clear synced signals to save space
+      await this.feedbackQueue.clearSynced();
+
+      return ids.length;
+    } catch (error) {
+      this.emit(
+        "error",
+        error instanceof Error ? error : new Error(String(error)),
+      );
+      return 0;
+    }
+  }
+
+  /**
+   * Get offline feedback queue (for CLI commands).
+   */
+  getOfflineFeedbackQueue(): OfflineFeedbackQueue | null {
+    return this.feedbackQueue;
   }
 
   /**
@@ -1067,7 +1143,27 @@ ${template.outputFormat}
     lines.push("## Agent Orchestration");
     lines.push("");
     lines.push(
-      "You are the **orchestrator**. Delegate complex tasks to specialized agents using the Task tool.",
+      "You are the **orchestrator**. You do NOT write code directly. Delegate ALL coding tasks to specialized agents using the Task tool.",
+    );
+    lines.push("");
+
+    // Critical rule section
+    lines.push("### Critical Rule: Agents Write Code, You Orchestrate");
+    lines.push("");
+    lines.push(
+      "**YOU (the main Claude instance) MUST NOT write code directly.** Your role is to:",
+    );
+    lines.push("- Plan and coordinate work");
+    lines.push("- Provide context and requirements to agents");
+    lines.push("- Review agent outputs");
+    lines.push("- Communicate with the user");
+    lines.push("");
+    lines.push("**Agents write ALL code.** Delegate implementation to:");
+    lines.push("- Built-in agents (code-explorer, code-architect, code-reviewer)");
+    lines.push("- Custom agents in `.claude/agents/` directory");
+    lines.push("");
+    lines.push(
+      "**Exception**: You may write code ONLY if no agents are available (e.g., no built-in agents accessible, no custom agents in `.claude/agents/`).",
     );
     lines.push("");
 
@@ -1087,7 +1183,11 @@ ${template.outputFormat}
     lines.push("");
 
     if (custom.length > 0) {
-      lines.push("### Project Agents");
+      lines.push("### Custom Project Agents");
+      lines.push("");
+      lines.push(
+        "The following project-specific agents are available in `.claude/agents/`:",
+      );
       lines.push("");
       for (const agent of custom) {
         const firstLine = agent.mission.split("\n")[0] ?? "";
@@ -1100,7 +1200,7 @@ ${template.outputFormat}
 
     lines.push("### Orchestration Workflow");
     lines.push("");
-    lines.push("For non-trivial features, follow this workflow:");
+    lines.push("For ALL coding tasks, follow this workflow:");
     lines.push("");
     lines.push(
       "1. **Explore**: Launch `code-explorer` agents to understand existing patterns",
@@ -1110,10 +1210,10 @@ ${template.outputFormat}
       "3. **Design**: Launch `code-architect` agents to create implementation plans",
     );
     lines.push(
-      "4. **Implement**: Write code following the chosen architecture",
+      "4. **Implement**: Launch implementation agents to write code (NEVER write code yourself)",
     );
     lines.push(
-      "5. **Review**: Launch `code-reviewer` agents to check your work",
+      "5. **Review**: Launch `code-reviewer` agents to check the work",
     );
     lines.push("");
     lines.push(
@@ -1121,6 +1221,9 @@ ${template.outputFormat}
     );
     lines.push(
       "**Memory**: Only YOU (orchestrator) access memory - agents receive context from you.",
+    );
+    lines.push(
+      "**Code Ownership**: Agents own ALL code changes - you coordinate and review.",
     );
     lines.push("");
 
@@ -1144,6 +1247,7 @@ ${template.outputFormat}
     this.client = null;
     this.offlineStore = null;
     this.feedbackService = null;
+    this.feedbackQueue = null;
     this.customAgents = [];
 
     // Reset state

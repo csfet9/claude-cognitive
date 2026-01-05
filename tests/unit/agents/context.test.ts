@@ -68,9 +68,9 @@ describe("agent context", () => {
       );
 
       expect(mockClient.recall).toHaveBeenCalledWith(
-        "test-bank",
-        "Analyze the auth system",
         expect.objectContaining({
+          bankId: "test-bank",
+          query: "Analyze the auth system",
           factType: "all",
           includeEntities: true,
         }),
@@ -126,13 +126,15 @@ describe("agent context", () => {
 
     it("should pass budget option to recall", async () => {
       await getAgentContext(mockClient, "test-bank", sampleTemplate, "Task", {
-        budget: "large",
+        budget: "high",
       });
 
       expect(mockClient.recall).toHaveBeenCalledWith(
-        "test-bank",
-        "Task",
-        expect.objectContaining({ budget: "large" }),
+        expect.objectContaining({
+          bankId: "test-bank",
+          query: "Task",
+          budget: "high",
+        }),
       );
     });
 

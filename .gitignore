@@ -7,7 +7,5 @@ coverage/
 dist/
 
 # Local project config (created by claude-mind init/install)
+.claude
 .claudemindrc
-.claude/memory.md
-.claude/settings.json
-.claude/.session-buffer.jsonl
