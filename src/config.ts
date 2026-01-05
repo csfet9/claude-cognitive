@@ -85,6 +85,12 @@ function mergeConfig(
   if (target.retainFilter !== undefined) {
     result.retainFilter = { ...target.retainFilter };
   }
+  if (target.context !== undefined) {
+    result.context = { ...target.context };
+  }
+  if (target.feedback !== undefined) {
+    result.feedback = { ...target.feedback };
+  }
 
   // Merge hindsight settings
   if (source.hindsight) {
@@ -135,6 +141,22 @@ function mergeConfig(
       ...result.retainFilter,
       ...source.retainFilter,
     };
+  }
+
+  // Merge context settings
+  if (source.context !== undefined) {
+    result.context = {
+      ...result.context,
+      ...source.context,
+    };
+  }
+
+  // Merge feedback settings
+  if (source.feedback !== undefined) {
+    result.feedback = {
+      ...result.feedback,
+      ...source.feedback,
+    } as typeof source.feedback;
   }
 
   return result;
@@ -213,6 +235,12 @@ function applyEnvConfig(config: ClaudeMindConfig): ClaudeMindConfig {
   if (config.retainFilter !== undefined) {
     result.retainFilter = { ...config.retainFilter };
   }
+  if (config.context !== undefined) {
+    result.context = { ...config.context };
+  }
+  if (config.feedback !== undefined) {
+    result.feedback = { ...config.feedback };
+  }
 
   // Hindsight connection settings
   const host = process.env["HINDSIGHT_HOST"];
@@ -290,6 +318,12 @@ function cloneConfig(config: ClaudeMindConfig): ClaudeMindConfig {
   }
   if (config.retainFilter !== undefined) {
     result.retainFilter = { ...config.retainFilter };
+  }
+  if (config.context !== undefined) {
+    result.context = { ...config.context };
+  }
+  if (config.feedback !== undefined) {
+    result.feedback = { ...config.feedback };
   }
 
   return result;
