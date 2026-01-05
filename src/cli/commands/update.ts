@@ -212,14 +212,46 @@ async function isGloballyInstalled(): Promise<boolean> {
 }
 
 /**
+ * Default configuration values for new options.
+ */
+const DEFAULT_CONFIG = {
+  context: {
+    recentMemoryLimit: 3,
+  },
+  retain: {
+    maxTranscriptLength: 25000,
+    filterToolResults: true,
+    filterFileContents: true,
+    maxCodeBlockLines: 30,
+    minSessionLength: 500,
+  },
+  feedback: {
+    enabled: true,
+    detection: {
+      explicit: true,
+      semantic: true,
+      behavioral: true,
+      semanticThreshold: 0.5,
+    },
+    hindsight: {
+      sendFeedback: true,
+      boostByUsefulness: true,
+      boostWeight: 0.3,
+    },
+  },
+};
+
+/**
  * Register the update command.
  */
 export function registerUpdateCommand(cli: CAC): void {
   cli
     .command("update", "Update claude-cognitive configuration")
     .option("--check", "Only check what needs updating (dry run)")
-    .action(async (options: { check?: boolean }) => {
+    .option("--project <path>", "Project directory to update .claudemindrc")
+    .action(async (options: { check?: boolean; project?: string }) => {
       const dryRun = options.check ?? false;
+      const projectPath = options.project ?? process.cwd();
 
       console.log("");
       console.log(
@@ -428,6 +460,104 @@ export function registerUpdateCommand(cli: CAC): void {
       if (!dryRun && updatesApplied > 0) {
         settings.hooks = hooks;
         await writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n");
+      }
+
+      // ============================================
+      // Check/update project .claudemindrc
+      // ============================================
+      const projectRcPath = join(projectPath, ".claudemindrc");
+      let projectRcExists = false;
+      try {
+        await access(projectRcPath);
+        projectRcExists = true;
+      } catch {
+        // No .claudemindrc in project
+      }
+
+      if (projectRcExists) {
+        const projectConfig = await readJsonFile(projectRcPath);
+        let projectUpdatesNeeded = 0;
+        const projectUpdates: string[] = [];
+
+        // Check for obsolete semantic config
+        if ("semantic" in projectConfig) {
+          projectUpdatesNeeded++;
+          projectUpdates.push("Remove obsolete 'semantic' config");
+        }
+
+        // Check for missing context config
+        if (!("context" in projectConfig)) {
+          projectUpdatesNeeded++;
+          projectUpdates.push("Add 'context' config");
+        }
+
+        // Check for missing retain config
+        if (!("retain" in projectConfig)) {
+          projectUpdatesNeeded++;
+          projectUpdates.push("Add 'retain' config");
+        }
+
+        // Check for missing feedback config
+        if (!("feedback" in projectConfig)) {
+          projectUpdatesNeeded++;
+          projectUpdates.push("Add 'feedback' config");
+        }
+
+        // Check for missing timeouts in hindsight config
+        const hindsight = projectConfig.hindsight as Record<string, unknown> | undefined;
+        if (hindsight && !("timeouts" in hindsight)) {
+          projectUpdatesNeeded++;
+          projectUpdates.push("Add 'hindsight.timeouts' config");
+        }
+
+        if (projectUpdatesNeeded > 0) {
+          updatesNeeded += projectUpdatesNeeded;
+          if (dryRun) {
+            printWarn(`Project .claudemindrc needs ${projectUpdatesNeeded} update(s):`);
+            for (const update of projectUpdates) {
+              printInfo(`  - ${update}`);
+            }
+          } else {
+            // Remove obsolete semantic config
+            if ("semantic" in projectConfig) {
+              delete projectConfig.semantic;
+            }
+
+            // Add missing configs with defaults
+            if (!("context" in projectConfig)) {
+              projectConfig.context = DEFAULT_CONFIG.context;
+            }
+
+            if (!("retain" in projectConfig)) {
+              projectConfig.retain = DEFAULT_CONFIG.retain;
+            }
+
+            if (!("feedback" in projectConfig)) {
+              projectConfig.feedback = DEFAULT_CONFIG.feedback;
+            }
+
+            // Add timeouts to hindsight config if missing
+            if (hindsight && !("timeouts" in hindsight)) {
+              hindsight.timeouts = {
+                recall: 120000,
+                reflect: 180000,
+                retain: 90000,
+              };
+            }
+
+            // Write updated config
+            await writeFile(projectRcPath, JSON.stringify(projectConfig, null, 2) + "\n");
+            printSuccess(`Updated project .claudemindrc (${projectUpdatesNeeded} changes)`);
+            for (const update of projectUpdates) {
+              printInfo(`  - ${update}`);
+            }
+            updatesApplied += projectUpdatesNeeded;
+          }
+        } else {
+          printInfo("Project .claudemindrc is up to date");
+        }
+      } else {
+        printInfo("No .claudemindrc in current directory (use --project to specify)");
       }
 
       // Summary
