@@ -32,7 +32,6 @@ claude-cognitive init
 This creates:
 
 - `.claudemindrc` - Configuration file
-- `.claude/memory.md` - Semantic memory (if not exists)
 
 ### 3. Bootstrap Memory (Optional)
 
@@ -94,7 +93,7 @@ Add to your Claude Code settings (`.claude/settings.json`):
 todo-app/
 ├── .claudemindrc           # claude-cognitive configuration
 ├── .claude/
-│   ├── memory.md           # Semantic memory
+│   ├── rules/              # Auto-generated context (session-context.md)
 │   └── settings.json       # Claude Code settings
 ├── src/
 │   ├── index.ts            # Entry point
@@ -111,8 +110,8 @@ todo-app/
 
 When you start a Claude Code session, the inject-context hook:
 
-1. Loads `.claude/memory.md`
-2. Recalls relevant memories from Hindsight
+1. Recalls relevant memories from Hindsight
+2. Generates `.claude/rules/session-context.md` with recent activity
 3. Injects context into Claude's system prompt
 
 ### During Session
@@ -129,8 +128,7 @@ When you close the session, the process-session hook:
 1. Processes the full transcript
 2. Extracts memories via Hindsight
 3. Forms observations about patterns
-4. Promotes high-confidence observations to semantic memory
-5. **Sends feedback signals** about which recalled facts were actually used
+4. **Sends feedback signals** about which recalled facts were actually used
 
 ### Feedback Loop (New in v0.4.0)
 
@@ -206,9 +204,6 @@ claude-cognitive recall "database schema" --boost
 # Reason about patterns
 claude-cognitive reflect "What patterns does this codebase use?"
 
-# Show semantic memory
-claude-cognitive semantic
-
 # Show configuration
 claude-cognitive config
 
@@ -238,9 +233,6 @@ See `.claudemindrc` for all options:
     "empathy": 2
   },
   "background": "A simple todo application for task management",
-  "semantic": {
-    "path": ".claude/memory.md"
-  },
   "context": {
     "recentMemoryLimit": 3
   },
@@ -299,8 +291,7 @@ Controls how session transcripts are processed before storing:
 
 ## Tips
 
-1. **Keep semantic memory curated**: Edit `.claude/memory.md` to add important decisions
-2. **Run learn after major changes**: Re-bootstrap to update tech stack knowledge
-3. **Check status periodically**: Verify Hindsight connection is healthy
-4. **Review promoted observations**: Check what patterns Claude is learning
-5. **Enable feedback loop**: Helps Claude learn which memories are actually useful
+1. **Run learn after major changes**: Re-bootstrap to update tech stack knowledge
+2. **Check status periodically**: Verify Hindsight connection is healthy
+3. **Enable feedback loop**: Helps Claude learn which memories are actually useful
+4. **Use CLAUDE.md for static context**: Put important project info in CLAUDE.md

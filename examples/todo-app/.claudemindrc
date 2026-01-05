@@ -15,9 +15,6 @@
     "empathy": 2
   },
   "background": "A simple todo application built with TypeScript and Express. Uses SQLite for storage. Follows REST API conventions.",
-  "semantic": {
-    "path": ".claude/memory.md"
-  },
   "context": {
     "recentMemoryLimit": 3
   },

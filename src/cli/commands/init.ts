@@ -3,7 +3,7 @@
  * @module cli/commands/init
  */
 
-import { mkdir, writeFile, access } from "node:fs/promises";
+import { writeFile, access } from "node:fs/promises";
 import { join } from "node:path";
 import type { CAC } from "cac";
 import { Mind } from "../../mind.js";
@@ -19,11 +19,9 @@ interface InitOptions {
 
 interface InitResult {
   rcPath: string;
-  semanticPath: string;
   bankId: string;
   created: {
     rc: boolean;
-    semantic: boolean;
     bank: boolean;
   };
 }
@@ -48,16 +46,12 @@ export function registerInitCommand(cli: CAC): void {
     .action(async (options: InitOptions) => {
       const projectPath = options.project ?? process.cwd();
       const rcPath = join(projectPath, ".claudemindrc");
-      const semanticDir = join(projectPath, ".claude");
-      const semanticPath = join(semanticDir, "memory.md");
 
       const result: InitResult = {
         rcPath,
-        semanticPath,
         bankId: "",
         created: {
           rc: false,
-          semantic: false,
           bank: false,
         },
       };
@@ -93,9 +87,6 @@ export function registerInitCommand(cli: CAC): void {
           empathy: 3,
         },
         background: "",
-        semantic: {
-          path: ".claude/memory.md",
-        },
         context: {
           recentMemoryLimit: 3,
         },
@@ -127,44 +118,6 @@ export function registerInitCommand(cli: CAC): void {
       result.created.rc = true;
       info(`Created ${rcPath}`, options);
 
-      // Create .claude directory and memory.md if they don't exist
-      const semanticExists = await access(semanticPath)
-        .then(() => true)
-        .catch(() => false);
-
-      if (!semanticExists) {
-        await mkdir(semanticDir, { recursive: true });
-        const defaultSemantic = `# Project Memory
-
-## Tech Stack
-
-<!-- Add your tech stack here -->
-
-## Key Decisions
-
-<!-- Document important architectural decisions -->
-
-## Critical Paths
-
-<!-- List important code paths -->
-
-## Observations
-
-<!-- Promoted insights from Hindsight -->
-
-## Feedback Stats
-
-<!-- Memory usefulness metrics tracked by the feedback loop -->
-
-- Feedback loop: enabled
-- Signal types: used, ignored, helpful, not_helpful
-- Usefulness boosting: enabled (weight: 0.3)
-`;
-        await writeFile(semanticPath, defaultSemantic);
-        result.created.semantic = true;
-        info(`Created ${semanticPath}`, options);
-      }
-
       // Initialize Mind to create bank
       try {
         const mind = new Mind({ projectPath });
@@ -187,7 +140,7 @@ export function registerInitCommand(cli: CAC): void {
       output(
         result,
         (r) =>
-          `Initialized claude-cognitive:\n  Config: ${r.rcPath}\n  Semantic: ${r.semanticPath}\n  Bank: ${r.bankId || "(not created)"}`,
+          `Initialized claude-cognitive:\n  Config: ${r.rcPath}\n  Bank: ${r.bankId || "(not created)"}\n\nContext is managed via .claude/rules/session-context.md at session start.`,
         options,
       );
     });
