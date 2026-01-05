@@ -238,7 +238,7 @@ async function checkAndWarnLegacyGlobalHook(): Promise<boolean> {
  * This script:
  * - Reads cwd from stdin JSON
  * - Skips projects without .claudemindrc
- * - Calls inject-context to output context to stdout
+ * - Writes context to .claude/rules/ which Claude Code auto-loads
  */
 async function createStartHookScript(projectPath: string): Promise<string> {
   const scriptPath = getStartHookScriptPath(projectPath);
@@ -248,18 +248,21 @@ async function createStartHookScript(projectPath: string): Promise<string> {
   await mkdir(scriptDir, { recursive: true });
 
   const scriptContent = `#!/bin/bash
-# Claude Code UserPromptSubmit hook wrapper for claude-cognitive (project-local)
+# Claude Code SessionStart hook wrapper for claude-cognitive (project-local)
 # Injects context from Hindsight at session start
+# Writes to .claude/rules/ which Claude Code auto-loads
 # Skips projects without .claudemindrc
 
 # Read stdin
 INPUT=$(cat)
 
-# Extract cwd using jq (or fallback to grep/sed)
+# Extract fields using jq (or fallback to grep/sed)
 if command -v jq &> /dev/null; then
   PROJECT_DIR=$(echo "$INPUT" | jq -r '.cwd // empty')
+  SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
 else
   PROJECT_DIR=$(echo "$INPUT" | grep -o '"cwd":"[^"]*"' | cut -d'"' -f4)
+  SESSION_ID=$(echo "$INPUT" | grep -o '"session_id":"[^"]*"' | cut -d'"' -f4)
 fi
 
 # Skip if no project dir or no .claudemindrc
@@ -267,8 +270,44 @@ if [ -z "$PROJECT_DIR" ] || [ ! -f "$PROJECT_DIR/.claudemindrc" ]; then
   exit 0
 fi
 
-# Inject context (outputs to stdout which Claude Code injects)
-claude-cognitive inject-context --project "$PROJECT_DIR"
+# Ensure .claude/rules directory exists
+mkdir -p "$PROJECT_DIR/.claude/rules" 2>/dev/null || true
+
+# Context file that Claude Code auto-loads
+CONTEXT_FILE="$PROJECT_DIR/.claude/rules/session-context.md"
+
+# Run inject-context and capture output
+CONTEXT_OUTPUT=$(claude-cognitive inject-context --project "$PROJECT_DIR" 2>/dev/null)
+
+# Write context to rules file
+if [ -n "$CONTEXT_OUTPUT" ]; then
+  cat > "$CONTEXT_FILE" << CONTEXT_EOF
+# Session Context (Auto-Recalled)
+
+This context was automatically recalled from memory at session start.
+Use this background to inform your work on this project.
+
+---
+
+$CONTEXT_OUTPUT
+
+---
+
+*Auto-recalled at $(date -Iseconds)*
+CONTEXT_EOF
+else
+  # No memories - create minimal placeholder
+  cat > "$CONTEXT_FILE" << CONTEXT_EOF
+# Session Context
+
+No prior memories found for this project yet.
+Memory will be stored when you use /exit to end the session.
+
+*Generated at $(date -Iseconds)*
+CONTEXT_EOF
+fi
+
+exit 0
 `;
 
   await writeFile(scriptPath, scriptContent, { mode: 0o755 });
@@ -282,6 +321,7 @@ claude-cognitive inject-context --project "$PROJECT_DIR"
  * This script filters out:
  * - Agent sessions (filename starts with "agent-")
  * - Projects without .claudemindrc
+ * - Responses that aren't true session ends (only processes on /exit)
  *
  * IMPORTANT: The script is now stored in PROJECT/.claude/hooks/ to ensure
  * it only affects this specific project, preventing unintended API calls
@@ -298,6 +338,7 @@ async function createStopHookScript(projectPath: string): Promise<string> {
 # Claude Code Stop hook wrapper for claude-cognitive (project-local)
 # Only processes MAIN sessions in projects with .claudemindrc
 # Skips agent sessions and unconfigured projects
+# IMPORTANT: Only processes when session truly ends (user typed /exit)
 
 # Read stdin
 INPUT=$(cat)
@@ -326,6 +367,14 @@ fi
 
 # FILTER 2: Skip projects without .claudemindrc
 if [ -z "$PROJECT_DIR" ] || [ ! -f "$PROJECT_DIR/.claudemindrc" ]; then
+  exit 0
+fi
+
+# FILTER 3: Only process if this is a TRUE session end (user typed /exit)
+# The Stop hook fires after EVERY assistant response, but we only want to
+# process memory once at session end. Check if /exit was used.
+if ! grep -q '<command-name>/exit</command-name>' "$TRANSCRIPT_PATH" 2>/dev/null; then
+  # No /exit found - this is just a normal response, not session end
   exit 0
 fi
 
@@ -376,7 +425,7 @@ fi
  *
  * Configures two hooks:
  * - Stop: Processes session transcript at session end (calls process-session)
- * - UserPromptSubmit: Injects context at session start (calls inject-context)
+ * - SessionStart: Injects context at session start (calls inject-context)
  */
 async function configureHooks(
   projectPath: string,
@@ -425,14 +474,13 @@ async function configureHooks(
   hooks.Stop = filteredStopHooks;
 
   // ============================================
-  // Configure UserPromptSubmit hook (session start / context injection)
+  // Configure SessionStart hook (context injection)
   // ============================================
-  let userPromptHooks =
-    (hooks.UserPromptSubmit as Array<{ matcher: string; hooks: unknown[] }>) ||
-    [];
+  let sessionStartHooks =
+    (hooks.SessionStart as Array<{ matcher: string; hooks: unknown[] }>) || [];
 
   // Remove old-style hooks that use $CWD env var (doesn't work)
-  userPromptHooks = userPromptHooks.filter(
+  sessionStartHooks = sessionStartHooks.filter(
     (entry) =>
       !entry.hooks?.some((h: unknown) => {
         const hook = h as { command?: string };
@@ -441,8 +489,8 @@ async function configureHooks(
   );
 
   // Add start hook script if not already present
-  if (!hasHookCommand(userPromptHooks, "start-hook.sh")) {
-    userPromptHooks.push({
+  if (!hasHookCommand(sessionStartHooks, "start-hook.sh")) {
+    sessionStartHooks.push({
       matcher: "",
       hooks: [
         {
@@ -453,7 +501,10 @@ async function configureHooks(
     });
   }
 
-  hooks.UserPromptSubmit = userPromptHooks;
+  hooks.SessionStart = sessionStartHooks;
+
+  // Remove legacy UserPromptSubmit hooks (we now use SessionStart)
+  delete hooks.UserPromptSubmit;
 
   settings.hooks = hooks;
 

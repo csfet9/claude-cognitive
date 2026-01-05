@@ -465,18 +465,15 @@ export function registerProcessSessionCommand(cli: CAC): void {
         const mind = new Mind({ projectPath });
         await mind.init();
 
-        if (mind.isDegraded) {
-          result.error = "Hindsight unavailable (degraded mode)";
-          outputResult(result, options.json);
-          process.exit(0);
-          return;
-        }
-
-        // Process session end
+        // Process session end (works in both online and offline mode)
         const reflectResult = await mind.onSessionEnd(transcript);
 
         result.processed = true;
         result.opinionsFormed = reflectResult?.opinions.length ?? 0;
+
+        if (mind.isDegraded) {
+          result.error = "Stored offline (Hindsight unavailable)";
+        }
 
         outputResult(result, options.json);
         process.exit(0);

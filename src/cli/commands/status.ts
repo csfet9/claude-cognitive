@@ -21,8 +21,6 @@ interface StatusResult {
   };
   bankId: string;
   memoryCount?: number;
-  semanticPath: string;
-  semanticLoaded: boolean;
   degraded: boolean;
 }
 
@@ -49,8 +47,6 @@ export function registerStatusCommand(cli: CAC): void {
           healthy: !mind.isDegraded,
         },
         bankId: mind.getBankId(),
-        semanticPath: mind.getSemanticPath(),
-        semanticLoaded: mind.getSemanticMemory()?.isLoaded() ?? false,
         degraded: mind.isDegraded,
       };
 

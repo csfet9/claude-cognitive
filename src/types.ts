@@ -315,6 +315,11 @@ export interface ClaudeMindConfig {
   };
   /** Transcript filtering configuration for session retention */
   retainFilter?: RetainFilterConfig;
+  /** Context injection settings for session start */
+  context?: {
+    /** Maximum number of recent memories to inject (default: 3) */
+    recentMemoryLimit?: number;
+  };
 }
 
 // ============================================

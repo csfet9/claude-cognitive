@@ -69,12 +69,12 @@ claude-cognitive uninstall --delete-bank
 
 ![Architecture](./docs/architecture.svg)
 
-### Two Memory Layers
+### Memory Layers
 
-| Layer         | Storage               | Purpose                                                |
-| ------------- | --------------------- | ------------------------------------------------------ |
-| **Hindsight** | PostgreSQL + pgvector | All memories, entity graphs, 4-way retrieval, opinions |
-| **Semantic**  | `.claude/memory.md`   | Human-curated knowledge, promoted observations         |
+| Layer         | Storage                         | Purpose                                                |
+| ------------- | ------------------------------- | ------------------------------------------------------ |
+| **Hindsight** | PostgreSQL + pgvector           | All memories, entity graphs, 4-way retrieval, opinions |
+| **Offline**   | `.claude/offline-memories.json` | Local storage when Hindsight unavailable (auto-syncs)  |
 
 ---
 
@@ -113,7 +113,6 @@ claude-cognitive learn                  # Bootstrap from codebase
 claude-cognitive learn --depth full     # Full analysis with git history
 claude-cognitive recall "query"         # Search memories
 claude-cognitive reflect "query"        # Reason about knowledge
-claude-cognitive semantic               # Show semantic memory
 claude-cognitive config                 # Show configuration
 claude-cognitive update                 # Update global configuration
 claude-cognitive update --check         # Check what needs updating
@@ -159,47 +158,20 @@ Each memory bank has personality traits that shape how `reflect()` reasons:
 
 ---
 
-## Semantic Memory
+## Graceful Degradation & Offline Mode
 
-The `.claude/memory.md` file contains human-curated project knowledge:
+When Hindsight is unavailable, claude-cognitive stores memories locally and syncs when reconnected:
 
-```markdown
-## Tech Stack
+| Operation     | With Hindsight | Without Hindsight (Offline)      |
+| ------------- | -------------- | -------------------------------- |
+| Session start | Full context   | Recent offline memories          |
+| recall        | 4-way search   | Text search in offline store     |
+| reflect       | LLM reasoning  | Error (requires Hindsight)       |
+| retain        | Stored         | Stored offline, auto-syncs later |
 
-- React Native with Expo SDK 51
-- Supabase for auth and database
-- NativeWind for styling
+**Offline storage:** `.claude/offline-memories.json`
 
-## Key Decisions
-
-- Magic link auth for better mobile UX
-- Zustand for state management
-
-## Critical Paths
-
-- Auth: src/lib/supabase.ts → src/providers/AuthProvider.tsx
-
-## Observations
-
-<!-- Promoted from Hindsight when confidence > 0.9 -->
-
-- Auth changes often require navigation updates
-```
-
-This file is always loaded at session start and takes precedence over Hindsight memories when there are conflicts.
-
----
-
-## Graceful Degradation
-
-When Hindsight is unavailable, claude-cognitive continues working with semantic memory only:
-
-| Operation     | With Hindsight | Without Hindsight          |
-| ------------- | -------------- | -------------------------- |
-| Session start | Full context   | Semantic only              |
-| recall        | 4-way search   | Empty results              |
-| reflect       | LLM reasoning  | Error (requires Hindsight) |
-| retain        | Stored         | Skipped                    |
+When Hindsight becomes available again, offline memories are automatically synced and cleared.
 
 ---
 
@@ -238,7 +210,7 @@ const result = await mind.learn({ depth: "full" });
 - **Node.js 18+**
 - **[Hindsight](https://github.com/vectorize-io/hindsight)** server running (for full functionality)
 
-Without Hindsight, claude-cognitive works in degraded mode with semantic memory only.
+Without Hindsight, claude-cognitive works in offline mode - memories are stored locally and automatically synced when Hindsight becomes available.
 
 ---
 

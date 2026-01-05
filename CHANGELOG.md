@@ -6,6 +6,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4] - 2026-01-05
+
+### Added
+
+- **Offline memory storage** - Memories are now stored locally when Hindsight is
+  unavailable
+  - New `OfflineMemoryStore` class (`src/offline.ts`) handles local JSON storage
+  - Memories stored in `.claude/offline-memories.json`
+  - Text-based search for recall in offline mode
+  - Session context still injected from offline store
+- **Auto-sync on reconnect** - Offline memories automatically sync to Hindsight
+  when connection is restored
+  - `attemptRecovery()` now syncs all unsynced memories
+  - Synced memories are cleared from local storage to save space
+- **New events** for offline operations:
+  - `offline:stored` - Emitted when content is stored locally
+  - `offline:synced` - Emitted when offline memories sync to Hindsight
+
+### Changed
+
+- **Graceful degradation improved** - Instead of skipping retain() when
+  Hindsight is down, memories are now stored locally for later sync
+- **Session end in offline mode** - Transcripts are stored locally instead of
+  being lost
+
+### Removed
+
+- **Deprecated `semantic` command** - `.claude/memory.md` sync has been removed
+- **Deprecated `sync` command** - Memory.md sync has been removed
+- Context is now managed via `.claude/rules/session-context.md` at session start
+
 ## [0.3.2] - 2026-01-04
 
 ### Security
@@ -241,6 +272,7 @@ and this project adheres to
   - Unit, integration, and E2E tests
   - Performance benchmarks
 
+[0.3.4]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.3.4
 [0.3.2]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.3.2
 [0.3.1]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.3.1
 [0.3.0]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.3.0

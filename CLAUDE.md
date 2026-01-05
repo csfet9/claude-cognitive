@@ -40,7 +40,7 @@ claude-cognitive sync           # regenerate memory.md from Hindsight
 ┌──────────────────────────────────────┐
 │           Mind (orchestrator)        │
 │  - Session lifecycle management      │
-│  - Graceful degradation              │
+│  - Graceful degradation + offline    │
 │  - Agent context preparation         │
 ├──────────────────────────────────────┤
 │         HindsightClient              │
@@ -48,19 +48,19 @@ claude-cognitive sync           # regenerate memory.md from Hindsight
 │  4-way retrieval: semantic + BM25    │
 │               + graph + temporal     │
 ├──────────────────────────────────────┤
-│         SemanticMemory               │
-│  .claude/memory.md (human-curated)   │
+│       OfflineMemoryStore             │
+│  .claude/offline-memories.json       │
+│  Local storage when Hindsight down   │
 └──────────────────────────────────────┘
 ```
 
 ### Key Classes
 
-| Class              | File               | Purpose                                                                                |
-| ------------------ | ------------------ | -------------------------------------------------------------------------------------- |
-| `Mind`             | `src/mind.ts`      | Orchestrator wrapping HindsightClient with session management and graceful degradation |
-| `HindsightClient`  | `src/client.ts`    | HTTP client for Hindsight API (retain/recall/reflect/learn)                            |
-| `SemanticMemory`   | `src/semantic.ts`  | Section-based markdown parser for `.claude/memory.md`                                  |
-| `PromotionManager` | `src/promotion.ts` | Promotes high-confidence opinions to semantic memory                                   |
+| Class                | File             | Purpose                                                                                |
+| -------------------- | ---------------- | -------------------------------------------------------------------------------------- |
+| `Mind`               | `src/mind.ts`    | Orchestrator wrapping HindsightClient with session management and graceful degradation |
+| `HindsightClient`    | `src/client.ts`  | HTTP client for Hindsight API (retain/recall/reflect/learn)                            |
+| `OfflineMemoryStore` | `src/offline.ts` | Local JSON storage for offline mode, auto-syncs to Hindsight on reconnect              |
 
 ### Memory Networks
 
@@ -84,8 +84,7 @@ Defined in `src/mcp/tools.ts`, handled in `src/mcp/handlers.ts`.
 src/
 ├── mind.ts              # Mind orchestrator
 ├── client.ts            # HindsightClient HTTP client
-├── semantic.ts          # SemanticMemory (.claude/memory.md)
-├── promotion.ts         # Opinion promotion to semantic memory
+├── offline.ts           # OfflineMemoryStore (local JSON storage)
 ├── events.ts            # TypedEventEmitter for Mind events
 ├── config.ts            # Config loading (.claudemindrc)
 ├── types.ts             # All TypeScript types
@@ -144,12 +143,14 @@ Tests mirror source structure under `tests/`:
 
 Vitest globals are enabled. Coverage thresholds: 80% statements/functions/lines, 75% branches.
 
-## Graceful Degradation
+## Graceful Degradation & Offline Mode
 
-When Hindsight is unavailable, Mind enters degraded mode:
+When Hindsight is unavailable, Mind enters offline mode:
 
-- `recall()` returns empty array
-- `retain()` silently skips
+- `recall()` searches offline storage (text-based)
+- `retain()` stores to `.claude/offline-memories.json`
 - `reflect()` throws (requires Hindsight)
-- Semantic memory still works
-- `attemptRecovery()` tries to reconnect
+- `attemptRecovery()` syncs offline memories and reconnects
+- Session context still injected from offline store
+
+Offline memories auto-sync to Hindsight when connection is restored.

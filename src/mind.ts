@@ -18,11 +18,11 @@ import { HindsightClient } from "./client.js";
 import { loadConfig } from "./config.js";
 import { HindsightError } from "./errors.js";
 import { TypedEventEmitter } from "./events.js";
-import { PromotionManager, DEFAULT_PROMOTION_THRESHOLD } from "./promotion.js";
-import { SemanticMemory } from "./semantic.js";
+import { OfflineMemoryStore } from "./offline.js";
 import type {
   Bank,
   Disposition,
+  FactType,
   LearnOptions,
   LearnResult,
   Memory,
@@ -90,11 +90,12 @@ export class Mind extends TypedEventEmitter {
   private bankId: string = "";
   private disposition: Disposition = DEFAULT_DISPOSITION;
   private background?: string;
-  /** Path to semantic memory file. Used in Phase 3. */
-  private semanticPath: string = ".claude/memory.md";
 
   // Client (nullable for graceful degradation)
   private client: HindsightClient | null = null;
+
+  // Offline memory store (always available)
+  private offlineStore: OfflineMemoryStore | null = null;
 
   // State
   private initialized = false;
@@ -107,9 +108,8 @@ export class Mind extends TypedEventEmitter {
   // Agent templates (loaded in init())
   private customAgents: AgentTemplate[] = [];
 
-  // Semantic memory (loaded in init())
-  private semantic: SemanticMemory | null = null;
-  private promotionManager: PromotionManager | null = null;
+  // Context settings
+  private recentMemoryLimit: number = 3;
 
   /**
    * Create a new Mind instance.
@@ -174,10 +174,6 @@ export class Mind extends TypedEventEmitter {
       if (this.pendingOptions.background !== undefined) {
         overrides.background = this.pendingOptions.background;
       }
-      if (this.pendingOptions.semanticPath !== undefined) {
-        overrides.semantic = { path: this.pendingOptions.semanticPath };
-      }
-
       // Load config with pending options as overrides
       const config = await loadConfig(this.projectPath, overrides);
 
@@ -187,7 +183,7 @@ export class Mind extends TypedEventEmitter {
       if (config.background) {
         this.background = config.background;
       }
-      this.semanticPath = config.semantic?.path ?? ".claude/memory.md";
+      this.recentMemoryLimit = config.context?.recentMemoryLimit ?? 3;
 
       // Create HindsightClient
       const clientOptions: {
@@ -222,25 +218,10 @@ export class Mind extends TypedEventEmitter {
       // Load custom agents from .claude/agents/
       this.customAgents = await loadCustomAgents(this.projectPath);
 
-      // Load semantic memory
-      this.semantic = new SemanticMemory(this.projectPath, this.semanticPath);
-      try {
-        await this.semantic.load();
-      } catch (error) {
-        // Semantic memory is optional - emit error but continue
-        this.emit(
-          "error",
-          error instanceof Error ? error : new Error(String(error)),
-        );
-      }
-
-      // Initialize promotion manager
-      if (this.semantic.isLoaded()) {
-        this.promotionManager = new PromotionManager(this.semantic, this, {
-          threshold: DEFAULT_PROMOTION_THRESHOLD,
-        });
-        this.promotionManager.startListening();
-      }
+      // Initialize offline store (always available)
+      this.offlineStore = new OfflineMemoryStore({
+        projectPath: this.projectPath,
+      });
 
       // Mark initialized
       this.initialized = true;
@@ -338,24 +319,43 @@ export class Mind extends TypedEventEmitter {
       contextParts.push(agentInstructions);
     }
 
-    // Load semantic memory context
-    if (this.semantic?.isLoaded()) {
-      const semanticContext = this.semantic.toContext();
-      if (semanticContext.trim().length > 0) {
-        contextParts.push(semanticContext);
-      }
-    }
-
-    // Recall recent experiences (if not degraded)
-    if (!this.degraded && this.client) {
-      try {
-        const recent = await this.client.recent(this.bankId, 7);
-        if (recent.length > 0) {
-          this.emit("memory:recalled", recent);
-          contextParts.push(this.formatRecentMemories(recent));
+    // Recall recent experiences
+    // Only fetch a small number (default 3) to keep context small
+    if (this.recentMemoryLimit > 0) {
+      if (!this.degraded && this.client) {
+        // Online mode: fetch from Hindsight
+        try {
+          const recent = await this.client.recent(
+            this.bankId,
+            this.recentMemoryLimit,
+          );
+          if (recent.length > 0) {
+            this.emit("memory:recalled", recent);
+            contextParts.push(this.formatRecentMemories(recent));
+          }
+        } catch (error) {
+          this.handleError(error, "onSessionStart recall");
+          // Fall through to offline on error
         }
-      } catch (error) {
-        this.handleError(error, "onSessionStart recall");
+      }
+
+      // Offline/degraded mode: fetch from local storage
+      if (this.degraded && this.offlineStore) {
+        try {
+          const offlineRecent = await this.offlineStore.getRecent(
+            this.recentMemoryLimit,
+          );
+          if (offlineRecent.length > 0) {
+            const memories = offlineRecent.map(OfflineMemoryStore.toMemory);
+            this.emit("memory:recalled", memories);
+            contextParts.push(this.formatRecentMemories(memories));
+          }
+        } catch (error) {
+          this.emit(
+            "error",
+            error instanceof Error ? error : new Error(String(error)),
+          );
+        }
       }
     }
 
@@ -366,8 +366,8 @@ export class Mind extends TypedEventEmitter {
    * Called at session end. Reflects on session and stores observations.
    *
    * This method:
-   * 1. Retains transcript if provided
-   * 2. Reflects on the session
+   * 1. Retains transcript if provided (online or offline)
+   * 2. Reflects on the session (online only)
    * 3. Emits opinion events
    *
    * @param transcript - Optional session transcript to store
@@ -377,12 +377,39 @@ export class Mind extends TypedEventEmitter {
     this.assertInitialized();
 
     // Retain transcript if provided
-    if (transcript && !this.degraded && this.client) {
-      try {
-        await this.client.retain(this.bankId, transcript, "Session transcript");
-        this.emit("memory:retained", transcript);
-      } catch (error) {
-        this.handleError(error, "onSessionEnd retain");
+    if (transcript) {
+      if (!this.degraded && this.client) {
+        // Online mode: store to Hindsight
+        try {
+          await this.client.retain(
+            this.bankId,
+            transcript,
+            "Session transcript",
+          );
+          this.emit("memory:retained", transcript);
+        } catch (error) {
+          this.handleError(error, "onSessionEnd retain");
+          // Fall through to offline on error
+        }
+      }
+
+      // Degraded/offline mode: store locally
+      if (this.degraded && this.offlineStore) {
+        try {
+          await this.offlineStore.retain(transcript, "experience", {
+            context: "Session transcript",
+          });
+          this.emit("memory:retained", transcript);
+          this.emit("offline:stored", {
+            content: transcript,
+            factType: "experience",
+          });
+        } catch (error) {
+          this.emit(
+            "error",
+            error instanceof Error ? error : new Error(String(error)),
+          );
+        }
       }
     }
 
@@ -404,11 +431,6 @@ export class Mind extends TypedEventEmitter {
       }
     }
 
-    // Clear promotion cache for next session
-    if (this.promotionManager) {
-      this.promotionManager.clearCache();
-    }
-
     // Reset session state
     this.sessionActive = false;
     this.sessionStartTime = null;
@@ -423,7 +445,7 @@ export class Mind extends TypedEventEmitter {
   /**
    * Search memories for relevant context.
    *
-   * In degraded mode, returns an empty array.
+   * In degraded mode, searches offline storage (text-based).
    *
    * @param query - What to search for
    * @param options - Search options (budget, factType, etc.)
@@ -432,19 +454,45 @@ export class Mind extends TypedEventEmitter {
   async recall(query: string, options?: RecallOptions): Promise<Memory[]> {
     this.assertInitialized();
 
-    // Degraded mode: return empty array
-    if (this.degraded || !this.client) {
-      return [];
+    // Online mode: use Hindsight
+    if (!this.degraded && this.client) {
+      try {
+        const memories = await this.client.recall(this.bankId, query, options);
+        this.emit("memory:recalled", memories);
+        return memories;
+      } catch (error) {
+        this.handleError(error, "recall");
+        // Fall through to offline on error
+      }
     }
 
-    try {
-      const memories = await this.client.recall(this.bankId, query, options);
-      this.emit("memory:recalled", memories);
-      return memories;
-    } catch (error) {
-      this.handleError(error, "recall");
-      return [];
+    // Degraded/offline mode: use local storage
+    if (this.offlineStore) {
+      try {
+        const recallOptions: { factType?: FactType | "all"; limit?: number } = {
+          limit: options?.maxTokens ? Math.floor(options.maxTokens / 100) : 10,
+        };
+        if (options?.factType) {
+          recallOptions.factType = options.factType;
+        }
+        const offlineMemories = await this.offlineStore.recall(
+          query,
+          recallOptions,
+        );
+        const memories = offlineMemories.map(OfflineMemoryStore.toMemory);
+        if (memories.length > 0) {
+          this.emit("memory:recalled", memories);
+        }
+        return memories;
+      } catch (error) {
+        this.emit(
+          "error",
+          error instanceof Error ? error : new Error(String(error)),
+        );
+      }
     }
+
+    return [];
   }
 
   /**
@@ -479,22 +527,48 @@ export class Mind extends TypedEventEmitter {
   /**
    * Store content in memory.
    *
-   * In degraded mode, skips silently and emits an error event.
+   * In degraded mode, stores to offline storage for later sync.
    *
    * @param content - Content to store
    * @param context - Optional additional context
+   * @param factType - Memory type (default: experience)
    */
-  async retain(content: string, context?: string): Promise<void> {
+  async retain(
+    content: string,
+    context?: string,
+    factType: FactType = "experience",
+  ): Promise<void> {
     this.assertInitialized();
 
-    // Degraded mode: skip silently
-    if (this.degraded || !this.client) {
-      this.emit("error", new Error("retain() skipped: Hindsight unavailable"));
-      return;
+    // Online mode: use Hindsight
+    if (!this.degraded && this.client) {
+      try {
+        await this.client.retain(this.bankId, content, context);
+        this.emit("memory:retained", content);
+        return;
+      } catch (error) {
+        this.handleError(error, "retain");
+        // Fall through to offline on error
+      }
     }
 
-    await this.client.retain(this.bankId, content, context);
-    this.emit("memory:retained", content);
+    // Degraded/offline mode: store locally
+    if (this.offlineStore) {
+      try {
+        const retainOptions: { context?: string; confidence?: number } = {};
+        if (context) {
+          retainOptions.context = context;
+        }
+        await this.offlineStore.retain(content, factType, retainOptions);
+        this.emit("memory:retained", content);
+        this.emit("offline:stored", { content, factType });
+      } catch (error) {
+        this.emit(
+          "error",
+          error instanceof Error ? error : new Error(String(error)),
+        );
+      }
+    }
   }
 
   // ============================================
@@ -645,6 +719,7 @@ ${template.outputFormat}
 
   /**
    * Attempt to recover from degraded mode.
+   * If successful, syncs offline memories to Hindsight.
    *
    * @returns True if recovery was successful
    */
@@ -657,10 +732,76 @@ ${template.outputFormat}
     if (health.healthy) {
       this.exitDegradedMode();
       await this.ensureBank();
+
+      // Auto-sync offline memories
+      await this.syncOfflineMemories();
+
       return true;
     }
 
     return false;
+  }
+
+  /**
+   * Sync offline memories to Hindsight.
+   * Called automatically on recovery from degraded mode.
+   *
+   * @returns Number of memories synced
+   */
+  async syncOfflineMemories(): Promise<number> {
+    if (!this.client || this.degraded || !this.offlineStore) {
+      return 0;
+    }
+
+    try {
+      await this.offlineStore.recordSyncAttempt();
+      const unsynced = await this.offlineStore.getUnsynced();
+
+      if (unsynced.length === 0) {
+        return 0;
+      }
+
+      const syncedIds: string[] = [];
+
+      for (const memory of unsynced) {
+        try {
+          await this.client.retain(this.bankId, memory.text, memory.context);
+          syncedIds.push(memory.id);
+        } catch (error) {
+          // Stop on error - don't want to skip memories
+          this.emit(
+            "error",
+            error instanceof Error
+              ? error
+              : new Error(`Failed to sync memory ${memory.id}`),
+          );
+          break;
+        }
+      }
+
+      if (syncedIds.length > 0) {
+        await this.offlineStore.markSynced(syncedIds);
+        this.emit("offline:synced", { count: syncedIds.length });
+
+        // Clear synced memories to save space
+        await this.offlineStore.clearSynced();
+      }
+
+      return syncedIds.length;
+    } catch (error) {
+      this.emit(
+        "error",
+        error instanceof Error ? error : new Error(String(error)),
+      );
+      return 0;
+    }
+  }
+
+  /**
+   * Get offline memory store (for CLI commands).
+   */
+  getOfflineStore(): OfflineMemoryStore | null {
+    return this.offlineStore;
   }
 
   /**
@@ -742,31 +883,6 @@ ${template.outputFormat}
   }
 
   /**
-   * Get the path to semantic memory file.
-   */
-  getSemanticPath(): string {
-    return this.semanticPath;
-  }
-
-  /**
-   * Get the SemanticMemory instance.
-   *
-   * @returns SemanticMemory or null if not initialized
-   */
-  getSemanticMemory(): SemanticMemory | null {
-    return this.semantic;
-  }
-
-  /**
-   * Get the PromotionManager instance.
-   *
-   * @returns PromotionManager or null if not initialized
-   */
-  getPromotionManager(): PromotionManager | null {
-    return this.promotionManager;
-  }
-
-  /**
    * Get the session start time, or null if no session is active.
    */
   getSessionStartTime(): Date | null {
@@ -785,16 +901,19 @@ ${template.outputFormat}
 
   /**
    * Format recent memories as context string.
+   * Shows fuller context since we only fetch a few memories.
    * @internal
    */
   private formatRecentMemories(memories: Memory[]): string {
     if (memories.length === 0) return "";
 
-    const lines = ["### Recent Context"];
-    for (const mem of memories.slice(0, 5)) {
+    const lines = ["## Recent Activity"];
+    for (const mem of memories) {
       const date = new Date(mem.createdAt).toLocaleDateString();
+      // Show more text since we're fetching fewer memories
+      const maxLen = 200;
       const text =
-        mem.text.length > 100 ? `${mem.text.slice(0, 100)}...` : mem.text;
+        mem.text.length > maxLen ? `${mem.text.slice(0, maxLen)}...` : mem.text;
       lines.push(`- ${date}: ${text}`);
     }
     return lines.join("\n");
@@ -890,15 +1009,9 @@ ${template.outputFormat}
    * After calling dispose(), the Mind instance should not be used.
    */
   dispose(): void {
-    // Stop promotion manager event listeners
-    if (this.promotionManager) {
-      this.promotionManager.stopListening();
-      this.promotionManager = null;
-    }
-
     // Clear references
-    this.semantic = null;
     this.client = null;
+    this.offlineStore = null;
     this.customAgents = [];
 
     // Reset state

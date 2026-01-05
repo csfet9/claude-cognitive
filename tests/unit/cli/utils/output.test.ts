@@ -186,8 +186,6 @@ describe("CLI output", () => {
         hindsight: { healthy: true, version: "1.0.0" },
         bankId: "test-bank",
         memoryCount: 42,
-        semanticPath: ".claude/memory.md",
-        semanticLoaded: true,
         degraded: false,
       };
 
@@ -196,7 +194,6 @@ describe("CLI output", () => {
       expect(result).toContain("Hindsight: Connected (v1.0.0)");
       expect(result).toContain("Bank: test-bank");
       expect(result).toContain("Memories: 42");
-      expect(result).toContain("Semantic: .claude/memory.md (loaded)");
       expect(result).not.toContain("DEGRADED");
     });
 
@@ -204,15 +201,12 @@ describe("CLI output", () => {
       const status = {
         hindsight: { healthy: false, error: "Connection refused" },
         bankId: "test-bank",
-        semanticPath: ".claude/memory.md",
-        semanticLoaded: false,
         degraded: true,
       };
 
       const result = formatStatus(status);
 
       expect(result).toContain("Hindsight: Disconnected - Connection refused");
-      expect(result).toContain("not loaded");
       expect(result).toContain("DEGRADED mode");
     });
   });

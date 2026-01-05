@@ -123,8 +123,6 @@ export function formatStatus(status: {
   hindsight: { healthy: boolean; version?: string; error?: string };
   bankId: string;
   memoryCount?: number;
-  semanticPath: string;
-  semanticLoaded: boolean;
   degraded: boolean;
 }): string {
   const lines: string[] = [];
@@ -145,11 +143,6 @@ export function formatStatus(status: {
   if (status.memoryCount !== undefined) {
     lines.push(`Memories: ${status.memoryCount}`);
   }
-
-  // Semantic memory
-  lines.push(
-    `Semantic: ${status.semanticPath} (${status.semanticLoaded ? "loaded" : "not loaded"})`,
-  );
 
   // Degraded mode
   if (status.degraded) {

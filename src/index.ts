@@ -44,6 +44,10 @@ export type { MindEventMap, MindEventName, Observation } from "./events.js";
 export { SemanticMemory, DEFAULT_TEMPLATE } from "./semantic.js";
 export type { SemanticMemoryOptions, ParseResult } from "./semantic.js";
 
+// Offline memory
+export { OfflineMemoryStore } from "./offline.js";
+export type { OfflineMemory, OfflineMemoryStoreOptions } from "./offline.js";
+
 // Promotion
 export {
   PromotionManager,

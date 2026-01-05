@@ -3,7 +3,10 @@
  * @module tests/mind
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { MindOptions } from "../src/types.js";
 
 // Use vi.hoisted to ensure mock functions are available at hoist time
@@ -225,25 +228,36 @@ describe("Mind", () => {
   });
 
   describe("retain() in degraded mode", () => {
-    it("should emit error event in degraded mode", async () => {
+    let tempDir: string;
+
+    beforeEach(async () => {
+      tempDir = await mkdtemp(join(tmpdir(), "mind-test-"));
+    });
+
+    afterEach(async () => {
+      await rm(tempDir, { recursive: true, force: true });
+    });
+
+    it("should store to offline in degraded mode", async () => {
       mockHealth.mockResolvedValue({
         healthy: false,
         error: "Connection refused",
       });
 
-      const mind = new Mind(defaultOptions);
-      // Collect all errors
-      const errors: Error[] = [];
-      mind.on("error", (err) => errors.push(err));
+      const mind = new Mind({ projectPath: tempDir, bankId: "test-bank" });
+      // Suppress errors from init
+      mind.on("error", () => {});
+      // Collect all offline:stored events
+      const offlineStored: Array<{ content: string; factType: string }> = [];
+      mind.on("offline:stored", (info) => offlineStored.push(info));
 
       await mind.init();
 
-      // Clear errors from init, then test retain
-      errors.length = 0;
       await mind.retain("test content");
 
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some((e) => e.message.includes("skipped"))).toBe(true);
+      expect(offlineStored.length).toBe(1);
+      expect(offlineStored[0].content).toBe("test content");
+      expect(offlineStored[0].factType).toBe("experience");
     });
   });
 

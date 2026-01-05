@@ -4,7 +4,7 @@
  */
 
 import { EventEmitter } from "node:events";
-import type { Memory, Opinion } from "./types.js";
+import type { FactType, Memory, Opinion } from "./types.js";
 
 // ============================================
 // Event Types
@@ -55,6 +55,12 @@ export interface MindEventMap {
 
   /** Emitted when agent context is prepared for delegation */
   "agent:context-prepared": [info: { agent: string; task: string }];
+
+  /** Emitted when content is stored offline (degraded mode) */
+  "offline:stored": [info: { content: string; factType: FactType }];
+
+  /** Emitted when offline memories are synced to Hindsight */
+  "offline:synced": [info: { count: number }];
 
   /** Emitted on errors (non-fatal, allows continued operation) */
   error: [error: Error];

@@ -216,7 +216,7 @@ Each project gets a memory bank with personality traits:
 
 ---
 
-## Two Memory Layers
+## Memory Layers
 
 ### Hindsight (PostgreSQL + pgvector)
 
@@ -225,27 +225,12 @@ Each project gets a memory bank with personality traits:
 - Opinion formation and evolution
 - Cross-encoder reranking
 
-### Semantic (.claude/memory.md)
+### Offline Storage (.claude/offline-memories.json)
 
-- Human-curated project knowledge
-- Promoted high-confidence observations
-- Always loaded at session start
-- Takes precedence over conflicting Hindsight memories
-
-### Promotion Flow
-
-```
-High-confidence opinion (>0.9)
-        │
-        ▼
-  reflect() generates observation
-        │
-        ▼
-  Human reviews and promotes
-        │
-        ▼
-  Added to .claude/memory.md
-```
+- Local JSON storage when Hindsight unavailable
+- Text-based search for recall
+- Auto-syncs to Hindsight on reconnect
+- Cleared after successful sync
 
 ---
 
@@ -253,9 +238,8 @@ High-confidence opinion (>0.9)
 
 ### Session Start
 
-1. Load `.claude/memory.md` as base context
-2. Recall recent experiences and relevant opinions
-3. Inject into Claude's context
+1. Recall recent experiences from Hindsight (or offline store)
+2. Inject into Claude's context via `.claude/rules/session-context.md`
 
 ### During Session
 
@@ -267,7 +251,7 @@ High-confidence opinion (>0.9)
 
 1. Process full transcript with retain()
 2. Call reflect() to form observations
-3. Flag high-confidence opinions for promotion
+3. Store to offline if Hindsight unavailable
 
 ---
 
@@ -309,11 +293,13 @@ Claude operates as a **project manager**, delegating to specialized agents:
 | `mid`  | ~4096  | 2          | Most queries (default) |
 | `high` | ~8192  | 3+         | Comprehensive research |
 
-### Graceful Degradation
+### Graceful Degradation & Offline Mode
 
 When Hindsight is unavailable:
 
-- Semantic memory still works (local file)
-- recall() returns empty array
-- reflect() throws error
-- retain() is skipped
+- recall() searches offline storage (text-based)
+- retain() stores to `.claude/offline-memories.json`
+- reflect() throws error (requires Hindsight)
+- attemptRecovery() syncs offline memories on reconnect
+
+Offline memories auto-sync when Hindsight becomes available.
