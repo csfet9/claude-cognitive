@@ -43,7 +43,7 @@ claude-cognitive uninstall --delete-bank
 
 ## How It Works
 
-![Session Lifecycle](./docs/session-lifecycle.svg)
+![Session Lifecycle](./docs/session-lifecycle.png)
 
 ### Core Operations
 
@@ -67,7 +67,7 @@ claude-cognitive uninstall --delete-bank
 
 ## Architecture
 
-![Architecture](./docs/architecture.svg)
+![Architecture](./docs/architecture.png)
 
 ### Memory Layers
 
