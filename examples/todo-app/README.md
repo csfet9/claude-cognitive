@@ -227,7 +227,8 @@ See `.claudemindrc` for all options:
     "port": 8888,
     "timeouts": {
       "recall": 120000,
-      "reflect": 180000
+      "reflect": 180000,
+      "retain": 90000
     }
   },
   "bankId": "todo-app",
@@ -243,12 +244,20 @@ See `.claudemindrc` for all options:
   "context": {
     "recentMemoryLimit": 3
   },
+  "retain": {
+    "maxTranscriptLength": 25000,
+    "filterToolResults": true,
+    "filterFileContents": true,
+    "maxCodeBlockLines": 30,
+    "minSessionLength": 500
+  },
   "feedback": {
     "enabled": true,
     "detection": {
       "explicit": true,
       "semantic": true,
-      "behavioral": true
+      "behavioral": true,
+      "semanticThreshold": 0.5
     },
     "hindsight": {
       "sendFeedback": true,
@@ -267,12 +276,23 @@ See `.claudemindrc` for all options:
 
 For code-focused projects, higher literalism and lower empathy work well.
 
+### Retain Configuration
+
+Controls how session transcripts are processed before storing:
+
+- **maxTranscriptLength**: Maximum transcript length before truncation (default: 25000)
+- **filterToolResults**: Filter verbose tool outputs (default: true)
+- **filterFileContents**: Filter file content blocks (default: true)
+- **maxCodeBlockLines**: Summarize code blocks exceeding this (default: 30)
+- **minSessionLength**: Skip sessions shorter than this (default: 500)
+
 ### Feedback Configuration
 
 - **enabled**: Turn feedback loop on/off
 - **detection.explicit**: Detect phrases like "based on the context"
 - **detection.semantic**: Detect paraphrased usage via similarity
 - **detection.behavioral**: Detect usage from file edits, commands
+- **detection.semanticThreshold**: Similarity threshold for matching (default: 0.5)
 - **hindsight.sendFeedback**: Send signals to Hindsight API
 - **hindsight.boostByUsefulness**: Prioritize useful memories in recalls
 - **hindsight.boostWeight**: How much to weight usefulness (0.0-1.0)

@@ -4,7 +4,8 @@
     "port": 8888,
     "timeouts": {
       "recall": 120000,
-      "reflect": 180000
+      "reflect": 180000,
+      "retain": 90000
     }
   },
   "bankId": "todo-app",
@@ -20,12 +21,20 @@
   "context": {
     "recentMemoryLimit": 3
   },
+  "retain": {
+    "maxTranscriptLength": 25000,
+    "filterToolResults": true,
+    "filterFileContents": true,
+    "maxCodeBlockLines": 30,
+    "minSessionLength": 500
+  },
   "feedback": {
     "enabled": true,
     "detection": {
       "explicit": true,
       "semantic": true,
-      "behavioral": true
+      "behavioral": true,
+      "semanticThreshold": 0.5
     },
     "hindsight": {
       "sendFeedback": true,
