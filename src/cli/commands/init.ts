@@ -75,11 +75,16 @@ export function registerInitCommand(cli: CAC): void {
         );
       }
 
-      // Create default configuration
+      // Create default configuration with all options
       const defaultConfig = {
         hindsight: {
           host: "localhost",
           port: 8888,
+          timeouts: {
+            recall: 120000,
+            reflect: 180000,
+            retain: 90000,
+          },
         },
         bankId: options.bankId,
         disposition: {
@@ -87,8 +92,33 @@ export function registerInitCommand(cli: CAC): void {
           literalism: 3,
           empathy: 3,
         },
+        background: "",
         semantic: {
           path: ".claude/memory.md",
+        },
+        context: {
+          recentMemoryLimit: 3,
+        },
+        retain: {
+          maxTranscriptLength: 25000,
+          filterToolResults: true,
+          filterFileContents: true,
+          maxCodeBlockLines: 30,
+          minSessionLength: 500,
+        },
+        feedback: {
+          enabled: true,
+          detection: {
+            explicit: true,
+            semantic: true,
+            behavioral: true,
+            semanticThreshold: 0.5,
+          },
+          hindsight: {
+            sendFeedback: true,
+            boostByUsefulness: true,
+            boostWeight: 0.3,
+          },
         },
       };
 
@@ -121,6 +151,14 @@ export function registerInitCommand(cli: CAC): void {
 ## Observations
 
 <!-- Promoted insights from Hindsight -->
+
+## Feedback Stats
+
+<!-- Memory usefulness metrics tracked by the feedback loop -->
+
+- Feedback loop: enabled
+- Signal types: used, ignored, helpful, not_helpful
+- Usefulness boosting: enabled (weight: 0.3)
 `;
         await writeFile(semanticPath, defaultSemantic);
         result.created.semantic = true;
