@@ -6,6 +6,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.7] - 2026-01-06
+
+### Changed
+
+- **Migrated from Stop hook to SessionEnd hook** - Session processing now only
+  triggers when the session truly ends, not after every assistant response
+  - Eliminates 1-2 minute delays caused by Stop hook firing repeatedly
+  - No longer needs `/exit` grep detection or marker file tracking
+  - SessionEnd hook receives structured JSON with `reason` field
+
+- **Shell script hardening** - Improved reliability and safety of hook scripts
+  - Added 30-second timeout to prevent hanging if Hindsight is slow
+  - Added `|| true` to ensure hooks never block Claude Code
+  - Added explicit `exit 0` at end of scripts
+  - Fixed misleading message about `/exit` → now says "when session ends"
+
+- **Improved migration detection in update command** - Better detection of
+  existing Stop hooks during migration
+  - Now detects both "claude-cognitive" and "stop-hook" patterns
+  - Warns if old stop-hook.sh file doesn't exist during migration
+
+- **MCP server session lifecycle** - Added proper session start/end calls
+  - `serve` command now calls `mind.onSessionStart()` to enable feedback tracking
+  - SIGINT/SIGTERM handlers call `mind.onSessionEnd()` for clean shutdown
+
+### Fixed
+
+- **Feedback tracking not working** - Fixed issue where feedback stats showed 0
+  signals because MCP server wasn't calling `onSessionStart()` to set sessionId
+
 ## [0.4.0] - 2026-01-05
 
 ### Added

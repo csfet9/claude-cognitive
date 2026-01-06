@@ -64,7 +64,10 @@ export interface MindEventMap {
 
   /** Emitted when feedback is processed at session end */
   "feedback:processed": [
-    info: { sessionId: string; summary: { used: number; ignored: number; uncertain: number } },
+    info: {
+      sessionId: string;
+      summary: { used: number; ignored: number; uncertain: number };
+    },
   ];
 
   /** Emitted when feedback signals are queued offline (degraded mode) */

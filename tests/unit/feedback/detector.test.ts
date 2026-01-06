@@ -31,12 +31,16 @@ function createFact(overrides: Partial<RecalledFact> = {}): RecalledFact {
 
 describe("detectExplicitReferences", () => {
   const facts: RecalledFact[] = [
-    createFact({ factId: "fact-1", text: "The authentication uses JWT tokens" }),
+    createFact({
+      factId: "fact-1",
+      text: "The authentication uses JWT tokens",
+    }),
     createFact({ factId: "fact-2", text: "User data is stored in PostgreSQL" }),
   ];
 
   it("should detect 'based on the context' pattern", () => {
-    const response = "Based on the recalled context, authentication uses JWT tokens.";
+    const response =
+      "Based on the recalled context, authentication uses JWT tokens.";
     const result = detectExplicitReferences(response, facts);
 
     expect(result).toHaveLength(1);
@@ -63,7 +67,8 @@ describe("detectExplicitReferences", () => {
   });
 
   it("should detect 'I recall that' pattern", () => {
-    const response = "I recall that authentication uses JWT tokens for this project.";
+    const response =
+      "I recall that authentication uses JWT tokens for this project.";
     const result = detectExplicitReferences(response, facts);
 
     expect(result).toHaveLength(1);
@@ -71,7 +76,8 @@ describe("detectExplicitReferences", () => {
   });
 
   it("should return empty array for no matches", () => {
-    const response = "This is a regular response without any context references.";
+    const response =
+      "This is a regular response without any context references.";
     const result = detectExplicitReferences(response, facts);
 
     expect(result).toHaveLength(0);
@@ -112,7 +118,8 @@ describe("detectSemanticMatches", () => {
   ];
 
   it("should detect paraphrased content", () => {
-    const response = "For authentication, we use JWT tokens to manage user sessions securely.";
+    const response =
+      "For authentication, we use JWT tokens to manage user sessions securely.";
     const result = detectSemanticMatches(response, facts, 0.3);
 
     expect(result.length).toBeGreaterThanOrEqual(1);
@@ -131,7 +138,9 @@ describe("detectSemanticMatches", () => {
 
   it("should handle long responses by chunking", () => {
     // Create a response longer than CHUNK_MAX_WORDS
-    const longResponse = Array(100).fill("word").join(" ") + " JWT tokens for authentication sessions";
+    const longResponse =
+      Array(100).fill("word").join(" ") +
+      " JWT tokens for authentication sessions";
     const result = detectSemanticMatches(longResponse, facts, 0.2);
 
     // Should still find the match in one of the chunks
@@ -144,7 +153,8 @@ describe("detectSemanticMatches", () => {
   });
 
   it("should keep best match per fact", () => {
-    const response = "JWT tokens authentication sessions JWT tokens authentication sessions";
+    const response =
+      "JWT tokens authentication sessions JWT tokens authentication sessions";
     const result = detectSemanticMatches(response, facts, 0.2);
 
     // Should not have duplicate fact IDs
@@ -229,7 +239,9 @@ describe("detectNegativeSignals", () => {
     const result = detectNegativeSignals(activity, facts, usedFactIds);
 
     expect(result.length).toBeGreaterThanOrEqual(1);
-    expect(result[0].signals.some((s) => s.type === "topic_mismatch")).toBe(true);
+    expect(result[0].signals.some((s) => s.type === "topic_mismatch")).toBe(
+      true,
+    );
   });
 
   it("should detect files not accessed", () => {
@@ -246,7 +258,9 @@ describe("detectNegativeSignals", () => {
     const result = detectNegativeSignals(activity, facts, usedFactIds);
 
     expect(result.length).toBeGreaterThanOrEqual(1);
-    expect(result[0].signals.some((s) => s.type === "files_not_accessed")).toBe(true);
+    expect(result[0].signals.some((s) => s.type === "files_not_accessed")).toBe(
+      true,
+    );
   });
 
   it("should skip facts already marked as used", () => {

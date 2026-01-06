@@ -34,7 +34,9 @@ export const signalInputSchema = z.object({
   signals: z
     .array(
       z.object({
-        factId: z.string().describe("The ID of the fact to provide feedback for"),
+        factId: z
+          .string()
+          .describe("The ID of the fact to provide feedback for"),
         signalType: z
           .enum(["used", "ignored", "helpful", "not_helpful"])
           .describe("Type of feedback signal"),
@@ -47,12 +49,16 @@ export const signalInputSchema = z.object({
         context: z
           .string()
           .optional()
-          .describe("Additional context about how the fact was used or why it was ignored"),
+          .describe(
+            "Additional context about how the fact was used or why it was ignored",
+          ),
       }),
     )
     .min(1)
     .describe("Array of feedback signals for recalled facts"),
-  query: z.string().describe("The query that triggered the recall (for context)"),
+  query: z
+    .string()
+    .describe("The query that triggered the recall (for context)"),
 });
 
 // ============================================

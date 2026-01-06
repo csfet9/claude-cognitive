@@ -202,7 +202,10 @@ export class FeedbackService {
 
     try {
       // Load recall session
-      const recallSession = await loadRecallSession(effectiveSessionId, this.projectDir);
+      const recallSession = await loadRecallSession(
+        effectiveSessionId,
+        this.projectDir,
+      );
       if (!recallSession) {
         return {
           success: false,

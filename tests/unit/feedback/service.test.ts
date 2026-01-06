@@ -111,7 +111,11 @@ describe("FeedbackService", () => {
       mockFs.existsSync.mockReturnValue(true);
       const service = new FeedbackService(enabledConfig, projectDir);
 
-      const result = await service.trackRecall("session-123", "test query", facts);
+      const result = await service.trackRecall(
+        "session-123",
+        "test query",
+        facts,
+      );
 
       expect(result.success).toBe(true);
       expect(result.sessionId).toBe("session-123");
@@ -122,7 +126,11 @@ describe("FeedbackService", () => {
     it("should return failure reason when disabled", async () => {
       const service = new FeedbackService(disabledConfig, projectDir);
 
-      const result = await service.trackRecall("session-123", "test query", facts);
+      const result = await service.trackRecall(
+        "session-123",
+        "test query",
+        facts,
+      );
 
       expect(result.success).toBe(false);
       expect(result.reason).toBe("Feedback loop disabled");
@@ -136,7 +144,11 @@ describe("FeedbackService", () => {
 
       const service = new FeedbackService(enabledConfig, projectDir);
 
-      const result = await service.trackRecall("session-123", "test query", facts);
+      const result = await service.trackRecall(
+        "session-123",
+        "test query",
+        facts,
+      );
 
       expect(result.success).toBe(false);
       expect(result.error).toBe("Write failed");
@@ -153,7 +165,12 @@ describe("FeedbackService", () => {
         recall: {
           query: "test query",
           queryType: "fixed",
-          parameters: { limit: 20, budget: "high", factTypes: [], timeWindow: null },
+          parameters: {
+            limit: 20,
+            budget: "high",
+            factTypes: [],
+            timeWindow: null,
+          },
           context: { branch: null, recentFiles: [], projectType: null },
         },
         factsRecalled: [
@@ -177,7 +194,8 @@ describe("FeedbackService", () => {
       const service = new FeedbackService(enabledConfig, projectDir);
 
       const result = await service.processFeedback("session-123", {
-        conversationText: "Based on the context, authentication uses JWT tokens.",
+        conversationText:
+          "Based on the context, authentication uses JWT tokens.",
       });
 
       expect(result.success).toBe(true);
@@ -209,7 +227,8 @@ describe("FeedbackService", () => {
       const service = new FeedbackService(enabledConfig, projectDir);
 
       const result = await service.processFeedback("session-123", {
-        conversationText: "Based on the context, authentication uses JWT tokens.",
+        conversationText:
+          "Based on the context, authentication uses JWT tokens.",
       });
 
       // Should prepare feedback for API

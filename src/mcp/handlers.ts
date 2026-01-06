@@ -5,7 +5,12 @@
 
 import type { Mind } from "../mind.js";
 import type { Memory, ReflectResult, SignalResult } from "../types.js";
-import type { RecallToolInput, ReflectToolInput, SignalToolInput, ToolResult } from "./types.js";
+import type {
+  RecallToolInput,
+  ReflectToolInput,
+  SignalToolInput,
+  ToolResult,
+} from "./types.js";
 
 // ============================================
 // Formatters
@@ -162,7 +167,9 @@ export async function handleReflect(
 function formatSignalResult(result: SignalResult, signalCount: number): string {
   const lines: string[] = [];
 
-  lines.push(`Submitted ${signalCount} feedback signal${signalCount === 1 ? "" : "s"}.`);
+  lines.push(
+    `Submitted ${signalCount} feedback signal${signalCount === 1 ? "" : "s"}.`,
+  );
   lines.push("");
 
   if (result.signalsProcessed > 0) {

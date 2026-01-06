@@ -411,7 +411,10 @@ describe("HindsightClient", () => {
         }),
       );
 
-      const memories = await client.recall({ bankId: "my-bank", query: "query" });
+      const memories = await client.recall({
+        bankId: "my-bank",
+        query: "query",
+      });
       const mem = memories[0];
 
       expect(mem.id).toBe("mem-1");

@@ -3,7 +3,10 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { OfflineFeedbackQueue, type OfflineSignal } from "../../../src/feedback/offline-queue.js";
+import {
+  OfflineFeedbackQueue,
+  type OfflineSignal,
+} from "../../../src/feedback/offline-queue.js";
 import type { SignalItem } from "../../../src/types.js";
 
 // In-memory store for tests
@@ -22,9 +25,11 @@ vi.mock("node:fs/promises", () => ({
     }
     return JSON.stringify(mockStore);
   }),
-  writeFile: vi.fn().mockImplementation(async (_path: string, content: string) => {
-    mockStore = JSON.parse(content);
-  }),
+  writeFile: vi
+    .fn()
+    .mockImplementation(async (_path: string, content: string) => {
+      mockStore = JSON.parse(content);
+    }),
   mkdir: vi.fn().mockResolvedValue(undefined),
 }));
 

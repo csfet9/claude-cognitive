@@ -32,12 +32,12 @@ The feedback signal system enables **query-context aware scoring** - the same fa
 
 ## Signal Types
 
-| Signal | Weight | When to Use |
-|--------|--------|-------------|
-| `used` | +1.0 | Agent referenced this fact in its response |
-| `ignored` | -0.5 | Agent saw but didn't use this fact |
-| `helpful` | +1.5 | User explicitly marked as helpful |
-| `not_helpful` | -1.0 | User explicitly marked as not helpful |
+| Signal        | Weight | When to Use                                |
+| ------------- | ------ | ------------------------------------------ |
+| `used`        | +1.0   | Agent referenced this fact in its response |
+| `ignored`     | -0.5   | Agent saw but didn't use this fact         |
+| `helpful`     | +1.5   | User explicitly marked as helpful          |
+| `not_helpful` | -1.0   | User explicitly marked as not helpful      |
 
 ### Implicit vs Explicit Signals
 
@@ -80,20 +80,22 @@ Compares Claude's response chunks against recalled facts using Jaccard similarit
 Correlates Claude's actions with recalled facts:
 
 **File Access Correlation (0.4):**
+
 - If a fact mentions `src/auth.ts` and Claude edited that file → signal
 
 **Task Topic Correlation (0.5):**
+
 - If a fact about "authentication" was recalled and Claude completed an auth-related task → signal
 
 ### Strategy 4: Negative Signal Detection
 
 Detects facts that were likely NOT used:
 
-| Signal | Weight | Description |
-|--------|--------|-------------|
-| Low Position | 0.2 | Fact was at end of recall list (position > 5) |
-| Topic Mismatch | 0.3 | Fact topics don't overlap with session summary |
-| Files Not Accessed | 0.2 | Fact mentions files that weren't accessed |
+| Signal             | Weight | Description                                    |
+| ------------------ | ------ | ---------------------------------------------- |
+| Low Position       | 0.2    | Fact was at end of recall list (position > 5)  |
+| Topic Mismatch     | 0.3    | Fact topics don't overlap with session summary |
+| Files Not Accessed | 0.2    | Fact mentions files that weren't accessed      |
 
 Negative signals combine additively (max 0.6 ignore confidence).
 
@@ -106,10 +108,10 @@ After detection, signals are aggregated per fact:
 ```typescript
 interface AggregatedScore {
   factId: string;
-  positiveScore: number;  // Sum of use signals (0.0 - 1.0)
-  negativeScore: number;  // Sum of ignore signals (0.0 - 1.0)
+  positiveScore: number; // Sum of use signals (0.0 - 1.0)
+  negativeScore: number; // Sum of ignore signals (0.0 - 1.0)
   verdict: "used" | "ignored" | "uncertain";
-  confidence: number;     // Confidence in verdict
+  confidence: number; // Confidence in verdict
 }
 ```
 
@@ -187,6 +189,7 @@ claude-cognitive feedback-stats --json
 ```
 
 **Output:**
+
 ```
 Feedback System Status
 ========================================
@@ -233,13 +236,13 @@ Enable feedback in `.claudemindrc`:
 
 ### Configuration Options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `enabled` | boolean | `false` | Enable feedback system |
-| `detection.explicit` | boolean | `true` | Enable explicit reference detection |
-| `detection.semantic` | boolean | `true` | Enable semantic similarity detection |
-| `detection.behavioral` | boolean | `true` | Enable behavioral signal detection |
-| `detection.semanticThreshold` | number | `0.25` | Minimum similarity for semantic match |
+| Option                        | Type    | Default | Description                           |
+| ----------------------------- | ------- | ------- | ------------------------------------- |
+| `enabled`                     | boolean | `false` | Enable feedback system                |
+| `detection.explicit`          | boolean | `true`  | Enable explicit reference detection   |
+| `detection.semantic`          | boolean | `true`  | Enable semantic similarity detection  |
+| `detection.behavioral`        | boolean | `true`  | Enable behavioral signal detection    |
+| `detection.semanticThreshold` | number  | `0.25`  | Minimum similarity for semantic match |
 
 ---
 
@@ -274,10 +277,13 @@ mind.on("feedback:synced", (info) => {
 ```typescript
 import { createFeedbackService } from "claude-cognitive";
 
-const service = createFeedbackService({
-  enabled: true,
-  detection: { explicit: true, semantic: true, behavioral: true }
-}, "/path/to/project");
+const service = createFeedbackService(
+  {
+    enabled: true,
+    detection: { explicit: true, semantic: true, behavioral: true },
+  },
+  "/path/to/project",
+);
 
 // Track a recall operation
 await service.trackRecall(sessionId, query, memories);
@@ -288,8 +294,8 @@ const result = await service.processFeedback(sessionId, {
   sessionActivity: {
     filesAccessed: ["src/auth.ts"],
     tasksCompleted: [{ description: "Fixed auth bug" }],
-    summary: "Implemented authentication fixes"
-  }
+    summary: "Implemented authentication fixes",
+  },
 });
 
 console.log(result.feedback);
@@ -345,8 +351,8 @@ When recalling with `boostByUsefulness: true`, the system:
 ```typescript
 const results = await mind.recall("authentication", {
   boostByUsefulness: true,
-  usefulnessWeight: 0.3,  // 30% usefulness, 70% semantic
-  minUsefulness: 0.0      // No minimum threshold
+  usefulnessWeight: 0.3, // 30% usefulness, 70% semantic
+  minUsefulness: 0.0, // No minimum threshold
 });
 ```
 
@@ -355,6 +361,7 @@ const results = await mind.recall("authentication", {
 ## Score Algorithm
 
 ### Initial Score
+
 All facts start with a neutral score of **0.5**.
 
 ### Score Updates
@@ -366,12 +373,12 @@ delta = signal_weight × confidence × 0.1
 new_score = clamp(old_score + delta, 0.0, 1.0)
 ```
 
-| Signal | Weight | Effect on Score |
-|--------|--------|-----------------|
-| `used` | +1.0 | +0.10 per signal |
-| `ignored` | -0.5 | -0.05 per signal |
-| `helpful` | +1.5 | +0.15 per signal |
-| `not_helpful` | -1.0 | -0.10 per signal |
+| Signal        | Weight | Effect on Score  |
+| ------------- | ------ | ---------------- |
+| `used`        | +1.0   | +0.10 per signal |
+| `ignored`     | -0.5   | -0.05 per signal |
+| `helpful`     | +1.5   | +0.15 per signal |
+| `not_helpful` | -1.0   | -0.10 per signal |
 
 ### Time Decay
 
@@ -387,21 +394,21 @@ decayed_score = 0.5 + (score - 0.5) × 0.95^(days_since_last_signal / 7)
 
 ### Detection Tuning
 
-| Scenario | Recommendation |
-|----------|----------------|
+| Scenario                        | Recommendation                              |
+| ------------------------------- | ------------------------------------------- |
 | Claude rarely says "I remember" | Lower explicit detection, increase semantic |
-| High false positives | Increase `semanticThreshold` to 0.35+ |
-| Missing obvious usage | Enable all detection strategies |
-| Short sessions | Disable behavioral detection |
+| High false positives            | Increase `semanticThreshold` to 0.35+       |
+| Missing obvious usage           | Enable all detection strategies             |
+| Short sessions                  | Disable behavioral detection                |
 
 ### Usefulness Weight Tuning
 
-| Use Case | Recommended Weight |
-|----------|-------------------|
-| New bank (little feedback) | 0.0-0.1 |
-| Balanced exploration | 0.2-0.3 |
-| Established patterns | 0.4-0.5 |
-| Strong preference for proven facts | 0.6+ |
+| Use Case                           | Recommended Weight |
+| ---------------------------------- | ------------------ |
+| New bank (little feedback)         | 0.0-0.1            |
+| Balanced exploration               | 0.2-0.3            |
+| Established patterns               | 0.4-0.5            |
+| Strong preference for proven facts | 0.6+               |
 
 > **Warning**: High usefulness weights can create filter bubbles where new facts never surface. Start low and increase gradually.
 

@@ -29,7 +29,9 @@ export interface FactScore {
     used: number;
     ignored: number;
   };
-  detections: Array<Detection | { detectionType: string; confidence: number; evidence: unknown }>;
+  detections: Array<
+    Detection | { detectionType: string; confidence: number; evidence: unknown }
+  >;
 }
 
 export interface FeedbackSummary {
@@ -69,7 +71,9 @@ interface IntermediateScore {
   factId: string;
   used: number;
   ignored: number;
-  detections: Array<Detection | { detectionType: string; confidence: number; evidence: unknown }>;
+  detections: Array<
+    Detection | { detectionType: string; confidence: number; evidence: unknown }
+  >;
 }
 
 /**
@@ -151,7 +155,7 @@ export function calculateVerdict(
 ): { verdict: Verdict; confidence: number } {
   // Net score: positive - (negative * weight)
   // Negative signals weighted less than positive
-  const netScore = usedScore - (ignoredScore * NEGATIVE_SIGNAL_WEIGHT);
+  const netScore = usedScore - ignoredScore * NEGATIVE_SIGNAL_WEIGHT;
 
   let verdict: Verdict;
   if (netScore > USED_THRESHOLD) {
@@ -267,14 +271,17 @@ export function filterHighConfidence(
   minConfidence = 0.5,
 ): FactScore[] {
   return factScores.filter(
-    (score) => score.verdict !== "uncertain" && score.confidence >= minConfidence,
+    (score) =>
+      score.verdict !== "uncertain" && score.confidence >= minConfidence,
   );
 }
 
 /**
  * Get detection type breakdown
  */
-export function getDetectionBreakdown(factScores: FactScore[]): Record<string, number> {
+export function getDetectionBreakdown(
+  factScores: FactScore[],
+): Record<string, number> {
   const breakdown: Record<string, number> = {
     explicit_reference: 0,
     semantic_match: 0,

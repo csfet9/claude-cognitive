@@ -237,7 +237,10 @@ export class Mind extends TypedEventEmitter {
 
       // Initialize feedback service if enabled
       if (config.feedback?.enabled) {
-        this.feedbackService = createFeedbackService(config.feedback, this.projectPath);
+        this.feedbackService = createFeedbackService(
+          config.feedback,
+          this.projectPath,
+        );
         // Initialize offline feedback queue alongside the service
         this.feedbackQueue = new OfflineFeedbackQueue({
           projectPath: this.projectPath,
@@ -396,7 +399,10 @@ export class Mind extends TypedEventEmitter {
    * @param sessionId - Optional session ID (extracted from transcript, or falls back to internal)
    * @returns Reflection result, or null in degraded mode
    */
-  async onSessionEnd(transcript?: string, sessionId?: string | null): Promise<ReflectResult | null> {
+  async onSessionEnd(
+    transcript?: string,
+    sessionId?: string | null,
+  ): Promise<ReflectResult | null> {
     this.assertInitialized();
 
     // Retain transcript if provided
@@ -443,9 +449,12 @@ export class Mind extends TypedEventEmitter {
     const effectiveFeedbackSessionId = feedbackSessionId ?? "unknown";
     if (this.feedbackService && transcript) {
       try {
-        const feedbackResult = await this.feedbackService.processFeedback(feedbackSessionId, {
-          conversationText: transcript,
-        });
+        const feedbackResult = await this.feedbackService.processFeedback(
+          feedbackSessionId,
+          {
+            conversationText: transcript,
+          },
+        );
 
         if (feedbackResult.success && feedbackResult.feedback.length > 0) {
           if (!this.degraded && this.client) {
@@ -473,7 +482,9 @@ export class Mind extends TypedEventEmitter {
         // Silently ignore feedback processing errors - non-critical
         this.emit(
           "error",
-          error instanceof Error ? error : new Error("Feedback processing failed"),
+          error instanceof Error
+            ? error
+            : new Error("Feedback processing failed"),
         );
       }
     }
@@ -558,7 +569,11 @@ export class Mind extends TypedEventEmitter {
         // Track recall for feedback if enabled
         if (this.feedbackService && this.sessionId && memories.length > 0) {
           try {
-            await this.feedbackService.trackRecall(this.sessionId, query, memories);
+            await this.feedbackService.trackRecall(
+              this.sessionId,
+              query,
+              memories,
+            );
           } catch {
             // Silently ignore feedback tracking errors
           }
@@ -920,7 +935,8 @@ ${template.outputFormat}
             bankId: this.bankId,
             content: memory.text,
           };
-          if (memory.context !== undefined) retainInput.context = memory.context;
+          if (memory.context !== undefined)
+            retainInput.context = memory.context;
 
           await this.client.retain(retainInput);
           syncedIds.push(memory.id);
@@ -1164,7 +1180,9 @@ ${template.outputFormat}
     lines.push("- Communicate with the user");
     lines.push("");
     lines.push("**Agents write ALL code.** Delegate implementation to:");
-    lines.push("- Built-in agents (code-explorer, code-architect, code-reviewer)");
+    lines.push(
+      "- Built-in agents (code-explorer, code-architect, code-reviewer)",
+    );
     lines.push("- Custom agents in `.claude/agents/` directory");
     lines.push("");
     lines.push(

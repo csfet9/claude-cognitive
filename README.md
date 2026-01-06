@@ -191,12 +191,12 @@ claude-cognitive automatically tracks which recalled memories are useful and sub
 
 ### Detection Strategies
 
-| Strategy | Confidence | Description |
-|----------|------------|-------------|
-| Explicit Reference | 0.9 | "I remember...", "As mentioned before..." |
-| Semantic Similarity | 0.7 | Word overlap between response and facts |
-| File Access | 0.4 | Fact mentions files Claude accessed |
-| Task Correlation | 0.5 | Fact topics match completed tasks |
+| Strategy            | Confidence | Description                               |
+| ------------------- | ---------- | ----------------------------------------- |
+| Explicit Reference  | 0.9        | "I remember...", "As mentioned before..." |
+| Semantic Similarity | 0.7        | Word overlap between response and facts   |
+| File Access         | 0.4        | Fact mentions files Claude accessed       |
+| Task Correlation    | 0.5        | Fact topics match completed tasks         |
 
 ### Configuration
 

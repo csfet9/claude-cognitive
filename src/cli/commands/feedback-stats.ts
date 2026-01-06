@@ -91,7 +91,10 @@ export function registerFeedbackStatsCommand(cli: CAC): void {
       }
 
       if (!feedbackEnabled && !options.quiet && !options.json) {
-        info("Feedback system is not enabled. Enable it in .claudemindrc:", options);
+        info(
+          "Feedback system is not enabled. Enable it in .claudemindrc:",
+          options,
+        );
         info('  "feedback": { "enabled": true }', options);
         info("", options);
       }

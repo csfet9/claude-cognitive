@@ -158,7 +158,7 @@ export function registerUninstallCommand(cli: CAC): void {
             const settings = JSON.parse(content);
             let modified = false;
 
-            // Remove claude-cognitive from Stop hooks
+            // Remove claude-cognitive from Stop hooks (legacy)
             if (settings.hooks?.Stop) {
               const stopHooks = settings.hooks.Stop as Array<{
                 matcher: string;
@@ -177,12 +177,34 @@ export function registerUninstallCommand(cli: CAC): void {
                 delete settings.hooks.Stop;
               }
 
-              // Clean up empty hooks object
-              if (Object.keys(settings.hooks).length === 0) {
-                delete settings.hooks;
+              modified = true;
+            }
+
+            // Remove claude-cognitive from SessionEnd hooks
+            if (settings.hooks?.SessionEnd) {
+              const sessionEndHooks = settings.hooks.SessionEnd as Array<{
+                matcher: string;
+                hooks: Array<{ type: string; command?: string }>;
+              }>;
+
+              settings.hooks.SessionEnd = sessionEndHooks.filter((entry) => {
+                const hasCognitive = entry.hooks?.some((h) =>
+                  h.command?.includes("claude-cognitive"),
+                );
+                return !hasCognitive;
+              });
+
+              // Clean up empty SessionEnd array
+              if (settings.hooks.SessionEnd.length === 0) {
+                delete settings.hooks.SessionEnd;
               }
 
               modified = true;
+            }
+
+            // Clean up empty hooks object
+            if (settings.hooks && Object.keys(settings.hooks).length === 0) {
+              delete settings.hooks;
             }
 
             if (modified) {
@@ -209,7 +231,7 @@ export function registerUninstallCommand(cli: CAC): void {
             const settings = JSON.parse(content);
             let modified = false;
 
-            // Remove claude-cognitive from Stop hooks
+            // Remove claude-cognitive from Stop hooks (legacy)
             if (settings.hooks?.Stop) {
               const stopHooks = settings.hooks.Stop as Array<{
                 matcher: string;
@@ -228,12 +250,34 @@ export function registerUninstallCommand(cli: CAC): void {
                 delete settings.hooks.Stop;
               }
 
-              // Clean up empty hooks object
-              if (Object.keys(settings.hooks).length === 0) {
-                delete settings.hooks;
+              modified = true;
+            }
+
+            // Remove claude-cognitive from SessionEnd hooks
+            if (settings.hooks?.SessionEnd) {
+              const sessionEndHooks = settings.hooks.SessionEnd as Array<{
+                matcher: string;
+                hooks: Array<{ type: string; command?: string }>;
+              }>;
+
+              settings.hooks.SessionEnd = sessionEndHooks.filter((entry) => {
+                const hasCognitive = entry.hooks?.some((h) =>
+                  h.command?.includes("claude-cognitive"),
+                );
+                return !hasCognitive;
+              });
+
+              // Clean up empty SessionEnd array
+              if (settings.hooks.SessionEnd.length === 0) {
+                delete settings.hooks.SessionEnd;
               }
 
               modified = true;
+            }
+
+            // Clean up empty hooks object
+            if (settings.hooks && Object.keys(settings.hooks).length === 0) {
+              delete settings.hooks;
             }
 
             if (modified) {
@@ -269,17 +313,25 @@ export function registerUninstallCommand(cli: CAC): void {
           }
         }
 
-        // 2e. Clean up legacy global hook (if --clean-global or always warn)
-        const legacyGlobalHookPath = join(
+        // 2e. Clean up legacy global hooks (if --clean-global or always warn)
+        const legacyGlobalStopHookPath = join(
           homedir(),
           ".local",
           "bin",
           "claude-cognitive-stop-hook.sh",
         );
-        if (await fileExists(legacyGlobalHookPath)) {
+        const legacyGlobalSessionEndHookPath = join(
+          homedir(),
+          ".local",
+          "bin",
+          "claude-cognitive-session-end-hook.sh",
+        );
+
+        // Check for legacy stop hook
+        if (await fileExists(legacyGlobalStopHookPath)) {
           if (options.cleanGlobal) {
             try {
-              await unlink(legacyGlobalHookPath);
+              await unlink(legacyGlobalStopHookPath);
               printSuccess(
                 "Removed legacy global hook ~/.local/bin/claude-cognitive-stop-hook.sh",
               );
@@ -294,6 +346,29 @@ export function registerUninstallCommand(cli: CAC): void {
             );
             printInfo(
               "Use --clean-global to remove, or: rm ~/.local/bin/claude-cognitive-stop-hook.sh",
+            );
+          }
+        }
+
+        // Check for legacy session-end hook
+        if (await fileExists(legacyGlobalSessionEndHookPath)) {
+          if (options.cleanGlobal) {
+            try {
+              await unlink(legacyGlobalSessionEndHookPath);
+              printSuccess(
+                "Removed legacy global hook ~/.local/bin/claude-cognitive-session-end-hook.sh",
+              );
+            } catch {
+              printWarn(
+                "Could not remove legacy global hook. Remove manually: rm ~/.local/bin/claude-cognitive-session-end-hook.sh",
+              );
+            }
+          } else {
+            printWarn(
+              "Legacy global hook exists at ~/.local/bin/claude-cognitive-session-end-hook.sh",
+            );
+            printInfo(
+              "Use --clean-global to remove, or: rm ~/.local/bin/claude-cognitive-session-end-hook.sh",
             );
           }
         }

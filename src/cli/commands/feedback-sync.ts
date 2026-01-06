@@ -30,18 +30,26 @@ function formatFeedbackSyncResult(result: FeedbackSyncResult): string {
 
   if (result.success) {
     if (result.signalsSynced > 0) {
-      lines.push(`Successfully synced ${result.signalsSynced} feedback signal(s) to Hindsight.`);
+      lines.push(
+        `Successfully synced ${result.signalsSynced} feedback signal(s) to Hindsight.`,
+      );
     } else {
       lines.push("No pending feedback signals to sync.");
     }
 
     if (result.signalsCleared > 0) {
-      lines.push(`Cleared ${result.signalsCleared} synced signal(s) from queue.`);
+      lines.push(
+        `Cleared ${result.signalsCleared} synced signal(s) from queue.`,
+      );
     }
   } else {
-    lines.push(`Failed to sync feedback signals: ${result.error ?? "Unknown error"}`);
+    lines.push(
+      `Failed to sync feedback signals: ${result.error ?? "Unknown error"}`,
+    );
     if (result.degraded) {
-      lines.push("Hindsight is unavailable. Signals will be synced when connection is restored.");
+      lines.push(
+        "Hindsight is unavailable. Signals will be synced when connection is restored.",
+      );
     }
   }
 
@@ -53,7 +61,10 @@ function formatFeedbackSyncResult(result: FeedbackSyncResult): string {
  */
 export function registerFeedbackSyncCommand(cli: CAC): void {
   cli
-    .command("feedback-sync", "Sync pending offline feedback signals to Hindsight")
+    .command(
+      "feedback-sync",
+      "Sync pending offline feedback signals to Hindsight",
+    )
     .option(
       "--project <path>",
       "Project directory (default: current directory)",
@@ -114,7 +125,10 @@ export function registerFeedbackSyncCommand(cli: CAC): void {
         return;
       }
 
-      info(`Found ${statsBefore.pending} pending signal(s) to sync...`, options);
+      info(
+        `Found ${statsBefore.pending} pending signal(s) to sync...`,
+        options,
+      );
 
       // Sync signals
       let signalsSynced = 0;

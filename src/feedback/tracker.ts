@@ -111,7 +111,10 @@ function getSessionContext(projectDir: string): SessionContext {
     const packageJsonPath = path.join(projectDir, "package.json");
     if (fs.existsSync(packageJsonPath)) {
       const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
-      const deps = { ...packageJson.dependencies, ...packageJson.devDependencies };
+      const deps = {
+        ...packageJson.dependencies,
+        ...packageJson.devDependencies,
+      };
 
       if (deps.expo || deps["expo-cli"]) {
         context.projectType = "expo-mobile";
@@ -182,7 +185,10 @@ export function createRecallSession(
 /**
  * Add recalled facts to session
  */
-export function addRecalledFacts(session: RecallSession, facts: Memory[]): RecallSession {
+export function addRecalledFacts(
+  session: RecallSession,
+  facts: Memory[],
+): RecallSession {
   if (!facts || !Array.isArray(facts)) {
     return session;
   }
@@ -198,7 +204,10 @@ export function addRecalledFacts(session: RecallSession, facts: Memory[]): Recal
   session.totalFacts = session.factsRecalled.length;
 
   // Estimate tokens (rough: ~4 chars per token)
-  const totalChars = session.factsRecalled.reduce((sum, f) => sum + (f.text?.length || 0), 0);
+  const totalChars = session.factsRecalled.reduce(
+    (sum, f) => sum + (f.text?.length || 0),
+    0,
+  );
   session.totalTokens = Math.ceil(totalChars / 4);
 
   return session;
@@ -290,11 +299,16 @@ export async function loadRecallSession(
       const activityDir = getSessionActivityDir(projectDir);
       const files = fs.readdirSync(activityDir);
       const archived = files.find(
-        (f) => f.startsWith(`.recall-session-${sessionId.slice(0, 8)}`) && f.endsWith(".json"),
+        (f) =>
+          f.startsWith(`.recall-session-${sessionId.slice(0, 8)}`) &&
+          f.endsWith(".json"),
       );
 
       if (archived) {
-        const archivedContent = fs.readFileSync(path.join(activityDir, archived), "utf-8");
+        const archivedContent = fs.readFileSync(
+          path.join(activityDir, archived),
+          "utf-8",
+        );
         const archivedParsed = JSON.parse(archivedContent);
         return validateRecallSession(archivedParsed);
       }
@@ -379,7 +393,9 @@ export async function cleanupOldSessions(
 /**
  * Get statistics about tracked sessions
  */
-export async function getSessionStats(projectDir: string): Promise<SessionStats> {
+export async function getSessionStats(
+  projectDir: string,
+): Promise<SessionStats> {
   const activityDir = getSessionActivityDir(projectDir);
 
   const stats: SessionStats = {
@@ -424,10 +440,16 @@ export async function getSessionStats(projectDir: string): Promise<SessionStats>
           stats.totalFactsTracked += session.totalFacts || 0;
 
           if (session.startedAt) {
-            if (!stats.oldestSession || session.startedAt < stats.oldestSession) {
+            if (
+              !stats.oldestSession ||
+              session.startedAt < stats.oldestSession
+            ) {
               stats.oldestSession = session.startedAt;
             }
-            if (!stats.newestSession || session.startedAt > stats.newestSession) {
+            if (
+              !stats.newestSession ||
+              session.startedAt > stats.newestSession
+            ) {
               stats.newestSession = session.startedAt;
             }
           }

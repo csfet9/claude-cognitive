@@ -54,6 +54,10 @@ export function registerServeCommand(cli: CAC): void {
       const mind = new Mind({ projectPath });
       await mind.init();
 
+      // Start session to enable feedback tracking
+      // This sets sessionId which is required for recall tracking
+      await mind.onSessionStart();
+
       if (mind.isDegraded) {
         info(
           "Warning: Running in degraded mode (Hindsight unavailable). Memory tools will return limited results.",
@@ -78,11 +82,13 @@ export function registerServeCommand(cli: CAC): void {
       // Keep process running
       process.on("SIGINT", async () => {
         info("\nShutting down...", options);
+        await mind.onSessionEnd();
         await server.stop();
         process.exit(0);
       });
 
       process.on("SIGTERM", async () => {
+        await mind.onSessionEnd();
         await server.stop();
         process.exit(0);
       });

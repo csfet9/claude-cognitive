@@ -196,11 +196,11 @@ function hasHookCommand(
 }
 
 /**
- * Get the path to the stop hook wrapper script (project-local).
+ * Get the path to the session end hook wrapper script (project-local).
  * This ensures the hook only exists within configured projects.
  */
-function getStopHookScriptPath(projectPath: string): string {
-  return join(projectPath, ".claude", "hooks", "stop-hook.sh");
+function getSessionEndHookScriptPath(projectPath: string): string {
+  return join(projectPath, ".claude", "hooks", "session-end-hook.sh");
 }
 
 /**
@@ -214,20 +214,39 @@ function getStartHookScriptPath(projectPath: string): string {
  * Get the path to the legacy global stop hook script.
  * Used for cleanup of old installations.
  */
-function getLegacyGlobalHookPath(): string {
+function getLegacyGlobalStopHookPath(): string {
   return join(homedir(), ".local", "bin", "claude-cognitive-stop-hook.sh");
+}
+
+/**
+ * Get the path to the legacy global session-end hook script.
+ * Used for cleanup of old installations.
+ */
+function getLegacyGlobalSessionEndHookPath(): string {
+  return join(
+    homedir(),
+    ".local",
+    "bin",
+    "claude-cognitive-session-end-hook.sh",
+  );
 }
 
 /**
  * Check if a legacy global hook exists and warn the user.
  */
 async function checkAndWarnLegacyGlobalHook(): Promise<boolean> {
-  const legacyPath = getLegacyGlobalHookPath();
+  const legacyStopPath = getLegacyGlobalStopHookPath();
+  const legacySessionEndPath = getLegacyGlobalSessionEndHookPath();
   try {
-    await access(legacyPath);
+    await access(legacyStopPath);
     return true;
   } catch {
-    return false;
+    try {
+      await access(legacySessionEndPath);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 
@@ -301,7 +320,7 @@ else
 # Session Context
 
 No prior memories found for this project yet.
-Memory will be stored when you use /exit to end the session.
+Memory will be stored automatically when the session ends.
 
 *Generated at $(date -Iseconds)*
 CONTEXT_EOF
@@ -315,30 +334,36 @@ exit 0
 }
 
 /**
- * Create the stop hook wrapper script (project-local).
+ * Create the session end hook wrapper script (project-local).
  * Claude Code passes transcript_path via stdin JSON, not as env var.
  *
  * This script filters out:
  * - Agent sessions (filename starts with "agent-")
  * - Projects without .claudemindrc
- * - Responses that aren't true session ends (only processes on /exit)
  *
  * IMPORTANT: The script is now stored in PROJECT/.claude/hooks/ to ensure
  * it only affects this specific project, preventing unintended API calls
  * when using Claude in other directories.
+ *
+ * NOTE: SessionEnd hook only fires when session truly ends (not after every response),
+ * so we no longer need the /exit grep and marker file logic from the old Stop hook.
  */
-async function createStopHookScript(projectPath: string): Promise<string> {
-  const scriptPath = getStopHookScriptPath(projectPath);
+async function createSessionEndHookScript(
+  projectPath: string,
+): Promise<string> {
+  const scriptPath = getSessionEndHookScriptPath(projectPath);
   const scriptDir = join(projectPath, ".claude", "hooks");
 
   // Ensure directory exists
   await mkdir(scriptDir, { recursive: true });
 
   const scriptContent = `#!/bin/bash
-# Claude Code Stop hook wrapper for claude-cognitive (project-local)
+# Claude Code SessionEnd hook wrapper for claude-cognitive (project-local)
 # Only processes MAIN sessions in projects with .claudemindrc
 # Skips agent sessions and unconfigured projects
-# IMPORTANT: Only processes when session truly ends (user typed /exit)
+#
+# NOTE: SessionEnd hook only fires when session truly ends, so we don't need
+# the /exit grep and marker file logic from the old Stop hook.
 
 # Read stdin
 INPUT=$(cat)
@@ -348,10 +373,12 @@ if command -v jq &> /dev/null; then
   TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // empty')
   PROJECT_DIR=$(echo "$INPUT" | jq -r '.cwd // empty')
   SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
+  REASON=$(echo "$INPUT" | jq -r '.reason // empty')
 else
   TRANSCRIPT_PATH=$(echo "$INPUT" | grep -o '"transcript_path":"[^"]*"' | cut -d'"' -f4)
   PROJECT_DIR=$(echo "$INPUT" | grep -o '"cwd":"[^"]*"' | cut -d'"' -f4)
   SESSION_ID=$(echo "$INPUT" | grep -o '"session_id":"[^"]*"' | cut -d'"' -f4)
+  REASON=$(echo "$INPUT" | grep -o '"reason":"[^"]*"' | cut -d'"' -f4)
 fi
 
 # Exit early if no transcript path
@@ -370,16 +397,10 @@ if [ -z "$PROJECT_DIR" ] || [ ! -f "$PROJECT_DIR/.claudemindrc" ]; then
   exit 0
 fi
 
-# FILTER 3: Only process if this is a TRUE session end (user typed /exit)
-# The Stop hook fires after EVERY assistant response, but we only want to
-# process memory once at session end. Check if /exit was used.
-if ! grep -q '<command-name>/exit</command-name>' "$TRANSCRIPT_PATH" 2>/dev/null; then
-  # No /exit found - this is just a normal response, not session end
-  exit 0
-fi
-
 # Process main session (pass project dir to ensure correct context)
-claude-cognitive process-session --project "$PROJECT_DIR" --transcript "$TRANSCRIPT_PATH"
+# Use timeout to prevent hanging if Hindsight is slow (30 second limit)
+# Use || true to ensure hook never fails (hooks should never block Claude Code)
+timeout 30 claude-cognitive process-session --project "$PROJECT_DIR" --transcript "$TRANSCRIPT_PATH" || true
 
 # Clean up ONLY this session's entries from buffer (not other ongoing sessions)
 # Use flock to prevent race conditions when multiple sessions end simultaneously
@@ -413,6 +434,8 @@ if [ -n "$SESSION_ID" ]; then
     rm -f "$LOCK_FILE" 2>/dev/null || true
   fi
 fi
+
+exit 0
 `;
 
   await writeFile(scriptPath, scriptContent, { mode: 0o755 });
@@ -424,7 +447,7 @@ fi
  * Hooks are stored in PROJECT/.claude/settings.json to keep them project-specific.
  *
  * Configures two hooks:
- * - Stop: Processes session transcript at session end (calls process-session)
+ * - SessionEnd: Processes session transcript at session end (calls process-session)
  * - SessionStart: Injects context at session start (calls inject-context)
  */
 async function configureHooks(
@@ -437,41 +460,50 @@ async function configureHooks(
   const legacyGlobalHookExists = await checkAndWarnLegacyGlobalHook();
 
   // Create the hook wrapper scripts (project-local)
-  const stopScriptPath = await createStopHookScript(projectPath);
+  const sessionEndScriptPath = await createSessionEndHookScript(projectPath);
   const startScriptPath = await createStartHookScript(projectPath);
 
   // Get or create hooks object
   const hooks = (settings.hooks as Record<string, unknown[]>) || {};
 
   // ============================================
-  // Configure Stop hook (session end)
+  // Remove legacy Stop hooks (migrate to SessionEnd)
   // ============================================
-  const stopHooks =
-    (hooks.Stop as Array<{ matcher: string; hooks: unknown[] }>) || [];
+  delete hooks.Stop;
+
+  // ============================================
+  // Configure SessionEnd hook (session end)
+  // ============================================
+  let sessionEndHooks =
+    (hooks.SessionEnd as Array<{ matcher: string; hooks: unknown[] }>) || [];
 
   // Remove old-style hooks that use $TRANSCRIPT_PATH env var (doesn't work)
-  const filteredStopHooks = stopHooks.filter(
+  // Also remove old stop-hook.sh references
+  sessionEndHooks = sessionEndHooks.filter(
     (entry) =>
       !entry.hooks?.some((h: unknown) => {
         const hook = h as { command?: string };
-        return hook.command?.includes('$TRANSCRIPT_PATH"');
+        return (
+          hook.command?.includes('$TRANSCRIPT_PATH"') ||
+          hook.command?.includes("stop-hook.sh")
+        );
       }),
   );
 
-  // Add wrapper script hook on Stop (session end)
-  if (!hasHookCommand(filteredStopHooks, "stop-hook.sh")) {
-    filteredStopHooks.push({
+  // Add wrapper script hook on SessionEnd
+  if (!hasHookCommand(sessionEndHooks, "session-end-hook.sh")) {
+    sessionEndHooks.push({
       matcher: "",
       hooks: [
         {
           type: "command",
-          command: stopScriptPath,
+          command: sessionEndScriptPath,
         },
       ],
     });
   }
 
-  hooks.Stop = filteredStopHooks;
+  hooks.SessionEnd = sessionEndHooks;
 
   // ============================================
   // Configure SessionStart hook (context injection)
@@ -781,7 +813,7 @@ export function registerInstallCommand(cli: CAC): void {
             print("");
             print(
               color(
-                "  ⚠ WARNING: Legacy global hook detected at ~/.local/bin/",
+                "  WARNING: Legacy global hook detected at ~/.local/bin/",
                 "yellow",
               ),
             );
@@ -793,7 +825,7 @@ export function registerInstallCommand(cli: CAC): void {
             );
             print(
               color(
-                "  To remove: rm ~/.local/bin/claude-cognitive-stop-hook.sh",
+                "  To remove: rm ~/.local/bin/claude-cognitive-*-hook.sh",
                 "yellow",
               ),
             );
@@ -946,7 +978,7 @@ You are the **orchestrator**. For non-trivial tasks, delegate to specialized age
         print("");
         print(
           color(
-            "Tip: Use /exit instead of /clear to sync session to Hindsight",
+            "Tip: Session memory syncs automatically when session ends.",
             "dim",
           ),
         );

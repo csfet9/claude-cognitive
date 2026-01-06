@@ -7,7 +7,10 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { HindsightClient } from "../../src/client.js";
 import { Mind } from "../../src/mind.js";
-import { FeedbackService, createFeedbackService } from "../../src/feedback/index.js";
+import {
+  FeedbackService,
+  createFeedbackService,
+} from "../../src/feedback/index.js";
 import { OfflineFeedbackQueue } from "../../src/feedback/offline-queue.js";
 import type { SignalItem, Memory } from "../../src/types.js";
 import { join } from "node:path";
@@ -31,15 +34,15 @@ describe("Feedback System Integration with Hindsight", () => {
     // Create minimal package.json and .claudemindrc for Mind initialization
     await writeFile(
       join(tempDir, "package.json"),
-      JSON.stringify({ name: "feedback-test-project" })
+      JSON.stringify({ name: "feedback-test-project" }),
     );
     await writeFile(
       join(tempDir, ".claudemindrc"),
       JSON.stringify({
         bankId: `test-feedback-${Date.now()}`,
         feedback: { enabled: true, hindsight: { sendFeedback: true } },
-        hindsight: { host: "localhost", port: 8888 }
-      })
+        hindsight: { host: "localhost", port: 8888 },
+      }),
     );
 
     // Check if Hindsight is available
@@ -71,171 +74,77 @@ describe("Feedback System Integration with Hindsight", () => {
   });
 
   describe("HindsightClient.signal()", () => {
-    it("should successfully submit signals to Hindsight", { timeout: HINDSIGHT_TIMEOUT }, async () => {
-      if (!isHindsightAvailable) {
-        console.log("Skipping: Hindsight not available");
-        return;
-      }
+    it(
+      "should successfully submit signals to Hindsight",
+      { timeout: HINDSIGHT_TIMEOUT },
+      async () => {
+        if (!isHindsightAvailable) {
+          console.log("Skipping: Hindsight not available");
+          return;
+        }
 
-      // First, store some content to get a fact ID
-      await client.retain({
-        bankId: testBankId,
-        content: "Test fact for signal testing - authentication uses JWT tokens",
-        context: "Testing feedback signals",
-      });
+        // First, store some content to get a fact ID
+        await client.retain({
+          bankId: testBankId,
+          content:
+            "Test fact for signal testing - authentication uses JWT tokens",
+          context: "Testing feedback signals",
+        });
 
-      // Recall to get the fact ID
-      const memories = await client.recall({
-        bankId: testBankId,
-        query: "JWT authentication tokens",
-      });
-
-      expect(memories.length).toBeGreaterThan(0);
-
-      const factId = memories[0].id;
-      console.log(`Testing signal with factId: ${factId}`);
-
-      // Submit a 'used' signal
-      const signals: SignalItem[] = [
-        {
-          factId,
-          signalType: "used",
-          confidence: 0.9,
+        // Recall to get the fact ID
+        const memories = await client.recall({
+          bankId: testBankId,
           query: "JWT authentication tokens",
-          context: "User referenced this fact in their response",
-        },
-      ];
+        });
 
-      const result = await client.signal({
-        bankId: testBankId,
-        signals,
-      });
+        expect(memories.length).toBeGreaterThan(0);
 
-      expect(result.success).toBe(true);
-      expect(result.signalsProcessed).toBe(1);
-      console.log("Signal result:", result);
-    });
+        const factId = memories[0].id;
+        console.log(`Testing signal with factId: ${factId}`);
 
-    it("should handle multiple signal types", { timeout: HINDSIGHT_TIMEOUT }, async () => {
-      if (!isHindsightAvailable) {
-        console.log("Skipping: Hindsight not available");
-        return;
-      }
+        // Submit a 'used' signal
+        const signals: SignalItem[] = [
+          {
+            factId,
+            signalType: "used",
+            confidence: 0.9,
+            query: "JWT authentication tokens",
+            context: "User referenced this fact in their response",
+          },
+        ];
 
-      // Store another fact
-      await client.retain({
-        bankId: testBankId,
-        content: "Test fact for multiple signals - React uses virtual DOM",
-        context: "Testing multiple signal types",
-      });
-
-      // Recall to get fact IDs
-      const memories = await client.recall({
-        bankId: testBankId,
-        query: "React virtual DOM",
-      });
-
-      if (memories.length === 0) {
-        console.log("Skipping: No memories found");
-        return;
-      }
-
-      const factId = memories[0].id;
-
-      // Submit different signal types sequentially
-      const signalTypes: Array<"used" | "ignored" | "helpful" | "not_helpful"> = [
-        "used",
-        "helpful",
-      ];
-
-      for (const signalType of signalTypes) {
         const result = await client.signal({
           bankId: testBankId,
-          signals: [
-            {
-              factId,
-              signalType,
-              confidence: 0.8,
-              query: "React virtual DOM",
-            },
-          ],
+          signals,
         });
 
         expect(result.success).toBe(true);
-        console.log(`${signalType} signal result:`, result);
-      }
-    });
+        expect(result.signalsProcessed).toBe(1);
+        console.log("Signal result:", result);
+      },
+    );
 
-    it("should handle batch signals", { timeout: HINDSIGHT_TIMEOUT }, async () => {
-      if (!isHindsightAvailable) {
-        console.log("Skipping: Hindsight not available");
-        return;
-      }
+    it(
+      "should handle multiple signal types",
+      { timeout: HINDSIGHT_TIMEOUT },
+      async () => {
+        if (!isHindsightAvailable) {
+          console.log("Skipping: Hindsight not available");
+          return;
+        }
 
-      // Store multiple facts
-      await client.retain({
-        bankId: testBankId,
-        content: "Batch test fact 1 - TypeScript provides static typing",
-      });
-      await client.retain({
-        bankId: testBankId,
-        content: "Batch test fact 2 - ESLint helps with code quality",
-      });
+        // Store another fact
+        await client.retain({
+          bankId: testBankId,
+          content: "Test fact for multiple signals - React uses virtual DOM",
+          context: "Testing multiple signal types",
+        });
 
-      // Recall to get fact IDs
-      const memories = await client.recall({
-        bankId: testBankId,
-        query: "TypeScript ESLint code",
-        budget: "mid",
-      });
-
-      if (memories.length < 2) {
-        console.log("Skipping: Not enough memories for batch test");
-        return;
-      }
-
-      // Submit batch signals
-      const batchSignals: SignalItem[] = memories.slice(0, 2).map((mem, idx) => ({
-        factId: mem.id,
-        signalType: idx === 0 ? "used" : "ignored" as const,
-        confidence: 0.75,
-        query: "TypeScript ESLint code",
-      }));
-
-      const result = await client.signal({
-        bankId: testBankId,
-        signals: batchSignals,
-      });
-
-      expect(result.success).toBe(true);
-      expect(result.signalsProcessed).toBe(batchSignals.length);
-      console.log("Batch signal result:", result);
-    });
-  });
-
-  describe("Mind.signal()", () => {
-    it("should submit signals through Mind", { timeout: HINDSIGHT_TIMEOUT }, async () => {
-      if (!isHindsightAvailable) {
-        console.log("Skipping: Hindsight not available");
-        return;
-      }
-
-      const mind = new Mind({
-        projectPath: tempDir,
-        bankId: testBankId,
-      });
-
-      try {
-        await mind.init();
-
-        // Store a fact first
-        await mind.retain(
-          "Mind signal test - Node.js is a JavaScript runtime",
-          "Testing Mind.signal()"
-        );
-
-        // Recall to get fact ID
-        const memories = await mind.recall("Node.js JavaScript runtime");
+        // Recall to get fact IDs
+        const memories = await client.recall({
+          bankId: testBankId,
+          query: "React virtual DOM",
+        });
 
         if (memories.length === 0) {
           console.log("Skipping: No memories found");
@@ -244,23 +153,135 @@ describe("Feedback System Integration with Hindsight", () => {
 
         const factId = memories[0].id;
 
-        // Submit signal through Mind
-        const result = await mind.signal([
-          {
-            factId,
-            signalType: "used",
-            confidence: 0.95,
-            query: "Node.js JavaScript runtime",
-          },
-        ]);
+        // Submit different signal types sequentially
+        const signalTypes: Array<
+          "used" | "ignored" | "helpful" | "not_helpful"
+        > = ["used", "helpful"];
+
+        for (const signalType of signalTypes) {
+          const result = await client.signal({
+            bankId: testBankId,
+            signals: [
+              {
+                factId,
+                signalType,
+                confidence: 0.8,
+                query: "React virtual DOM",
+              },
+            ],
+          });
+
+          expect(result.success).toBe(true);
+          console.log(`${signalType} signal result:`, result);
+        }
+      },
+    );
+
+    it(
+      "should handle batch signals",
+      { timeout: HINDSIGHT_TIMEOUT },
+      async () => {
+        if (!isHindsightAvailable) {
+          console.log("Skipping: Hindsight not available");
+          return;
+        }
+
+        // Store multiple facts
+        await client.retain({
+          bankId: testBankId,
+          content: "Batch test fact 1 - TypeScript provides static typing",
+        });
+        await client.retain({
+          bankId: testBankId,
+          content: "Batch test fact 2 - ESLint helps with code quality",
+        });
+
+        // Recall to get fact IDs
+        const memories = await client.recall({
+          bankId: testBankId,
+          query: "TypeScript ESLint code",
+          budget: "mid",
+        });
+
+        if (memories.length < 2) {
+          console.log("Skipping: Not enough memories for batch test");
+          return;
+        }
+
+        // Submit batch signals
+        const batchSignals: SignalItem[] = memories
+          .slice(0, 2)
+          .map((mem, idx) => ({
+            factId: mem.id,
+            signalType: idx === 0 ? "used" : ("ignored" as const),
+            confidence: 0.75,
+            query: "TypeScript ESLint code",
+          }));
+
+        const result = await client.signal({
+          bankId: testBankId,
+          signals: batchSignals,
+        });
 
         expect(result.success).toBe(true);
-        expect(result.signalsProcessed).toBe(1);
-        console.log("Mind.signal() result:", result);
-      } finally {
-        mind.dispose();
-      }
-    });
+        expect(result.signalsProcessed).toBe(batchSignals.length);
+        console.log("Batch signal result:", result);
+      },
+    );
+  });
+
+  describe("Mind.signal()", () => {
+    it(
+      "should submit signals through Mind",
+      { timeout: HINDSIGHT_TIMEOUT },
+      async () => {
+        if (!isHindsightAvailable) {
+          console.log("Skipping: Hindsight not available");
+          return;
+        }
+
+        const mind = new Mind({
+          projectPath: tempDir,
+          bankId: testBankId,
+        });
+
+        try {
+          await mind.init();
+
+          // Store a fact first
+          await mind.retain(
+            "Mind signal test - Node.js is a JavaScript runtime",
+            "Testing Mind.signal()",
+          );
+
+          // Recall to get fact ID
+          const memories = await mind.recall("Node.js JavaScript runtime");
+
+          if (memories.length === 0) {
+            console.log("Skipping: No memories found");
+            return;
+          }
+
+          const factId = memories[0].id;
+
+          // Submit signal through Mind
+          const result = await mind.signal([
+            {
+              factId,
+              signalType: "used",
+              confidence: 0.95,
+              query: "Node.js JavaScript runtime",
+            },
+          ]);
+
+          expect(result.success).toBe(true);
+          expect(result.signalsProcessed).toBe(1);
+          console.log("Mind.signal() result:", result);
+        } finally {
+          mind.dispose();
+        }
+      },
+    );
   });
 
   describe("FeedbackService end-to-end", () => {
@@ -272,7 +293,7 @@ describe("Feedback System Integration with Hindsight", () => {
 
       const feedbackService = createFeedbackService(
         { enabled: true, hindsight: { sendFeedback: true } },
-        tempDir
+        tempDir,
       );
 
       expect(feedbackService.isEnabled()).toBe(true);
@@ -298,7 +319,7 @@ describe("Feedback System Integration with Hindsight", () => {
       const trackResult = await feedbackService.trackRecall(
         sessionId,
         "testing framework",
-        mockFacts
+        mockFacts,
       );
 
       expect(trackResult.success).toBe(true);
@@ -322,10 +343,7 @@ describe("Feedback System Integration with Hindsight", () => {
     });
 
     it("should get feedback stats", async () => {
-      const feedbackService = createFeedbackService(
-        { enabled: true },
-        tempDir
-      );
+      const feedbackService = createFeedbackService({ enabled: true }, tempDir);
 
       const stats = await feedbackService.getStats();
       expect(stats.success).toBe(true);
@@ -419,50 +437,53 @@ describe("Feedback System Integration with Hindsight", () => {
   });
 
   describe("Full session workflow", () => {
-    it("should handle complete session lifecycle with feedback", { timeout: HINDSIGHT_TIMEOUT * 2 }, async () => {
-      if (!isHindsightAvailable) {
-        console.log("Skipping: Hindsight not available");
-        return;
-      }
+    it(
+      "should handle complete session lifecycle with feedback",
+      { timeout: HINDSIGHT_TIMEOUT * 2 },
+      async () => {
+        if (!isHindsightAvailable) {
+          console.log("Skipping: Hindsight not available");
+          return;
+        }
 
-      // Create a new Mind with feedback enabled
-      const sessionTempDir = await mkdtemp(join(tmpdir(), "session-test-"));
-      await mkdir(join(sessionTempDir, ".claude"), { recursive: true });
+        // Create a new Mind with feedback enabled
+        const sessionTempDir = await mkdtemp(join(tmpdir(), "session-test-"));
+        await mkdir(join(sessionTempDir, ".claude"), { recursive: true });
 
-      await writeFile(
-        join(sessionTempDir, "package.json"),
-        JSON.stringify({ name: "session-test-project" })
-      );
-      await writeFile(
-        join(sessionTempDir, ".claudemindrc"),
-        JSON.stringify({
-          bankId: testBankId,
-          feedback: { enabled: true, hindsight: { sendFeedback: true } },
-          hindsight: { host: "localhost", port: 8888 }
-        })
-      );
-
-      const mind = new Mind({ projectPath: sessionTempDir });
-
-      try {
-        await mind.init();
-
-        // Store some facts first
-        await mind.retain(
-          "Session workflow test - The app uses Express for the backend API",
-          "Testing session workflow"
+        await writeFile(
+          join(sessionTempDir, "package.json"),
+          JSON.stringify({ name: "session-test-project" }),
+        );
+        await writeFile(
+          join(sessionTempDir, ".claudemindrc"),
+          JSON.stringify({
+            bankId: testBankId,
+            feedback: { enabled: true, hindsight: { sendFeedback: true } },
+            hindsight: { host: "localhost", port: 8888 },
+          }),
         );
 
-        // Start session
-        const context = await mind.onSessionStart();
-        console.log("Session context length:", context.length);
+        const mind = new Mind({ projectPath: sessionTempDir });
 
-        // Recall during session
-        const memories = await mind.recall("Express backend API");
-        console.log("Recalled memories:", memories.length);
+        try {
+          await mind.init();
 
-        // Simulate conversation with the recalled facts
-        const transcript = `
+          // Store some facts first
+          await mind.retain(
+            "Session workflow test - The app uses Express for the backend API",
+            "Testing session workflow",
+          );
+
+          // Start session
+          const context = await mind.onSessionStart();
+          console.log("Session context length:", context.length);
+
+          // Recall during session
+          const memories = await mind.recall("Express backend API");
+          console.log("Recalled memories:", memories.length);
+
+          // Simulate conversation with the recalled facts
+          const transcript = `
           User: How is the backend API structured?
 
           Assistant: Based on the context, the app uses Express for the backend API.
@@ -471,61 +492,67 @@ describe("Feedback System Integration with Hindsight", () => {
           User: Thanks for remembering that!
         `;
 
-        // End session (this should process feedback and submit signals)
-        const result = await mind.onSessionEnd(transcript);
-        console.log("Session end result:", result);
-
-      } finally {
-        mind.dispose();
-        await rm(sessionTempDir, { recursive: true, force: true });
-      }
-    });
+          // End session (this should process feedback and submit signals)
+          const result = await mind.onSessionEnd(transcript);
+          console.log("Session end result:", result);
+        } finally {
+          mind.dispose();
+          await rm(sessionTempDir, { recursive: true, force: true });
+        }
+      },
+    );
   });
 
   describe("Usefulness boosting in recall", () => {
-    it("should support boostByUsefulness parameter", { timeout: HINDSIGHT_TIMEOUT }, async () => {
-      if (!isHindsightAvailable) {
-        console.log("Skipping: Hindsight not available");
-        return;
-      }
+    it(
+      "should support boostByUsefulness parameter",
+      { timeout: HINDSIGHT_TIMEOUT },
+      async () => {
+        if (!isHindsightAvailable) {
+          console.log("Skipping: Hindsight not available");
+          return;
+        }
 
-      // Store and signal some facts
-      await client.retain({
-        bankId: testBankId,
-        content: "Boost test - PostgreSQL is the primary database",
-      });
-
-      const memories = await client.recall({
-        bankId: testBankId,
-        query: "database",
-      });
-
-      if (memories.length > 0) {
-        // Submit helpful signal to boost usefulness
-        await client.signal({
+        // Store and signal some facts
+        await client.retain({
           bankId: testBankId,
-          signals: [{
-            factId: memories[0].id,
-            signalType: "helpful",
-            confidence: 1.0,
-            query: "database",
-          }],
+          content: "Boost test - PostgreSQL is the primary database",
         });
-      }
 
-      // Recall with usefulness boosting
-      const boostedMemories = await client.recall({
-        bankId: testBankId,
-        query: "database",
-        boostByUsefulness: true,
-        usefulnessWeight: 0.3,
-      });
+        const memories = await client.recall({
+          bankId: testBankId,
+          query: "database",
+        });
 
-      console.log("Boosted recall results:", boostedMemories.length);
+        if (memories.length > 0) {
+          // Submit helpful signal to boost usefulness
+          await client.signal({
+            bankId: testBankId,
+            signals: [
+              {
+                factId: memories[0].id,
+                signalType: "helpful",
+                confidence: 1.0,
+                query: "database",
+              },
+            ],
+          });
+        }
 
-      // Both should return results
-      expect(memories.length).toBeGreaterThanOrEqual(0);
-      expect(boostedMemories.length).toBeGreaterThanOrEqual(0);
-    });
+        // Recall with usefulness boosting
+        const boostedMemories = await client.recall({
+          bankId: testBankId,
+          query: "database",
+          boostByUsefulness: true,
+          usefulnessWeight: 0.3,
+        });
+
+        console.log("Boosted recall results:", boostedMemories.length);
+
+        // Both should return results
+        expect(memories.length).toBeGreaterThanOrEqual(0);
+        expect(boostedMemories.length).toBeGreaterThanOrEqual(0);
+      },
+    );
   });
 });

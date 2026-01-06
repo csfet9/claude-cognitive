@@ -13,7 +13,10 @@ import {
   getDetectionBreakdown,
   type FactScore,
 } from "../../../src/feedback/scorer.js";
-import type { Detection, DetectionResults } from "../../../src/feedback/detector.js";
+import type {
+  Detection,
+  DetectionResults,
+} from "../../../src/feedback/detector.js";
 
 describe("calculateVerdict", () => {
   it("should return 'used' for high positive score", () => {
@@ -55,10 +58,20 @@ describe("aggregateDetections", () => {
   it("should aggregate positive detections", () => {
     const detections: DetectionResults = {
       explicit: [
-        { factId: "fact-1", detectionType: "explicit_reference", confidence: 0.95, evidence: {} },
+        {
+          factId: "fact-1",
+          detectionType: "explicit_reference",
+          confidence: 0.95,
+          evidence: {},
+        },
       ],
       semantic: [
-        { factId: "fact-1", detectionType: "semantic_match", confidence: 0.5, evidence: {} },
+        {
+          factId: "fact-1",
+          detectionType: "semantic_match",
+          confidence: 0.5,
+          evidence: {},
+        },
       ],
       behavioral: [],
       negative: [],
@@ -81,7 +94,9 @@ describe("aggregateDetections", () => {
       negative: [
         {
           factId: "fact-1",
-          signals: [{ type: "low_position", weight: 0.3, detail: "Position 20" }],
+          signals: [
+            { type: "low_position", weight: 0.3, detail: "Position 20" },
+          ],
           ignoreConfidence: 0.5,
         },
       ],
@@ -96,7 +111,12 @@ describe("aggregateDetections", () => {
   it("should calculate correct verdict for mixed signals", () => {
     const detections: DetectionResults = {
       explicit: [
-        { factId: "fact-1", detectionType: "explicit_reference", confidence: 0.8, evidence: {} },
+        {
+          factId: "fact-1",
+          detectionType: "explicit_reference",
+          confidence: 0.8,
+          evidence: {},
+        },
       ],
       semantic: [],
       behavioral: [],
@@ -118,8 +138,18 @@ describe("aggregateDetections", () => {
   it("should sort by confidence descending", () => {
     const detections: DetectionResults = {
       explicit: [
-        { factId: "fact-1", detectionType: "explicit_reference", confidence: 0.5, evidence: {} },
-        { factId: "fact-2", detectionType: "explicit_reference", confidence: 0.9, evidence: {} },
+        {
+          factId: "fact-1",
+          detectionType: "explicit_reference",
+          confidence: 0.5,
+          evidence: {},
+        },
+        {
+          factId: "fact-2",
+          detectionType: "explicit_reference",
+          confidence: 0.9,
+          evidence: {},
+        },
       ],
       semantic: [],
       behavioral: [],
@@ -148,13 +178,28 @@ describe("aggregateDetections", () => {
   it("should cap scores at 1.0", () => {
     const detections: DetectionResults = {
       explicit: [
-        { factId: "fact-1", detectionType: "explicit_reference", confidence: 0.95, evidence: {} },
+        {
+          factId: "fact-1",
+          detectionType: "explicit_reference",
+          confidence: 0.95,
+          evidence: {},
+        },
       ],
       semantic: [
-        { factId: "fact-1", detectionType: "semantic_match", confidence: 0.7, evidence: {} },
+        {
+          factId: "fact-1",
+          detectionType: "semantic_match",
+          confidence: 0.7,
+          evidence: {},
+        },
       ],
       behavioral: [
-        { factId: "fact-1", detectionType: "file_access_correlation", confidence: 0.5, evidence: {} },
+        {
+          factId: "fact-1",
+          detectionType: "file_access_correlation",
+          confidence: 0.5,
+          evidence: {},
+        },
       ],
       negative: [],
     };
@@ -235,7 +280,13 @@ describe("signal types", () => {
         verdict: "used",
         confidence: 1.0,
         scores: { used: 1.0, ignored: 0 },
-        detections: [{ detectionType: "explicit_reference", confidence: 0.95, evidence: {} }],
+        detections: [
+          {
+            detectionType: "explicit_reference",
+            confidence: 0.95,
+            evidence: {},
+          },
+        ],
       },
     ];
 
@@ -268,7 +319,10 @@ describe("signal types", () => {
     expect(result[0].signalType).toBe("ignored");
 
     // Manually convert to not_helpful (simulating user explicit negative feedback)
-    const notHelpfulSignal = { ...result[0], signalType: "not_helpful" as const };
+    const notHelpfulSignal = {
+      ...result[0],
+      signalType: "not_helpful" as const,
+    };
     expect(notHelpfulSignal.signalType).toBe("not_helpful");
   });
 
@@ -300,9 +354,27 @@ describe("signal types", () => {
 
   it("should handle mixed signal confidence levels", () => {
     const factScores: FactScore[] = [
-      { factId: "1", verdict: "used", confidence: 1.0, scores: { used: 1.0, ignored: 0 }, detections: [] },
-      { factId: "2", verdict: "used", confidence: 0.7, scores: { used: 0.7, ignored: 0 }, detections: [] },
-      { factId: "3", verdict: "ignored", confidence: 0.5, scores: { used: 0, ignored: 0.5 }, detections: [] },
+      {
+        factId: "1",
+        verdict: "used",
+        confidence: 1.0,
+        scores: { used: 1.0, ignored: 0 },
+        detections: [],
+      },
+      {
+        factId: "2",
+        verdict: "used",
+        confidence: 0.7,
+        scores: { used: 0.7, ignored: 0 },
+        detections: [],
+      },
+      {
+        factId: "3",
+        verdict: "ignored",
+        confidence: 0.5,
+        scores: { used: 0, ignored: 0.5 },
+        detections: [],
+      },
     ];
 
     const result = prepareFeedback(factScores, "test");
@@ -317,10 +389,34 @@ describe("signal types", () => {
 describe("summarizeFeedback", () => {
   it("should count verdicts correctly", () => {
     const factScores: FactScore[] = [
-      { factId: "1", verdict: "used", confidence: 0.8, scores: { used: 0.8, ignored: 0 }, detections: [] },
-      { factId: "2", verdict: "used", confidence: 0.9, scores: { used: 0.9, ignored: 0 }, detections: [] },
-      { factId: "3", verdict: "ignored", confidence: 0.5, scores: { used: 0, ignored: 0.5 }, detections: [] },
-      { factId: "4", verdict: "uncertain", confidence: 0.1, scores: { used: 0.1, ignored: 0.1 }, detections: [] },
+      {
+        factId: "1",
+        verdict: "used",
+        confidence: 0.8,
+        scores: { used: 0.8, ignored: 0 },
+        detections: [],
+      },
+      {
+        factId: "2",
+        verdict: "used",
+        confidence: 0.9,
+        scores: { used: 0.9, ignored: 0 },
+        detections: [],
+      },
+      {
+        factId: "3",
+        verdict: "ignored",
+        confidence: 0.5,
+        scores: { used: 0, ignored: 0.5 },
+        detections: [],
+      },
+      {
+        factId: "4",
+        verdict: "uncertain",
+        confidence: 0.1,
+        scores: { used: 0.1, ignored: 0.1 },
+        detections: [],
+      },
     ];
 
     const result = summarizeFeedback(factScores);
@@ -333,8 +429,20 @@ describe("summarizeFeedback", () => {
 
   it("should calculate usage rate", () => {
     const factScores: FactScore[] = [
-      { factId: "1", verdict: "used", confidence: 0.8, scores: { used: 0.8, ignored: 0 }, detections: [] },
-      { factId: "2", verdict: "ignored", confidence: 0.5, scores: { used: 0, ignored: 0.5 }, detections: [] },
+      {
+        factId: "1",
+        verdict: "used",
+        confidence: 0.8,
+        scores: { used: 0.8, ignored: 0 },
+        detections: [],
+      },
+      {
+        factId: "2",
+        verdict: "ignored",
+        confidence: 0.5,
+        scores: { used: 0, ignored: 0.5 },
+        detections: [],
+      },
     ];
 
     const result = summarizeFeedback(factScores);
@@ -344,9 +452,27 @@ describe("summarizeFeedback", () => {
 
   it("should calculate average confidences", () => {
     const factScores: FactScore[] = [
-      { factId: "1", verdict: "used", confidence: 0.8, scores: { used: 0.8, ignored: 0 }, detections: [] },
-      { factId: "2", verdict: "used", confidence: 0.6, scores: { used: 0.6, ignored: 0 }, detections: [] },
-      { factId: "3", verdict: "ignored", confidence: 0.5, scores: { used: 0, ignored: 0.5 }, detections: [] },
+      {
+        factId: "1",
+        verdict: "used",
+        confidence: 0.8,
+        scores: { used: 0.8, ignored: 0 },
+        detections: [],
+      },
+      {
+        factId: "2",
+        verdict: "used",
+        confidence: 0.6,
+        scores: { used: 0.6, ignored: 0 },
+        detections: [],
+      },
+      {
+        factId: "3",
+        verdict: "ignored",
+        confidence: 0.5,
+        scores: { used: 0, ignored: 0.5 },
+        detections: [],
+      },
     ];
 
     const result = summarizeFeedback(factScores);
@@ -357,8 +483,26 @@ describe("summarizeFeedback", () => {
 
   it("should include top used and ignored facts", () => {
     const factScores: FactScore[] = [
-      { factId: "1", verdict: "used", confidence: 0.9, scores: { used: 0.9, ignored: 0 }, detections: [{ detectionType: "explicit_reference", confidence: 0.9, evidence: {} } as Detection] },
-      { factId: "2", verdict: "ignored", confidence: 0.7, scores: { used: 0, ignored: 0.7 }, detections: [] },
+      {
+        factId: "1",
+        verdict: "used",
+        confidence: 0.9,
+        scores: { used: 0.9, ignored: 0 },
+        detections: [
+          {
+            detectionType: "explicit_reference",
+            confidence: 0.9,
+            evidence: {},
+          } as Detection,
+        ],
+      },
+      {
+        factId: "2",
+        verdict: "ignored",
+        confidence: 0.7,
+        scores: { used: 0, ignored: 0.7 },
+        detections: [],
+      },
     ];
 
     const result = summarizeFeedback(factScores);
@@ -399,9 +543,27 @@ describe("summarizeFeedback", () => {
 describe("filterHighConfidence", () => {
   it("should filter by confidence threshold", () => {
     const factScores: FactScore[] = [
-      { factId: "1", verdict: "used", confidence: 0.9, scores: { used: 0.9, ignored: 0 }, detections: [] },
-      { factId: "2", verdict: "used", confidence: 0.3, scores: { used: 0.3, ignored: 0 }, detections: [] },
-      { factId: "3", verdict: "ignored", confidence: 0.6, scores: { used: 0, ignored: 0.6 }, detections: [] },
+      {
+        factId: "1",
+        verdict: "used",
+        confidence: 0.9,
+        scores: { used: 0.9, ignored: 0 },
+        detections: [],
+      },
+      {
+        factId: "2",
+        verdict: "used",
+        confidence: 0.3,
+        scores: { used: 0.3, ignored: 0 },
+        detections: [],
+      },
+      {
+        factId: "3",
+        verdict: "ignored",
+        confidence: 0.6,
+        scores: { used: 0, ignored: 0.6 },
+        detections: [],
+      },
     ];
 
     const result = filterHighConfidence(factScores, 0.5);
@@ -412,7 +574,13 @@ describe("filterHighConfidence", () => {
 
   it("should exclude uncertain verdicts", () => {
     const factScores: FactScore[] = [
-      { factId: "1", verdict: "uncertain", confidence: 0.9, scores: { used: 0.9, ignored: 0.9 }, detections: [] },
+      {
+        factId: "1",
+        verdict: "uncertain",
+        confidence: 0.9,
+        scores: { used: 0.9, ignored: 0.9 },
+        detections: [],
+      },
     ];
 
     const result = filterHighConfidence(factScores, 0.5);
@@ -422,8 +590,20 @@ describe("filterHighConfidence", () => {
 
   it("should use default threshold of 0.5", () => {
     const factScores: FactScore[] = [
-      { factId: "1", verdict: "used", confidence: 0.5, scores: { used: 0.5, ignored: 0 }, detections: [] },
-      { factId: "2", verdict: "used", confidence: 0.4, scores: { used: 0.4, ignored: 0 }, detections: [] },
+      {
+        factId: "1",
+        verdict: "used",
+        confidence: 0.5,
+        scores: { used: 0.5, ignored: 0 },
+        detections: [],
+      },
+      {
+        factId: "2",
+        verdict: "used",
+        confidence: 0.4,
+        scores: { used: 0.4, ignored: 0 },
+        detections: [],
+      },
     ];
 
     const result = filterHighConfidence(factScores);
@@ -442,7 +622,11 @@ describe("getDetectionBreakdown", () => {
         confidence: 0.9,
         scores: { used: 0.9, ignored: 0 },
         detections: [
-          { detectionType: "explicit_reference", confidence: 0.9, evidence: {} },
+          {
+            detectionType: "explicit_reference",
+            confidence: 0.9,
+            evidence: {},
+          },
           { detectionType: "semantic_match", confidence: 0.5, evidence: {} },
         ],
       },

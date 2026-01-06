@@ -39,7 +39,11 @@ import type { FeedbackDetectionConfig } from "../types.js";
 
 export interface Detection {
   factId: string;
-  detectionType: "explicit_reference" | "semantic_match" | "file_access_correlation" | "task_topic_correlation";
+  detectionType:
+    | "explicit_reference"
+    | "semantic_match"
+    | "file_access_correlation"
+    | "task_topic_correlation";
   confidence: number;
   evidence: Record<string, unknown>;
 }
@@ -122,10 +126,15 @@ export function detectExplicitReferences(
         }
       }
 
-      const surroundingContext = response.slice(contextStart, contextEnd).trim();
+      const surroundingContext = response
+        .slice(contextStart, contextEnd)
+        .trim();
 
       // Find best matching fact based on context
-      const matchedFact = findBestMatchingFact(surroundingContext, recalledFacts);
+      const matchedFact = findBestMatchingFact(
+        surroundingContext,
+        recalledFacts,
+      );
 
       if (matchedFact && !detectedFactIds.has(matchedFact.factId)) {
         detectedFactIds.add(matchedFact.factId);
@@ -196,7 +205,11 @@ export function detectSemanticMatches(
   const factDetections = new Map<string, Detection>();
 
   // Split response into chunks for comparison
-  const chunks = splitIntoChunks(response, CHUNK_MAX_WORDS, CHUNK_OVERLAP_WORDS);
+  const chunks = splitIntoChunks(
+    response,
+    CHUNK_MAX_WORDS,
+    CHUNK_OVERLAP_WORDS,
+  );
 
   // Compare each chunk to each fact
   for (const chunk of chunks) {
@@ -205,7 +218,10 @@ export function detectSemanticMatches(
       const similarity = calculateSimilarity(chunk, factText);
 
       if (similarity >= threshold) {
-        const confidence = Math.min(similarity * SEMANTIC_MAX_CONFIDENCE, SEMANTIC_MAX_CONFIDENCE);
+        const confidence = Math.min(
+          similarity * SEMANTIC_MAX_CONFIDENCE,
+          SEMANTIC_MAX_CONFIDENCE,
+        );
 
         // Keep best detection per fact
         const existing = factDetections.get(fact.factId);
@@ -393,12 +409,66 @@ export function extractTopics(text: string): Set<string> {
 
   // Common stop words to filter out
   const stopWords = new Set([
-    "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
-    "of", "with", "by", "from", "as", "is", "was", "are", "were", "be",
-    "been", "being", "have", "has", "had", "do", "does", "did", "will",
-    "would", "could", "should", "may", "might", "must", "shall", "can",
-    "this", "that", "these", "those", "it", "its", "they", "them", "their",
-    "we", "us", "our", "you", "your", "i", "me", "my", "he", "she", "him", "her", "his",
+    "the",
+    "a",
+    "an",
+    "and",
+    "or",
+    "but",
+    "in",
+    "on",
+    "at",
+    "to",
+    "for",
+    "of",
+    "with",
+    "by",
+    "from",
+    "as",
+    "is",
+    "was",
+    "are",
+    "were",
+    "be",
+    "been",
+    "being",
+    "have",
+    "has",
+    "had",
+    "do",
+    "does",
+    "did",
+    "will",
+    "would",
+    "could",
+    "should",
+    "may",
+    "might",
+    "must",
+    "shall",
+    "can",
+    "this",
+    "that",
+    "these",
+    "those",
+    "it",
+    "its",
+    "they",
+    "them",
+    "their",
+    "we",
+    "us",
+    "our",
+    "you",
+    "your",
+    "i",
+    "me",
+    "my",
+    "he",
+    "she",
+    "him",
+    "her",
+    "his",
   ]);
 
   const words = text
@@ -435,8 +505,12 @@ export function detectNegativeSignals(
   }
 
   const negativeSignals: NegativeSignal[] = [];
-  const sessionTopics = sessionActivity?.summary ? extractTopics(sessionActivity.summary) : new Set<string>();
-  const accessedFiles = new Set((sessionActivity?.filesAccessed || []).map((f) => f.toLowerCase()));
+  const sessionTopics = sessionActivity?.summary
+    ? extractTopics(sessionActivity.summary)
+    : new Set<string>();
+  const accessedFiles = new Set(
+    (sessionActivity?.filesAccessed || []).map((f) => f.toLowerCase()),
+  );
 
   for (const fact of recalledFacts) {
     // Skip facts already detected as used
@@ -471,7 +545,9 @@ export function detectNegativeSignals(
     // 3. Files not accessed signal
     const factFiles = extractFileReferences(factText);
     if (factFiles.length > 0) {
-      const filesAccessed = factFiles.filter((f) => accessedFiles.has(f.toLowerCase()));
+      const filesAccessed = factFiles.filter((f) =>
+        accessedFiles.has(f.toLowerCase()),
+      );
       if (filesAccessed.length === 0) {
         signals.push({
           type: "files_not_accessed",
@@ -518,17 +594,27 @@ export function runDetectionPipeline(
   // Run enabled detection strategies
   if (conversationText) {
     if (config.explicit !== false) {
-      results.explicit = detectExplicitReferences(conversationText, recalledFacts);
+      results.explicit = detectExplicitReferences(
+        conversationText,
+        recalledFacts,
+      );
     }
 
     if (config.semantic !== false) {
       const threshold = config.semanticThreshold || SEMANTIC_THRESHOLD;
-      results.semantic = detectSemanticMatches(conversationText, recalledFacts, threshold);
+      results.semantic = detectSemanticMatches(
+        conversationText,
+        recalledFacts,
+        threshold,
+      );
     }
   }
 
   if (sessionActivity && config.behavioral !== false) {
-    results.behavioral = detectBehavioralSignals(sessionActivity, recalledFacts);
+    results.behavioral = detectBehavioralSignals(
+      sessionActivity,
+      recalledFacts,
+    );
   }
 
   // Collect all used fact IDs for negative signal detection
@@ -539,7 +625,11 @@ export function runDetectionPipeline(
   ]);
 
   // Run negative signal detection
-  results.negative = detectNegativeSignals(sessionActivity, recalledFacts, usedFactIds);
+  results.negative = detectNegativeSignals(
+    sessionActivity,
+    recalledFacts,
+    usedFactIds,
+  );
 
   return results;
 }

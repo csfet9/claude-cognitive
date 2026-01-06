@@ -460,7 +460,9 @@ export function registerProcessSessionCommand(cli: CAC): void {
         const filterConfig = config.retainFilter ?? DEFAULT_RETAIN_FILTER;
 
         // Read transcript
-        const { transcript: rawTranscript, sessionId } = await readTranscript(options.transcript);
+        const { transcript: rawTranscript, sessionId } = await readTranscript(
+          options.transcript,
+        );
         let transcript = rawTranscript;
 
         if (!transcript || transcript.trim().length === 0) {

@@ -53,7 +53,12 @@ describe("getRecallSessionPath", () => {
   it("should return the correct path", () => {
     const result = getRecallSessionPath("/project");
     expect(result).toBe(
-      path.join("/project", ".claude", "feedback-sessions", ".recall-session.json"),
+      path.join(
+        "/project",
+        ".claude",
+        "feedback-sessions",
+        ".recall-session.json",
+      ),
     );
   });
 });
@@ -98,7 +103,10 @@ describe("createRecallSession", () => {
     expect(session.recall.queryType).toBe("fixed");
     expect(session.recall.parameters.limit).toBe(20);
     expect(session.recall.parameters.budget).toBe("high");
-    expect(session.recall.parameters.factTypes).toEqual(["world", "experience"]);
+    expect(session.recall.parameters.factTypes).toEqual([
+      "world",
+      "experience",
+    ]);
   });
 
   it("should detect git branch when .git exists", () => {
@@ -214,7 +222,11 @@ describe("createRecallSession", () => {
     );
     mockFs.readFileSync.mockReturnValue(
       JSON.stringify({
-        dependencies: { expo: "~49.0.0", react: "^18.0.0", "react-native": "0.72.0" },
+        dependencies: {
+          expo: "~49.0.0",
+          react: "^18.0.0",
+          "react-native": "0.72.0",
+        },
       }),
     );
 
@@ -367,7 +379,12 @@ describe("loadRecallSession", () => {
       recall: {
         query: "test",
         queryType: "fixed",
-        parameters: { limit: 20, budget: "high", factTypes: [], timeWindow: null },
+        parameters: {
+          limit: 20,
+          budget: "high",
+          factTypes: [],
+          timeWindow: null,
+        },
         context: { branch: null, recentFiles: [], projectType: null },
       },
       factsRecalled: [],
@@ -391,7 +408,12 @@ describe("loadRecallSession", () => {
       recall: {
         query: "test",
         queryType: "fixed",
-        parameters: { limit: 20, budget: "high", factTypes: [], timeWindow: null },
+        parameters: {
+          limit: 20,
+          budget: "high",
+          factTypes: [],
+          timeWindow: null,
+        },
         context: { branch: null, recentFiles: [], projectType: null },
       },
       factsRecalled: [],
@@ -416,7 +438,12 @@ describe("loadRecallSession", () => {
       recall: {
         query: "test",
         queryType: "fixed",
-        parameters: { limit: 20, budget: "high", factTypes: [], timeWindow: null },
+        parameters: {
+          limit: 20,
+          budget: "high",
+          factTypes: [],
+          timeWindow: null,
+        },
         context: { branch: null, recentFiles: [], projectType: null },
       },
       factsRecalled: [],
@@ -475,11 +502,22 @@ describe("loadRecallSession", () => {
       recall: {
         query: "test",
         queryType: "fixed",
-        parameters: { limit: 20, budget: "high", factTypes: [], timeWindow: null },
+        parameters: {
+          limit: 20,
+          budget: "high",
+          factTypes: [],
+          timeWindow: null,
+        },
         context: { branch: null, recentFiles: [], projectType: null },
       },
       factsRecalled: [
-        { factId: "fact-1", text: "Test fact", factType: "world", score: 0.9, position: 1 },
+        {
+          factId: "fact-1",
+          text: "Test fact",
+          factType: "world",
+          score: 0.9,
+          position: 1,
+        },
       ],
       totalFacts: 1,
       totalTokens: 10,

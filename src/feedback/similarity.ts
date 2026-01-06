@@ -44,7 +44,10 @@ export function calculateSimilarity(text1: string, text2: string): number {
 /**
  * Calculate Jaccard similarity between two sets
  */
-export function jaccardSimilarity(set1: Set<string>, set2: Set<string>): number {
+export function jaccardSimilarity(
+  set1: Set<string>,
+  set2: Set<string>,
+): number {
   if (set1.size === 0 && set2.size === 0) return 1;
   if (set1.size === 0 || set2.size === 0) return 0;
 
