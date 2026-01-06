@@ -8,108 +8,6 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import type { CAC } from "cac";
 
-/**
- * Get the path to the stop hook wrapper script.
- */
-function getStopHookScriptPath(): string {
-  return join(homedir(), ".local", "bin", "claude-cognitive-stop-hook.sh");
-}
-
-
-/**
- * Create the stop hook wrapper script.
- * Claude Code passes transcript_path via stdin JSON, not as env var.
- */
-async function createStopHookScript(): Promise<string> {
-  const scriptPath = getStopHookScriptPath();
-  const scriptDir = join(homedir(), ".local", "bin");
-
-  // Ensure directory exists
-  await mkdir(scriptDir, { recursive: true });
-
-  const scriptContent = `#!/bin/bash
-# Claude Code Stop hook wrapper for claude-cognitive
-# Only processes MAIN sessions in projects with .claudemindrc
-# Skips agent sessions and unconfigured projects
-
-# Read stdin
-INPUT=$(cat)
-
-# Extract fields using jq (or fallback to grep/sed)
-if command -v jq &> /dev/null; then
-  TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // empty')
-  PROJECT_DIR=$(echo "$INPUT" | jq -r '.cwd // empty')
-  SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
-else
-  TRANSCRIPT_PATH=$(echo "$INPUT" | grep -o '"transcript_path":"[^"]*"' | cut -d'"' -f4)
-  PROJECT_DIR=$(echo "$INPUT" | grep -o '"cwd":"[^"]*"' | cut -d'"' -f4)
-  SESSION_ID=$(echo "$INPUT" | grep -o '"session_id":"[^"]*"' | cut -d'"' -f4)
-fi
-
-# Exit early if no transcript path
-if [ -z "$TRANSCRIPT_PATH" ] || [ ! -f "$TRANSCRIPT_PATH" ]; then
-  exit 0
-fi
-
-# FILTER 1: Skip agent sessions (filename starts with "agent-")
-FILENAME=$(basename "$TRANSCRIPT_PATH")
-if [[ "$FILENAME" == agent-* ]]; then
-  exit 0
-fi
-
-# FILTER 2: Skip projects without .claudemindrc
-if [ -z "$PROJECT_DIR" ] || [ ! -f "$PROJECT_DIR/.claudemindrc" ]; then
-  exit 0
-fi
-
-# Process main session (pass project dir to ensure correct context)
-claude-cognitive process-session --project "$PROJECT_DIR" --transcript "$TRANSCRIPT_PATH"
-
-# Clean up ONLY this session's entries from buffer (not other ongoing sessions)
-if [ -n "$SESSION_ID" ]; then
-  BUFFER_FILE="$PROJECT_DIR/.claude/.session-buffer.jsonl"
-  if [ -f "$BUFFER_FILE" ]; then
-    if command -v jq &> /dev/null; then
-      # Filter out entries matching this session_id
-      TEMP_FILE=$(mktemp)
-      jq -c "select(.session_id != \\"$SESSION_ID\\")" "$BUFFER_FILE" > "$TEMP_FILE" 2>/dev/null || true
-      if [ -s "$TEMP_FILE" ]; then
-        mv "$TEMP_FILE" "$BUFFER_FILE"
-      else
-        rm -f "$BUFFER_FILE" "$TEMP_FILE"
-      fi
-    else
-      # Without jq, use grep to filter (less reliable but works)
-      TEMP_FILE=$(mktemp)
-      grep -v "\\"session_id\\":\\"$SESSION_ID\\"" "$BUFFER_FILE" > "$TEMP_FILE" 2>/dev/null || true
-      if [ -s "$TEMP_FILE" ]; then
-        mv "$TEMP_FILE" "$BUFFER_FILE"
-      else
-        rm -f "$BUFFER_FILE" "$TEMP_FILE"
-      fi
-    fi
-  fi
-fi
-`;
-
-  await writeFile(scriptPath, scriptContent, { mode: 0o755 });
-  return scriptPath;
-}
-
-
-/**
- * Check if the stop hook script exists.
- */
-async function stopHookScriptExists(): Promise<boolean> {
-  try {
-    await access(getStopHookScriptPath());
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-
 const COLORS = {
   reset: "\x1b[0m",
   green: "\x1b[32m",
@@ -253,82 +151,31 @@ export function registerUpdateCommand(cli: CAC): void {
       // 3. Check/update hooks configuration
       const settings = await readJsonFile(settingsPath);
       const hooks = (settings.hooks as Record<string, unknown[]>) || {};
-      const scriptPath = getStopHookScriptPath();
-
-      // Helper to check if a hook command exists
-      const hasHookCommand = (
-        hooksArray: Array<{ matcher: string; hooks: unknown[] }>,
-        commandSubstring: string,
-      ): boolean => {
-        return hooksArray.some((entry) =>
-          entry.hooks?.some((h: unknown) => {
-            const hook = h as { command?: string };
-            return hook.command?.includes(commandSubstring);
-          }),
-        );
-      };
 
       // ============================================
-      // Check/update Stop hook (session end)
+      // Remove legacy Stop hooks from global settings
+      // Stop hooks should NOT be in global settings - they cause the hook to run
+      // on EVERY session end, not just /exit. Project-local hooks handle this.
       // ============================================
-      const scriptExists = await stopHookScriptExists();
       const stopHooks =
         (hooks.Stop as Array<{ matcher: string; hooks: unknown[] }>) || [];
-      const hasWrapperHook = hasHookCommand(
-        stopHooks,
-        "claude-cognitive-stop-hook.sh",
-      );
-      const hasOldStyleHook = hasHookCommand(stopHooks, '$TRANSCRIPT_PATH"');
+      const hasStopHook = stopHooks.length > 0;
 
-      if (!scriptExists || !hasWrapperHook || hasOldStyleHook) {
+      if (hasStopHook) {
         updatesNeeded++;
         if (dryRun) {
-          if (!scriptExists) {
-            printWarn("Stop hook wrapper script not found");
-          }
-          if (!hasWrapperHook) {
-            printWarn("Stop hook not using wrapper script");
-          }
-          if (hasOldStyleHook) {
-            printWarn(
-              "Old-style Stop hook needs migration (uses $TRANSCRIPT_PATH env var which doesn't work)",
-            );
-          }
-        } else {
-          // Create/update the wrapper script
-          await createStopHookScript();
-          printSuccess("Created/updated stop hook wrapper script");
-
-          // Remove old-style hooks that use $TRANSCRIPT_PATH env var
-          const filteredStopHooks = stopHooks.filter(
-            (entry) =>
-              !entry.hooks?.some((h: unknown) => {
-                const hook = h as { command?: string };
-                return hook.command?.includes('$TRANSCRIPT_PATH"');
-              }),
+          printWarn(
+            "Legacy Stop hook found in global settings (will be removed - causes hooks on every response)",
           );
-
-          // Add wrapper script hook if not present
-          if (
-            !hasHookCommand(filteredStopHooks, "claude-cognitive-stop-hook.sh")
-          ) {
-            filteredStopHooks.push({
-              matcher: "",
-              hooks: [
-                {
-                  type: "command",
-                  command: scriptPath,
-                },
-              ],
-            });
-          }
-
-          hooks.Stop = filteredStopHooks;
-          printSuccess("Updated Stop hook to use wrapper script");
+        } else {
+          delete hooks.Stop;
+          printSuccess(
+            "Removed legacy Stop hook from global settings (use project-local hooks instead)",
+          );
           updatesApplied++;
         }
       } else {
-        printInfo("Stop hook already configured correctly");
+        printInfo("No legacy Stop hooks in global settings");
       }
 
       // ============================================
