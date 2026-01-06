@@ -420,7 +420,15 @@ if [ -z "$PROJECT_DIR" ] || [ ! -f "$PROJECT_DIR/.claudemindrc" ]; then
 fi
 
 # Process main session (pass project dir to ensure correct context)
-claude-cognitive process-session --project "$PROJECT_DIR" --transcript "$TRANSCRIPT_PATH"
+# Use timeout to prevent hanging if Hindsight is slow (2 minute limit on Linux)
+# Note: timeout may not be available on macOS - script continues without timeout
+if command -v timeout &> /dev/null; then
+  timeout 120 claude-cognitive process-session --project "$PROJECT_DIR" --transcript "$TRANSCRIPT_PATH" || true
+elif command -v gtimeout &> /dev/null; then
+  gtimeout 120 claude-cognitive process-session --project "$PROJECT_DIR" --transcript "$TRANSCRIPT_PATH" || true
+else
+  claude-cognitive process-session --project "$PROJECT_DIR" --transcript "$TRANSCRIPT_PATH" || true
+fi
 
 # Clean up ONLY this session's entries from buffer (not other ongoing sessions)
 # Use flock to prevent race conditions when multiple sessions end simultaneously

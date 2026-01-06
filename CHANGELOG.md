@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.8] - 2026-01-06
+
+### Fixed
+
+- **macOS compatibility** - Fixed `timeout` command not found error on macOS
+  - Now checks for `timeout` (Linux), `gtimeout` (macOS with coreutils), or runs
+    without timeout (macOS without coreutils)
+  - Session end waits dynamically for Hindsight on systems without timeout
+
 ## [0.4.7] - 2026-01-06
 
 ### Changed
@@ -17,7 +26,7 @@ and this project adheres to
   - SessionEnd hook receives structured JSON with `reason` field
 
 - **Shell script hardening** - Improved reliability and safety of hook scripts
-  - Added 30-second timeout to prevent hanging if Hindsight is slow
+  - Added 2-minute timeout to prevent hanging if Hindsight is slow
   - Added `|| true` to ensure hooks never block Claude Code
   - Added explicit `exit 0` at end of scripts
   - Fixed misleading message about `/exit` → now says "when session ends"
