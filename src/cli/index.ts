@@ -4,6 +4,7 @@
  */
 
 import { cac, type CAC } from "cac";
+import { createRequire } from "module";
 import { handleError } from "./utils/index.js";
 import {
   registerInitCommand,
@@ -27,8 +28,10 @@ import { registerInjectContextCommand } from "../hooks/inject-context.js";
 import { registerProcessSessionCommand } from "../hooks/process-session.js";
 import { registerBufferMessageCommand } from "../hooks/buffer-message.js";
 
-// Get version from package.json
-const VERSION = "0.4.5";
+// Get version from package.json dynamically
+const require = createRequire(import.meta.url);
+const pkg = require("../../package.json") as { version: string };
+const VERSION = pkg.version;
 
 /**
  * Create and configure the CLI.
