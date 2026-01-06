@@ -15,12 +15,6 @@ function getStopHookScriptPath(): string {
   return join(homedir(), ".local", "bin", "claude-cognitive-stop-hook.sh");
 }
 
-/**
- * Get the path to the start hook wrapper script.
- */
-function getStartHookScriptPath(): string {
-  return join(homedir(), ".local", "bin", "claude-cognitive-start-hook.sh");
-}
 
 /**
  * Create the stop hook wrapper script.
@@ -102,44 +96,6 @@ fi
   return scriptPath;
 }
 
-/**
- * Create the start hook wrapper script.
- * Claude Code passes cwd via stdin JSON.
- */
-async function createStartHookScript(): Promise<string> {
-  const scriptPath = getStartHookScriptPath();
-  const scriptDir = join(homedir(), ".local", "bin");
-
-  // Ensure directory exists
-  await mkdir(scriptDir, { recursive: true });
-
-  const scriptContent = `#!/bin/bash
-# Claude Code UserPromptSubmit hook wrapper for claude-cognitive
-# Injects context from Hindsight at session start
-# Skips projects without .claudemindrc
-
-# Read stdin
-INPUT=$(cat)
-
-# Extract cwd using jq (or fallback to grep/sed)
-if command -v jq &> /dev/null; then
-  PROJECT_DIR=$(echo "$INPUT" | jq -r '.cwd // empty')
-else
-  PROJECT_DIR=$(echo "$INPUT" | grep -o '"cwd":"[^"]*"' | cut -d'"' -f4)
-fi
-
-# Skip if no project dir or no .claudemindrc
-if [ -z "$PROJECT_DIR" ] || [ ! -f "$PROJECT_DIR/.claudemindrc" ]; then
-  exit 0
-fi
-
-# Inject context (outputs to stdout which Claude Code injects)
-claude-cognitive inject-context --project "$PROJECT_DIR"
-`;
-
-  await writeFile(scriptPath, scriptContent, { mode: 0o755 });
-  return scriptPath;
-}
 
 /**
  * Check if the stop hook script exists.
@@ -153,17 +109,6 @@ async function stopHookScriptExists(): Promise<boolean> {
   }
 }
 
-/**
- * Check if the start hook script exists.
- */
-async function startHookScriptExists(): Promise<boolean> {
-  try {
-    await access(getStartHookScriptPath());
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 const COLORS = {
   reset: "\x1b[0m",
@@ -387,74 +332,22 @@ export function registerUpdateCommand(cli: CAC): void {
       }
 
       // ============================================
-      // Check/update UserPromptSubmit hook (context injection)
+      // Remove legacy UserPromptSubmit hooks (context now injected via SessionStart)
       // ============================================
-      const startScriptExists = await startHookScriptExists();
-      const startScriptPath = getStartHookScriptPath();
-      let userPromptHooks =
-        (hooks.UserPromptSubmit as Array<{
-          matcher: string;
-          hooks: unknown[];
-        }>) || [];
-      const hasStartHookScript = hasHookCommand(
-        userPromptHooks,
-        "claude-cognitive-start-hook.sh",
-      );
-      const hasOldStyleInjectHook = hasHookCommand(userPromptHooks, "$CWD");
-
-      if (!startScriptExists || !hasStartHookScript || hasOldStyleInjectHook) {
+      if (hooks.UserPromptSubmit) {
         updatesNeeded++;
         if (dryRun) {
-          if (!startScriptExists) {
-            printWarn("Start hook wrapper script not found");
-          }
-          if (!hasStartHookScript) {
-            printWarn("UserPromptSubmit hook not using wrapper script");
-          }
-          if (hasOldStyleInjectHook) {
-            printWarn(
-              "Old-style UserPromptSubmit hook needs migration (uses $CWD env var which doesn't work)",
-            );
-          }
-        } else {
-          // Create/update the wrapper script
-          await createStartHookScript();
-          printSuccess("Created/updated start hook wrapper script");
-
-          // Remove old-style hooks that use $CWD env var
-          userPromptHooks = userPromptHooks.filter(
-            (entry) =>
-              !entry.hooks?.some((h: unknown) => {
-                const hook = h as { command?: string };
-                return hook.command?.includes("$CWD");
-              }),
+          printWarn(
+            "Legacy UserPromptSubmit hook found (will be removed - now using SessionStart)",
           );
-
-          // Add wrapper script hook if not present
-          if (
-            !hasHookCommand(userPromptHooks, "claude-cognitive-start-hook.sh")
-          ) {
-            userPromptHooks.push({
-              matcher: "",
-              hooks: [
-                {
-                  type: "command",
-                  command: startScriptPath,
-                },
-              ],
-            });
-          }
-
-          hooks.UserPromptSubmit = userPromptHooks;
-          printSuccess("Updated UserPromptSubmit hook to use wrapper script");
+        } else {
+          delete hooks.UserPromptSubmit;
+          printSuccess(
+            "Removed legacy UserPromptSubmit hook (context now injected via SessionStart)",
+          );
           updatesApplied++;
         }
-      } else {
-        printInfo("UserPromptSubmit hook already configured correctly");
       }
-
-      // Note: Claude Code passes transcript_path via stdin JSON, not as env var
-      // The wrapper script reads stdin and extracts the path
 
       // Write settings if any hooks were updated
       if (!dryRun && updatesApplied > 0) {
