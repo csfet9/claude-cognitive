@@ -32,6 +32,10 @@ The interactive installer will:
 - Optionally bootstrap from your codebase
 
 ```bash
+# Update existing installation (recommended after upgrading)
+claude-cognitive update          # Update hooks and MCP configuration
+claude-cognitive update --check  # Preview changes before applying
+
 # Check status
 claude-cognitive status
 
