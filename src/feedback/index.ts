@@ -184,13 +184,15 @@ export class FeedbackService {
    * Process feedback for a session
    */
   async processFeedback(
-    sessionId: string,
+    sessionId: string | null,
     options: ProcessFeedbackOptions = {},
   ): Promise<FeedbackResult> {
+    const effectiveSessionId = sessionId ?? "unknown";
+
     if (!this.isEnabled()) {
       return {
         success: false,
-        sessionId,
+        sessionId: effectiveSessionId,
         reason: "Feedback loop disabled",
         summary: createEmptySummary(),
         factScores: [],
@@ -200,12 +202,12 @@ export class FeedbackService {
 
     try {
       // Load recall session
-      const recallSession = await loadRecallSession(sessionId, this.projectDir);
+      const recallSession = await loadRecallSession(effectiveSessionId, this.projectDir);
       if (!recallSession) {
         return {
           success: false,
-          sessionId,
-          reason: "No recall session found for this session ID",
+          sessionId: effectiveSessionId,
+          reason: `No recall session found for session ID: ${effectiveSessionId}`,
           summary: createEmptySummary(),
           factScores: [],
           feedback: [],
@@ -234,7 +236,7 @@ export class FeedbackService {
 
       return {
         success: true,
-        sessionId,
+        sessionId: effectiveSessionId,
         summary,
         factScores,
         feedback,
@@ -242,7 +244,7 @@ export class FeedbackService {
     } catch (error) {
       return {
         success: false,
-        sessionId,
+        sessionId: effectiveSessionId,
         error: error instanceof Error ? error.message : String(error),
         summary: createEmptySummary(),
         factScores: [],

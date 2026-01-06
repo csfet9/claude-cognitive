@@ -326,11 +326,33 @@ function parseTranscript(rawContent: string): string {
 }
 
 /**
+ * Extract session ID from transcript JSONL.
+ * Returns the first session_id found in metadata entries.
+ */
+function extractSessionId(rawContent: string): string | null {
+  const lines = rawContent.split("\n").filter((l) => l.trim());
+
+  for (const line of lines) {
+    try {
+      const entry = JSON.parse(line);
+      if (entry.session_id && typeof entry.session_id === "string") {
+        return entry.session_id;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
+/**
  * Read transcript from file or stdin.
+ * Returns both the parsed transcript and the extracted session ID.
  */
 async function readTranscript(
   filePath: string | undefined,
-): Promise<string | null> {
+): Promise<{ transcript: string | null; sessionId: string | null }> {
   let rawContent: string | null = null;
 
   // If file path provided, read from file
@@ -341,7 +363,7 @@ async function readTranscript(
       console.error(
         `Warning: Could not read transcript file: ${error instanceof Error ? error.message : error}`,
       );
-      return null;
+      return { transcript: null, sessionId: null };
     }
   } else if (!process.stdin.isTTY) {
     // Read from stdin if not a TTY
@@ -368,17 +390,18 @@ async function readTranscript(
     });
   }
 
-  if (!rawContent) return null;
+  if (!rawContent) return { transcript: null, sessionId: null };
 
   // Check if content is JSONL format (Claude Code transcripts)
   const firstLine = rawContent.split("\n")[0]?.trim() ?? "";
   if (firstLine.startsWith("{")) {
     // Parse JSONL and extract meaningful content
-    return parseTranscript(rawContent);
+    const sessionId = extractSessionId(rawContent);
+    return { transcript: parseTranscript(rawContent), sessionId };
   }
 
-  // Return raw content if not JSONL
-  return rawContent;
+  // Return raw content if not JSONL (no session ID available)
+  return { transcript: rawContent, sessionId: null };
 }
 
 /**
@@ -437,7 +460,8 @@ export function registerProcessSessionCommand(cli: CAC): void {
         const filterConfig = config.retainFilter ?? DEFAULT_RETAIN_FILTER;
 
         // Read transcript
-        let transcript = await readTranscript(options.transcript);
+        const { transcript: rawTranscript, sessionId } = await readTranscript(options.transcript);
+        let transcript = rawTranscript;
 
         if (!transcript || transcript.trim().length === 0) {
           result.error = "No transcript provided";
@@ -476,7 +500,7 @@ export function registerProcessSessionCommand(cli: CAC): void {
         });
 
         // Process session end (works in both online and offline mode)
-        const reflectResult = await mind.onSessionEnd(transcript);
+        const reflectResult = await mind.onSessionEnd(transcript, sessionId);
 
         result.processed = true;
         result.opinionsFormed = reflectResult?.opinions.length ?? 0;

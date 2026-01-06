@@ -393,9 +393,10 @@ export class Mind extends TypedEventEmitter {
    * 3. Emits opinion events
    *
    * @param transcript - Optional session transcript to store
+   * @param sessionId - Optional session ID (extracted from transcript, or falls back to internal)
    * @returns Reflection result, or null in degraded mode
    */
-  async onSessionEnd(transcript?: string): Promise<ReflectResult | null> {
+  async onSessionEnd(transcript?: string, sessionId?: string | null): Promise<ReflectResult | null> {
     this.assertInitialized();
 
     // Retain transcript if provided
@@ -436,9 +437,13 @@ export class Mind extends TypedEventEmitter {
     }
 
     // Process feedback if enabled
-    if (this.feedbackService && this.sessionId && transcript) {
+    // Use provided sessionId (from transcript) or fall back to internal sessionId
+    // Always use a fallback for event emission consistency
+    const feedbackSessionId = sessionId || this.sessionId;
+    const effectiveFeedbackSessionId = feedbackSessionId ?? "unknown";
+    if (this.feedbackService && transcript) {
       try {
-        const feedbackResult = await this.feedbackService.processFeedback(this.sessionId, {
+        const feedbackResult = await this.feedbackService.processFeedback(feedbackSessionId, {
           conversationText: transcript,
         });
 
@@ -451,7 +456,7 @@ export class Mind extends TypedEventEmitter {
             });
 
             this.emit("feedback:processed", {
-              sessionId: this.sessionId,
+              sessionId: effectiveFeedbackSessionId,
               summary: feedbackResult.summary,
             });
           } else if (this.feedbackQueue) {
@@ -459,7 +464,7 @@ export class Mind extends TypedEventEmitter {
             await this.feedbackQueue.enqueueBatch(feedbackResult.feedback);
 
             this.emit("feedback:queued", {
-              sessionId: this.sessionId,
+              sessionId: effectiveFeedbackSessionId,
               count: feedbackResult.feedback.length,
             });
           }
