@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.9] - 2026-01-06
+
+### Changed
+
+- **Install command now creates complete config** - Fresh installations now include
+  all modern configuration options that were previously only added by `update`
+  - Added `context.recentMemoryLimit` for controlling recalled memory count
+  - Added `retain` config (transcript filtering, length limits, code block limits)
+  - Added `feedback` config (detection settings, Hindsight integration)
+  - Added `hindsight.timeouts` (recall: 120s, reflect: 180s, retain: 90s)
+
+### Removed
+
+- **Obsolete semantic memory.md approach** - Removed from install command
+  - No longer creates `.claude/memory.md` template file
+  - No longer adds `semantic` config to `.claudemindrc`
+  - No longer injects memory instructions into CLAUDE.md
+  - The `update` command still migrates old installations by removing `semantic` config
+
 ## [0.4.8] - 2026-01-06
 
 ### Fixed

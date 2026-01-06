@@ -143,18 +143,6 @@ function createPrompt(): {
 }
 
 /**
- * Check if a file exists.
- */
-async function fileExists(path: string): Promise<boolean> {
-  try {
-    await access(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Get the Claude Code MCP config path (always project-local).
  */
 function getMcpConfigPath(projectPath: string): string {
@@ -736,47 +724,43 @@ export function registerInstallCommand(cli: CAC): void {
           hindsight: {
             host: "localhost",
             port: 8888,
+            timeouts: {
+              recall: 120000,
+              reflect: 180000,
+              retain: 90000,
+            },
           },
           bankId: answers.bankId,
           disposition: answers.disposition,
           ...(answers.background ? { background: answers.background } : {}),
-          semantic: {
-            path: ".claude/memory.md",
+          context: {
+            recentMemoryLimit: 3,
+          },
+          retain: {
+            maxTranscriptLength: 25000,
+            filterToolResults: true,
+            filterFileContents: true,
+            maxCodeBlockLines: 30,
+            minSessionLength: 500,
+          },
+          feedback: {
+            enabled: true,
+            detection: {
+              explicit: true,
+              semantic: true,
+              behavioral: true,
+              semanticThreshold: 0.5,
+            },
+            hindsight: {
+              sendFeedback: true,
+              boostByUsefulness: true,
+              boostWeight: 0.3,
+            },
           },
         };
 
         await writeFile(rcPath, JSON.stringify(config, null, 2) + "\n");
         printSuccess(`Created ${rcPath}`);
-
-        // Create .claude/memory.md
-        const semanticDir = join(answers.projectPath, ".claude");
-        const semanticPath = join(semanticDir, "memory.md");
-
-        if (!(await fileExists(semanticPath))) {
-          await mkdir(semanticDir, { recursive: true });
-          const semanticContent = `# Project Memory
-
-## Tech Stack
-
-<!-- Add your tech stack here -->
-
-## Key Decisions
-
-<!-- Document important architectural decisions -->
-
-## Critical Paths
-
-<!-- List important code paths -->
-
-## Observations
-
-<!-- Promoted insights from Hindsight -->
-`;
-          await writeFile(semanticPath, semanticContent);
-          printSuccess(`Created ${semanticPath}`);
-        } else {
-          printInfo(`${semanticPath} already exists, skipping`);
-        }
 
         // Configure Claude Code MCP (always project-local)
         if (answers.configureClaudeCode) {
@@ -842,76 +826,6 @@ export function registerInstallCommand(cli: CAC): void {
               ),
             );
           }
-        }
-
-        // Inject memory instructions into CLAUDE.md
-        const claudeMdPath = join(answers.projectPath, "CLAUDE.md");
-        if (await fileExists(claudeMdPath)) {
-          const claudeMdContent = await readFile(claudeMdPath, "utf-8");
-
-          // Check if memory section already exists
-          if (
-            !claudeMdContent.includes("## 🧠 MEMORY") &&
-            !claudeMdContent.includes("memory_recall") &&
-            !claudeMdContent.includes("Agent Orchestration")
-          ) {
-            const memorySection = `
-## 🧠 MEMORY & AGENT SYSTEM
-
-This project uses **claude-cognitive** for persistent memory and agent orchestration.
-
-### Memory Tools
-- **Before starting work:** Use \`memory_recall\` to get context about the area
-- **When asked about the project:** Use \`memory_recall\` to retrieve knowledge
-- **When forming opinions:** Use \`memory_reflect\` to reason through knowledge
-
-### Agent Orchestration
-You are the **orchestrator**. For non-trivial tasks, delegate to specialized agents:
-
-| Agent | When to Use |
-|-------|-------------|
-| \`code-explorer\` | Before implementing - explore codebase patterns, trace execution paths |
-| \`code-architect\` | Before complex changes - design solutions, create implementation plans |
-| \`code-reviewer\` | After writing code - review for bugs, security issues, pattern adherence |
-
-**Workflow for features:**
-1. **Explore** → Launch \`code-explorer\` agents to understand existing patterns
-2. **Clarify** → Ask user about unclear requirements
-3. **Design** → Launch \`code-architect\` agents for implementation plans
-4. **Implement** → Write code following the chosen architecture
-5. **Review** → Launch \`code-reviewer\` agents to check your work
-
-**Tips:**
-- Launch multiple agents in parallel with different focuses
-- Only YOU (orchestrator) access memory - pass relevant context to agents
-- Check \`.claude/agents/\` for project-specific agents
-
----
-`;
-            // Find first --- after the title and insert after it
-            const firstDividerIndex = claudeMdContent.indexOf("---");
-            let newContent: string;
-
-            if (firstDividerIndex !== -1) {
-              // Insert after the first ---
-              const insertPoint = firstDividerIndex + 3;
-              newContent =
-                claudeMdContent.slice(0, insertPoint) +
-                "\n" +
-                memorySection +
-                claudeMdContent.slice(insertPoint);
-            } else {
-              // No divider found, prepend to file
-              newContent = memorySection + "\n" + claudeMdContent;
-            }
-
-            await writeFile(claudeMdPath, newContent);
-            printSuccess("Injected memory instructions into CLAUDE.md");
-          } else {
-            printInfo("CLAUDE.md already has memory instructions");
-          }
-        } else {
-          printInfo("No CLAUDE.md found (skipping memory instructions)");
         }
 
         // Initialize Mind
