@@ -278,6 +278,9 @@ function applyEnvConfig(config: ClaudeMindConfig): ClaudeMindConfig {
   if (config.feedback !== undefined) {
     result.feedback = { ...config.feedback };
   }
+  if (config.securityReview !== undefined) {
+    result.securityReview = { ...config.securityReview };
+  }
 
   // Hindsight connection settings
   const host = process.env["HINDSIGHT_HOST"];
@@ -361,6 +364,9 @@ function cloneConfig(config: ClaudeMindConfig): ClaudeMindConfig {
   }
   if (config.feedback !== undefined) {
     result.feedback = { ...config.feedback };
+  }
+  if (config.securityReview !== undefined) {
+    result.securityReview = { ...config.securityReview };
   }
 
   return result;
