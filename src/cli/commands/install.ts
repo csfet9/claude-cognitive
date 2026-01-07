@@ -691,7 +691,7 @@ if [ -z "$STAGED_FILES" ]; then
 fi
 
 # Filter to code files only
-CODE_EXTENSIONS="\\.(ts|tsx|js|jsx|py|go|rs|java|c|cpp|h|hpp|rb|php|cs|swift|kt)$"
+CODE_EXTENSIONS="\\.(ts|tsx|js|jsx|py|go|rs|java|c|cpp|h|hpp|rb|php|cs|swift|kt|sh|bash|zsh|md|yaml|yml|json|toml|xml|sql|graphql|gql)$"
 CODE_FILES=$(echo "$STAGED_FILES" | grep -E "$CODE_EXTENSIONS")
 
 # Exit if no code files staged
@@ -1109,6 +1109,9 @@ export function registerInstallCommand(cli: CAC): void {
               boostByUsefulness: true,
               boostWeight: 0.3,
             },
+          },
+          securityReview: {
+            enabled: true,
           },
         };
 
