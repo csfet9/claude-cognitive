@@ -309,9 +309,19 @@ export class ClaudeMindMcpServer {
    */
   private async startHttpTransport(): Promise<void> {
     this.expressApp = express();
-    this.expressApp.use(express.json());
+    this.expressApp.use(express.json({ limit: '100kb' }));
 
-    // Optional CORS
+    // Add security headers
+    this.expressApp.use((_req: Request, res: Response, next) => {
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('X-Frame-Options', 'DENY');
+      res.setHeader('X-XSS-Protection', '1; mode=block');
+      next();
+    });
+
+    // WARNING: cors: true enables Access-Control-Allow-Origin: *
+    // This allows any website to make requests. Use with caution.
+    // For production, consider implementing origin allowlisting.
     if (this.httpConfig.cors) {
       this.expressApp.use((_req: Request, res: Response, next) => {
         res.header("Access-Control-Allow-Origin", "*");

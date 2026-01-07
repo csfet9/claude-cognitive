@@ -123,7 +123,10 @@ export class HindsightClient {
     const host = options.host ?? "localhost";
     const port = options.port ?? 8888;
 
-    this.baseUrl = `http://${host}:${port}`;
+    // Use HTTPS for non-localhost connections
+    const isLocalhost = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+    const protocol = isLocalhost ? 'http' : 'https';
+    this.baseUrl = `${protocol}://${host}:${port}`;
     if (options.apiKey !== undefined) {
       this.apiKey = options.apiKey;
     }

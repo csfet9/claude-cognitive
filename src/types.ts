@@ -480,6 +480,21 @@ export interface FeedbackConfig {
   debug?: boolean;
 }
 
+/**
+ * Security review configuration for pre-commit hooks.
+ * Enables automated security analysis before commits.
+ */
+export interface SecurityReviewConfig {
+  /** Enable/disable pre-commit security review (default: false) */
+  enabled: boolean;
+  /** Model to use for review agent (default: "opus") */
+  model?: "opus" | "sonnet" | "haiku";
+  /** Block commits on critical security issues (default: true) */
+  blockOnCritical?: boolean;
+  /** Code file extensions to review */
+  codeExtensions?: string[];
+}
+
 /** Full configuration schema for claude-cognitive */
 export interface ClaudeMindConfig {
   /** Hindsight server connection settings */
@@ -511,6 +526,8 @@ export interface ClaudeMindConfig {
   };
   /** Feedback loop configuration for tracking fact usefulness */
   feedback?: FeedbackConfig;
+  /** Security review configuration for pre-commit hooks */
+  securityReview?: SecurityReviewConfig;
 }
 
 // ============================================

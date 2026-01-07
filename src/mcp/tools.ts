@@ -13,7 +13,7 @@ import { z } from "zod";
  * Zod schema for memory_recall tool input.
  */
 export const recallInputSchema = z.object({
-  query: z.string().min(1).describe("What to search for in memory"),
+  query: z.string().min(1).max(10000).describe("What to search for in memory"),
   type: z
     .enum(["world", "experience", "opinion", "all"])
     .optional()
@@ -24,7 +24,7 @@ export const recallInputSchema = z.object({
  * Zod schema for memory_reflect tool input.
  */
 export const reflectInputSchema = z.object({
-  query: z.string().min(1).describe("What to think about or reason through"),
+  query: z.string().min(1).max(10000).describe("What to think about or reason through"),
 });
 
 /**

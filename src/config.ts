@@ -9,6 +9,7 @@ import type {
   ClaudeMindConfig,
   Disposition,
   RetainFilterConfig,
+  SecurityReviewConfig,
 } from "./types.js";
 
 /**
@@ -26,6 +27,30 @@ export const DEFAULT_RETAIN_FILTER: RetainFilterConfig = {
 };
 
 /**
+ * Default security review configuration.
+ * Disabled by default (opt-in feature).
+ */
+export const DEFAULT_SECURITY_REVIEW_CONFIG: SecurityReviewConfig = {
+  enabled: false,
+  model: "opus",
+  blockOnCritical: true,
+  codeExtensions: [
+    ".ts",
+    ".tsx",
+    ".js",
+    ".jsx",
+    ".py",
+    ".go",
+    ".rs",
+    ".java",
+    ".c",
+    ".cpp",
+    ".h",
+    ".rb",
+  ],
+};
+
+/**
  * Default configuration values.
  */
 const DEFAULT_CONFIG: ClaudeMindConfig = {
@@ -38,6 +63,7 @@ const DEFAULT_CONFIG: ClaudeMindConfig = {
     path: ".claude/memory.md",
   },
   retainFilter: DEFAULT_RETAIN_FILTER,
+  securityReview: DEFAULT_SECURITY_REVIEW_CONFIG,
 };
 
 /**
@@ -90,6 +116,9 @@ function mergeConfig(
   }
   if (target.feedback !== undefined) {
     result.feedback = { ...target.feedback };
+  }
+  if (target.securityReview !== undefined) {
+    result.securityReview = { ...target.securityReview };
   }
 
   // Merge hindsight settings
@@ -157,6 +186,14 @@ function mergeConfig(
       ...result.feedback,
       ...source.feedback,
     } as typeof source.feedback;
+  }
+
+  // Merge securityReview settings
+  if (source.securityReview !== undefined) {
+    result.securityReview = {
+      ...result.securityReview,
+      ...source.securityReview,
+    };
   }
 
   return result;

@@ -62,8 +62,9 @@ describe("HindsightClient", () => {
       );
       c.health();
 
+      // Non-localhost hosts use HTTPS for security
       expect(mockFetch).toHaveBeenCalledWith(
-        "http://custom-host:9999/health",
+        "https://custom-host:9999/health",
         expect.any(Object),
       );
     });
