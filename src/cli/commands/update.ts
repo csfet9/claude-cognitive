@@ -7,6 +7,11 @@ import { mkdir, readFile, writeFile, access } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import type { CAC } from "cac";
+import {
+  createStartHookScript,
+  createSessionEndHookScript,
+  createPreCommitReviewScript,
+} from "./install.js";
 
 const COLORS = {
   reset: "\x1b[0m",
@@ -592,6 +597,25 @@ fi
           }
         } else {
           printInfo("Project .claudemindrc is up to date");
+        }
+
+        // ============================================
+        // Always regenerate hook scripts with latest security fixes
+        // ============================================
+        if (!dryRun) {
+          const hooksDir = join(projectPath, ".claude", "hooks");
+          await mkdir(hooksDir, { recursive: true });
+
+          await createStartHookScript(projectPath);
+          await createSessionEndHookScript(projectPath);
+          await createPreCommitReviewScript(projectPath);
+
+          printSuccess("Regenerated hook scripts with latest security fixes");
+          printInfo(`  ${hooksDir}/start-hook.sh`);
+          printInfo(`  ${hooksDir}/session-end-hook.sh`);
+          printInfo(`  ${hooksDir}/pre-commit-review.sh`);
+        } else {
+          printInfo("Hook scripts will be regenerated (with latest security fixes)");
         }
       } else {
         printInfo(

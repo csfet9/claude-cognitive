@@ -254,7 +254,7 @@ async function checkAndWarnLegacyGlobalHook(): Promise<boolean> {
  * - Skips projects without .claudemindrc
  * - Writes context to .claude/rules/ which Claude Code auto-loads
  */
-async function createStartHookScript(projectPath: string): Promise<string> {
+export async function createStartHookScript(projectPath: string): Promise<string> {
   const scriptPath = getStartHookScriptPath(projectPath);
   const scriptDir = join(projectPath, ".claude", "hooks");
 
@@ -352,7 +352,7 @@ exit 0
  * NOTE: SessionEnd hook only fires when session truly ends (not after every response),
  * so we no longer need the /exit grep and marker file logic from the old Stop hook.
  */
-async function createSessionEndHookScript(
+export async function createSessionEndHookScript(
   projectPath: string,
 ): Promise<string> {
   const scriptPath = getSessionEndHookScriptPath(projectPath);
@@ -465,7 +465,7 @@ exit 0
  * Triggers security review before git commit commands.
  * Only activates when securityReview.enabled is true in .claudemindrc.
  */
-async function createPreCommitReviewScript(projectPath: string): Promise<string> {
+export async function createPreCommitReviewScript(projectPath: string): Promise<string> {
   const scriptPath = getPreCommitReviewScriptPath(projectPath);
   const scriptDir = join(projectPath, ".claude", "hooks");
 
