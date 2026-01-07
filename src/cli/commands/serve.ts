@@ -52,6 +52,14 @@ export function registerServeCommand(cli: CAC): void {
 
       // Initialize Mind
       const mind = new Mind({ projectPath });
+
+      // Handle error events to prevent crashes in degraded mode
+      mind.on("error", (err) => {
+        if (!options.quiet) {
+          console.error(`[claude-cognitive] ${err.message}`);
+        }
+      });
+
       await mind.init();
 
       // Start session to enable feedback tracking

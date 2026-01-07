@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.10] - 2026-01-07
+
+### Fixed
+
+- **MCP server now works in offline/degraded mode** - Added error event listener
+  in serve command to prevent crashes when Hindsight is unavailable. The server
+  now starts successfully and operates in degraded mode with local offline storage.
+
 ## [0.4.9] - 2026-01-06
 
 ### Changed
