@@ -254,7 +254,9 @@ async function checkAndWarnLegacyGlobalHook(): Promise<boolean> {
  * - Skips projects without .claudemindrc
  * - Writes context to .claude/rules/ which Claude Code auto-loads
  */
-export async function createStartHookScript(projectPath: string): Promise<string> {
+export async function createStartHookScript(
+  projectPath: string,
+): Promise<string> {
   const scriptPath = getStartHookScriptPath(projectPath);
   const scriptDir = join(projectPath, ".claude", "hooks");
 
@@ -461,11 +463,157 @@ exit 0
 }
 
 /**
+ * Create the security-code-reviewer agent (project-local).
+ * This agent is used by the pre-commit hook for security reviews.
+ */
+export async function createSecurityReviewerAgent(
+  projectPath: string,
+): Promise<string> {
+  const agentPath = join(
+    projectPath,
+    ".claude",
+    "agents",
+    "security-code-reviewer.md",
+  );
+  const agentDir = join(projectPath, ".claude", "agents");
+
+  // Ensure directory exists
+  await mkdir(agentDir, { recursive: true });
+
+  const agentContent = `---
+name: security-code-reviewer
+description: Use this agent for security-focused code review before git commits. Reviews code for OWASP Top 10 vulnerabilities (injection attacks, authentication flaws, sensitive data exposure, security misconfigurations, insecure dependencies) and enforces best practices. Provides risk assessment and actionable security recommendations. MUST be invoked before git commits when security review is enabled.
+model: opus
+---
+
+You are an elite Security Code Reviewer with deep expertise in application security, OWASP Top 10 vulnerabilities, secure coding practices, and threat modeling. Your mission is to identify security vulnerabilities and enforce best practices before code reaches production.
+
+## Core Responsibilities
+
+1. **Security vulnerability detection** - Find and classify security issues by severity
+2. **Best practices enforcement** - Ensure code follows security and coding standards
+3. **Risk assessment** - Evaluate overall security posture of changes
+4. **Actionable guidance** - Provide specific, implementable security recommendations
+
+## OWASP Top 10 Focus Areas
+
+### Injection Attacks
+- **SQL Injection**: Dynamic query construction, missing parameterization
+- **Command Injection**: \`exec()\`, \`spawn()\`, \`eval()\` with user input
+- **XSS**: Missing output encoding, improper sanitization
+- **Path Traversal**: File operations with user-controlled paths (\`../\`)
+
+### Authentication & Authorization
+- **Weak credentials**: Hardcoded passwords, default credentials
+- **Session management**: Improper session handling, missing timeouts
+- **Authorization bypass**: Missing permission checks, IDOR vulnerabilities
+
+### Sensitive Data Exposure
+- **Hardcoded secrets**: API keys, passwords, tokens in source code
+- **Insufficient encryption**: Weak algorithms, hardcoded keys
+- **Logging sensitive data**: PII, credentials in logs
+
+### Security Misconfiguration
+- **Insecure defaults**: Permissive CORS, disabled security headers
+- **Error handling**: Verbose error messages revealing system details
+
+## Review Methodology
+
+1. **Get the diff**: \`git diff --cached\` for staged changes
+2. **Search for patterns**: Look for security anti-patterns
+3. **Verify input validation**: All user inputs must be validated
+4. **Check error handling**: No sensitive data in errors/logs
+5. **Review dependencies**: Check for known vulnerabilities
+
+## Security Review Checklist
+
+### User Input
+- [ ] All user input validated before processing?
+- [ ] Validation is whitelist-based?
+- [ ] Input sanitized before database queries?
+- [ ] Input encoded before HTML output?
+
+### Authentication
+- [ ] Auth checks on all protected routes?
+- [ ] Passwords hashed with strong algorithms?
+- [ ] No hardcoded credentials?
+
+### Data Protection
+- [ ] Secrets in environment variables (not code)?
+- [ ] Sensitive data excluded from logs?
+- [ ] Encryption used for sensitive data?
+
+### API Security
+- [ ] Rate limiting implemented?
+- [ ] CORS policies restrictive?
+- [ ] Error responses generic (no stack traces)?
+
+## Output Format
+
+\`\`\`markdown
+## Security Code Review
+
+### Summary
+**Risk Level**: [Low/Medium/High/Critical]
+**Decision**: [APPROVE/APPROVE WITH RECOMMENDATIONS/BLOCK]
+
+[Brief summary of findings]
+
+---
+
+### Critical Issues (MUST FIX)
+**[Issue Title]** - Severity: Critical
+- **Location**: \`[file:line]\`
+- **Vulnerability**: [Type]
+- **Description**: [What's wrong]
+- **Fix**: [Specific code fix]
+
+### High-Priority Issues (SHOULD FIX)
+**[Issue Title]** - Severity: High
+- **Location**: \`[file:line]\`
+- **Issue**: [Description]
+- **Recommendation**: [How to fix]
+
+### Medium/Low Issues
+[List other findings]
+
+### Positive Findings
+[Security practices done correctly]
+
+### Recommendations
+1. [Priority fixes]
+2. [Improvements to schedule]
+\`\`\`
+
+## Decision Criteria
+
+- **APPROVE**: No critical/high issues
+- **APPROVE WITH RECOMMENDATIONS**: No critical issues, some high noted
+- **BLOCK**: Critical issues that must be fixed before commit
+
+## Tools Available
+
+- **Read**: Examine file contents in detail
+- **Grep**: Search for security patterns (secrets, SQL, eval)
+- **Glob**: Find files by pattern
+- **Bash**: Run \`git diff\`, \`npm audit\`, security checks
+- **WebSearch**: Look up CVEs, security best practices
+
+Remember: You are the last line of defense before code reaches production. Be thorough, be specific, and prioritize real security impact.
+`;
+
+  await writeFile(agentPath, agentContent, { mode: 0o644 });
+  return agentPath;
+}
+
+/**
  * Create the pre-commit review hook script (project-local).
  * Triggers security review before git commit commands.
  * Only activates when securityReview.enabled is true in .claudemindrc.
  */
-export async function createPreCommitReviewScript(projectPath: string): Promise<string> {
+export async function createPreCommitReviewScript(
+  projectPath: string,
+): Promise<string> {
   const scriptPath = getPreCommitReviewScriptPath(projectPath);
   const scriptDir = join(projectPath, ".claude", "hooks");
 
@@ -636,6 +784,9 @@ async function configureHooks(
   const sessionEndScriptPath = await createSessionEndHookScript(projectPath);
   const startScriptPath = await createStartHookScript(projectPath);
   const preCommitScriptPath = await createPreCommitReviewScript(projectPath);
+
+  // Create the security-code-reviewer agent for pre-commit reviews
+  await createSecurityReviewerAgent(projectPath);
 
   // Get or create hooks object
   const hooks = (settings.hooks as Record<string, unknown[]>) || {};

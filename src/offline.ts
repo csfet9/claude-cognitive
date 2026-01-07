@@ -61,7 +61,11 @@ export class OfflineMemoryStore {
   private store: OfflineStore | null = null;
 
   constructor(options: OfflineMemoryStoreOptions) {
-    const defaultPath = join(options.projectPath, ".claude", "offline-memories.json");
+    const defaultPath = join(
+      options.projectPath,
+      ".claude",
+      "offline-memories.json",
+    );
     const storagePath = options.storagePath ?? defaultPath;
 
     // Validate the path is within the project directory
@@ -69,8 +73,8 @@ export class OfflineMemoryStore {
     const relativePath = relative(options.projectPath, resolvedPath);
 
     // Reject if path escapes project directory
-    if (relativePath.startsWith('..') || isAbsolute(relativePath)) {
-      throw new Error('Storage path must be within project directory');
+    if (relativePath.startsWith("..") || isAbsolute(relativePath)) {
+      throw new Error("Storage path must be within project directory");
     }
     this.filePath = resolvedPath;
   }

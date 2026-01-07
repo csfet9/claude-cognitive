@@ -309,13 +309,13 @@ export class ClaudeMindMcpServer {
    */
   private async startHttpTransport(): Promise<void> {
     this.expressApp = express();
-    this.expressApp.use(express.json({ limit: '100kb' }));
+    this.expressApp.use(express.json({ limit: "100kb" }));
 
     // Add security headers
     this.expressApp.use((_req: Request, res: Response, next) => {
-      res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('X-Frame-Options', 'DENY');
-      res.setHeader('X-XSS-Protection', '1; mode=block');
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("X-Frame-Options", "DENY");
+      res.setHeader("X-XSS-Protection", "1; mode=block");
       next();
     });
 

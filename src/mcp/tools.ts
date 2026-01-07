@@ -24,7 +24,11 @@ export const recallInputSchema = z.object({
  * Zod schema for memory_reflect tool input.
  */
 export const reflectInputSchema = z.object({
-  query: z.string().min(1).max(10000).describe("What to think about or reason through"),
+  query: z
+    .string()
+    .min(1)
+    .max(10000)
+    .describe("What to think about or reason through"),
 });
 
 /**
