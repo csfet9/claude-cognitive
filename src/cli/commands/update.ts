@@ -10,7 +10,6 @@ import type { CAC } from "cac";
 import {
   createStartHookScript,
   createSessionEndHookScript,
-  createPreCommitReviewScript,
   createSecurityReviewerAgent,
 } from "./install.js";
 
@@ -609,13 +608,11 @@ fi
 
           await createStartHookScript(projectPath);
           await createSessionEndHookScript(projectPath);
-          await createPreCommitReviewScript(projectPath);
           await createSecurityReviewerAgent(projectPath);
 
           printSuccess("Regenerated hook scripts with latest security fixes");
           printInfo(`  ${hooksDir}/start-hook.sh`);
           printInfo(`  ${hooksDir}/session-end-hook.sh`);
-          printInfo(`  ${hooksDir}/pre-commit-review.sh`);
           printSuccess("Created security-code-reviewer agent");
           printInfo(
             `  ${join(projectPath, ".claude", "agents", "security-code-reviewer.md")}`,

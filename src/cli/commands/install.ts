@@ -199,13 +199,6 @@ function getStartHookScriptPath(projectPath: string): string {
 }
 
 /**
- * Get the path to the pre-commit review hook script (project-local).
- */
-function getPreCommitReviewScriptPath(projectPath: string): string {
-  return join(projectPath, ".claude", "hooks", "pre-commit-review.sh");
-}
-
-/**
  * Get the path to the legacy global stop hook script.
  * Used for cleanup of old installations.
  */
@@ -607,158 +600,12 @@ Remember: You are the last line of defense before code reaches production. Be th
 }
 
 /**
- * Create the pre-commit review hook script (project-local).
- * Triggers security review before git commit commands.
- * Only activates when securityReview.enabled is true in .claudemindrc.
- */
-export async function createPreCommitReviewScript(
-  projectPath: string,
-): Promise<string> {
-  const scriptPath = getPreCommitReviewScriptPath(projectPath);
-  const scriptDir = join(projectPath, ".claude", "hooks");
-
-  // Ensure directory exists
-  await mkdir(scriptDir, { recursive: true });
-
-  const scriptContent = `#!/bin/bash
-# Claude Code PreToolUse hook for pre-commit security review
-# Triggers security review before git commit commands
-# Only activates when securityReview.enabled is true in .claudemindrc
-
-# Read stdin
-INPUT=$(cat)
-
-# Extract fields using jq (or fallback to grep/sed)
-if command -v jq &> /dev/null; then
-  TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
-  COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
-  PROJECT_DIR=$(echo "$INPUT" | jq -r '.cwd // empty')
-else
-  TOOL_NAME=$(echo "$INPUT" | grep -o '"tool_name":"[^"]*"' | cut -d'"' -f4)
-  COMMAND=$(echo "$INPUT" | grep -o '"command":"[^"]*"' | sed 's/\\\\"//g' | cut -d'"' -f4)
-  PROJECT_DIR=$(echo "$INPUT" | grep -o '"cwd":"[^"]*"' | cut -d'"' -f4)
-fi
-
-# Validate PROJECT_DIR to prevent path traversal/injection
-# Allow alphanumeric, slash, dot, dash, underscore only, reject path traversal
-if [[ ! "$PROJECT_DIR" =~ ^[a-zA-Z0-9/./_-]+$ ]] || [[ "$PROJECT_DIR" == *".."* ]]; then
-  echo "{}"
-  exit 0
-fi
-
-# Only intercept Bash tool with git commit commands
-if [ "$TOOL_NAME" != "Bash" ] || [[ ! "$COMMAND" =~ ^git[[:space:]]+commit ]]; then
-  echo "{}"
-  exit 0
-fi
-
-# Skip if no project dir or no .claudemindrc
-if [ -z "$PROJECT_DIR" ] || [ ! -f "$PROJECT_DIR/.claudemindrc" ]; then
-  echo "{}"
-  exit 0
-fi
-
-# Check if security review is enabled
-SECURITY_ENABLED="false"
-if command -v jq &> /dev/null; then
-  SECURITY_ENABLED=$(jq -r '.securityReview.enabled // false' "$PROJECT_DIR/.claudemindrc" 2>/dev/null)
-else
-  if grep -q '"securityReview"' "$PROJECT_DIR/.claudemindrc" 2>/dev/null; then
-    if grep -A5 '"securityReview"' "$PROJECT_DIR/.claudemindrc" | grep -q '"enabled"[[:space:]]*:[[:space:]]*true'; then
-      SECURITY_ENABLED="true"
-    fi
-  fi
-fi
-
-# Exit if security review is not enabled
-if [ "$SECURITY_ENABLED" != "true" ]; then
-  echo "{}"
-  exit 0
-fi
-
-# Get staged files (need to be in project dir for git commands)
-cd "$PROJECT_DIR" 2>/dev/null || {
-  echo "{}"
-  exit 0
-}
-
-STAGED_FILES=$(git diff --cached --name-only 2>/dev/null)
-
-# Exit if no staged files
-if [ -z "$STAGED_FILES" ]; then
-  echo "{}"
-  exit 0
-fi
-
-# Filter to code files only
-CODE_EXTENSIONS="\\.(ts|tsx|js|jsx|py|go|rs|java|c|cpp|h|hpp|rb|php|cs|swift|kt|sh|bash|zsh|md|yaml|yml|json|toml|xml|sql|graphql|gql)$"
-CODE_FILES=$(echo "$STAGED_FILES" | grep -E "$CODE_EXTENSIONS")
-
-# Exit if no code files staged
-if [ -z "$CODE_FILES" ]; then
-  echo "{}"
-  exit 0
-fi
-
-# Get diff summary for context
-DIFF_SUMMARY=$(git diff --cached --stat 2>/dev/null | head -20)
-
-# Count code files
-FILE_COUNT=$(echo "$CODE_FILES" | wc -l | tr -d ' ')
-
-# Build file list (limit to 20 for readability)
-if [ "$FILE_COUNT" -gt 20 ]; then
-  FILE_LIST=$(echo "$CODE_FILES" | head -20 | sed 's/^/  - /')
-  FILE_LIST="$FILE_LIST"$'\\n'"  - ... and $((FILE_COUNT - 20)) more files"
-else
-  FILE_LIST=$(echo "$CODE_FILES" | sed 's/^/  - /')
-fi
-
-# Build the blocking reason message
-REASON="## Security Review Required
-
-Security review is enabled for this project. This commit is BLOCKED until review is complete.
-
-**Staged Code Files ($FILE_COUNT):**
-$FILE_LIST
-
-**Diff Summary:**
-\\\`\\\`\\\`
-$DIFF_SUMMARY
-\\\`\\\`\\\`
-
-**Action Required:**
-1. Launch the \\\`security-code-reviewer\\\` agent to review the staged changes
-2. Address any security issues found
-3. Retry the commit after review is complete"
-
-# Output blocking JSON response
-if command -v jq &> /dev/null; then
-  jq -n --arg reason "$REASON" '{
-    decision: "block",
-    reason: $reason
-  }'
-else
-  # Manual JSON construction (fallback for systems without jq)
-  ESCAPED_REASON=$(echo "$REASON" | sed 's/\\\\/\\\\\\\\/g' | sed 's/"/\\\\"/g' | awk '{printf "%s\\\\n", $0}' | sed 's/\\\\n$//')
-  echo "{\\\"decision\\\":\\\"block\\\",\\\"reason\\\":\\\"$ESCAPED_REASON\\\"}"
-fi
-
-exit 0
-`;
-
-  await writeFile(scriptPath, scriptContent, { mode: 0o755 });
-  return scriptPath;
-}
-
-/**
  * Configure hooks in project-local Claude Code settings.
  * Hooks are stored in PROJECT/.claude/settings.json to keep them project-specific.
  *
- * Configures three hooks:
+ * Configures two hooks:
  * - SessionEnd: Processes session transcript at session end (calls process-session)
  * - SessionStart: Injects context at session start (calls inject-context)
- * - PreToolUse: Security review before git commit (calls pre-commit-review)
  */
 async function configureHooks(
   projectPath: string,
@@ -772,9 +619,8 @@ async function configureHooks(
   // Create the hook wrapper scripts (project-local)
   const sessionEndScriptPath = await createSessionEndHookScript(projectPath);
   const startScriptPath = await createStartHookScript(projectPath);
-  const preCommitScriptPath = await createPreCommitReviewScript(projectPath);
 
-  // Create the security-code-reviewer agent for pre-commit reviews
+  // Create the security-code-reviewer agent (used via context injection)
   await createSecurityReviewerAgent(projectPath);
 
   // Get or create hooks object
@@ -849,27 +695,8 @@ async function configureHooks(
 
   hooks.SessionStart = sessionStartHooks;
 
-  // ============================================
-  // Configure PreToolUse hook (pre-commit security review)
-  // ============================================
-  let preToolUseHooks =
-    (hooks.PreToolUse as Array<{ matcher: string; hooks: unknown[] }>) || [];
-
-  // Add pre-commit review hook if not already present
-  if (!hasHookCommand(preToolUseHooks, "pre-commit-review.sh")) {
-    preToolUseHooks.push({
-      matcher: "Bash(git commit:*)",
-      hooks: [
-        {
-          type: "command",
-          command: preCommitScriptPath,
-          timeout: 60000,
-        },
-      ],
-    });
-  }
-
-  hooks.PreToolUse = preToolUseHooks;
+  // Remove legacy PreToolUse hooks (security review now via context injection)
+  delete hooks.PreToolUse;
 
   // Remove legacy UserPromptSubmit hooks (we now use SessionStart)
   delete hooks.UserPromptSubmit;
