@@ -714,12 +714,10 @@ else
   FILE_LIST=$(echo "$CODE_FILES" | sed 's/^/  - /')
 fi
 
-# Build additional context message
-CONTEXT="## Pre-Commit Security Review Required
+# Build the blocking reason message
+REASON="## Security Review Required
 
-**Security review is enabled for this project.**
-
-Before committing, launch the \\\`security-code-reviewer\\\` agent to analyze staged changes.
+Security review is enabled for this project. This commit is BLOCKED until review is complete.
 
 **Staged Code Files ($FILE_COUNT):**
 $FILE_LIST
@@ -730,29 +728,20 @@ $DIFF_SUMMARY
 \\\`\\\`\\\`
 
 **Action Required:**
-Use the Task tool to launch the security-code-reviewer agent with model: opus
+1. Launch the \\\`security-code-reviewer\\\` agent to review the staged changes
+2. Address any security issues found
+3. Retry the commit after review is complete"
 
-Review focus:
-- Input validation and sanitization
-- Authentication and authorization checks
-- Injection vulnerabilities (SQL, XSS, command)
-- Hardcoded secrets and sensitive data
-- Error handling and information leakage
-
-Only proceed with commit after security review is complete."
-
-# Output JSON with additionalContext
+# Output blocking JSON response
 if command -v jq &> /dev/null; then
-  jq -n --arg context "$CONTEXT" '{
-    hookSpecificOutput: {
-      hookEventName: "PreToolUse",
-      additionalContext: $context
-    }
+  jq -n --arg reason "$REASON" '{
+    decision: "block",
+    reason: $reason
   }'
 else
-  # Manual JSON construction
-  ESCAPED_CONTEXT=$(echo "$CONTEXT" | sed 's/\\\\/\\\\\\\\/g' | sed 's/"/\\\\"/g' | awk '{printf "%s\\\\n", $0}' | sed 's/\\\\n$//')
-  echo "{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"PreToolUse\\\",\\\"additionalContext\\\":\\\"$ESCAPED_CONTEXT\\\"}}"
+  # Manual JSON construction (fallback for systems without jq)
+  ESCAPED_REASON=$(echo "$REASON" | sed 's/\\\\/\\\\\\\\/g' | sed 's/"/\\\\"/g' | awk '{printf "%s\\\\n", $0}' | sed 's/\\\\n$//')
+  echo "{\\\"decision\\\":\\\"block\\\",\\\"reason\\\":\\\"$ESCAPED_REASON\\\"}"
 fi
 
 exit 0
