@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.11] - 2026-01-07
+
+### Fixed
+
+- **UUID validation in memory_signal handler** - Added early validation to check
+  that fact IDs are valid UUIDs before sending to Hindsight. Invalid IDs now
+  return a helpful error message explaining that IDs must be UUIDs from
+  `memory_recall` responses, instead of causing a cryptic 500 server error.
+
 ## [0.4.10] - 2026-01-07
 
 ### Fixed

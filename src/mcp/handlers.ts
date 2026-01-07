@@ -13,6 +13,23 @@ import type {
 } from "./types.js";
 
 // ============================================
+// Validation
+// ============================================
+
+/**
+ * UUID v4 pattern for validating fact IDs.
+ */
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Check if a string is a valid UUID.
+ */
+function isValidUUID(id: string): boolean {
+  return UUID_PATTERN.test(id);
+}
+
+// ============================================
 // Formatters
 // ============================================
 
@@ -200,6 +217,21 @@ export async function handleSignal(
   input: SignalToolInput,
 ): Promise<ToolResult> {
   try {
+    // Validate all fact IDs are valid UUIDs
+    const invalidSignals = input.signals.filter((s) => !isValidUUID(s.factId));
+    if (invalidSignals.length > 0) {
+      const invalidIds = invalidSignals.map((s) => s.factId).join(", ");
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Invalid fact IDs: ${invalidIds}. Fact IDs must be UUIDs from memory_recall responses (e.g., 550e8400-e29b-41d4-a716-446655440000).`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
     // Transform input signals to SignalItem format
     // Handle exactOptionalPropertyTypes by conditionally adding optional fields
     const signals = input.signals.map((s) => {

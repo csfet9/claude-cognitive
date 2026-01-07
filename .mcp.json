@@ -2,9 +2,7 @@
   "mcpServers": {
     "claude-cognitive": {
       "command": "claude-cognitive",
-      "args": [
-        "serve"
-      ]
+      "args": ["serve"]
     }
   }
 }

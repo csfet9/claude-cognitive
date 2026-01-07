@@ -47,17 +47,17 @@ For ALL coding tasks, follow this workflow:
 
 
 ## Recent Activity
-- 1/6/2026: The update command in claude-cognitive handles migration by removing semantic config from existing .claudemindrc files. | When: Tuesday, January 6, 2026 | Involving: Assistant | To ensure backward com...
-- 1/6/2026: User is working on a project named Camarilla_Trader located at /Users/sfetanclaudiu/Documents/GitHub/Camarilla_Trader. | When: Tuesday, January 6, 2026 | Involving: User (sfetanclaudiu) | This is the ...
-- 1/6/2026: Assistant released version 0.4.9 of claude-cognitive, which included updating npm, committing the changelog, and pushing changes (4 files changed, 50 insertions, 117 deletions). | When: Tuesday, Janua...
-- 1/6/2026: Assistant added modern configuration options to the install command: hindsight.timeouts (recall: 120s, reflect: 180s, retain: 90s), context.recentMemoryLimit: 3, retain config, and feedback config. | ...
-- 1/6/2026: Assistant removed obsolete semantic memory configurations including the .claude/memory.md path, file creation, and CLAUDE.md memory instructions injection from the install command. | When: Tuesday, Ja...
-- 1/6/2026: The tracking logic within 'mind.recall()' was silently skipped as a result of the missing session identifier.
-- 1/6/2026: The lack of session initialization caused the feedback system to record zero feedback despite extended project work.
-- 1/6/2026: The 'mind.onSessionStart()' function was not being called during the MCP server's 'serve' command.
-- 1/6/2026: A bug in the MCP server initialization prevented the 'sessionId' from being assigned, leaving it as a null value.
-- 1/6/2026: User employs a sophisticated AI development workflow involving the Claude Code CLI, multiple specialized agents (code-explorer, Explore, code-architect), and a custom 'Hindsight' memory system for ses...
+- 1/7/2026: The synchronization process utilizes the Stop hook within the Claude Code session environment.
+- 1/7/2026: The user requires Hindsight API synchronization to occur exclusively as a single batch at the end of a session.
+- 1/7/2026: Data synchronization is triggered by the /exit command rather than incrementally after individual messages.
+- 1/7/2026: The deferred synchronization approach is intended to reduce unnecessary API costs and minimize the frequency of API calls.
+- 1/7/2026: Session-end synchronization is preferred to ensure data management remains cost-effective and efficient.
+- 1/7/2026: Root cause analysis identified a global stop hook in ~/.claude/settings.json as the source of excessive API costs due to it triggering two expensive LLM operations (retain and reflect) at the end of e...
+- 1/7/2026: Root cause analysis identifies how specific configurations, like processing every session end globally rather than project-specifically, lead to unexpected cost accumulation.
+- 1/7/2026: Root cause analysis is used to diagnose performance delays, such as a 1-2 minute lag in running stop hooks, by investigating hook invocation overhead, script hangs, or bugs in the hook discovery syste...
+- 1/7/2026: The process involves evaluating detailed configuration and environment data to distinguish between localized script issues and system-wide architectural triggers.
+- 1/7/2026: User values engineering principles such as system observability, modular architecture, and transparency in risk management and technical operations.
 
 ---
 
-*Auto-recalled at 2026-01-07T09:47:48+01:00*
+*Auto-recalled at 2026-01-07T09:59:26+01:00*
