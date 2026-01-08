@@ -19,6 +19,7 @@ interface RecallCliOptions {
   limit?: number;
   json?: boolean;
   quiet?: boolean;
+  dryRun?: boolean;
 }
 
 /**
@@ -42,6 +43,7 @@ export function registerRecallCommand(cli: CAC): void {
     .option("--limit <n>", "Maximum number of results")
     .option("--json", "Output as JSON")
     .option("--quiet", "Suppress output")
+    .option("--dry-run", "Preview search without tracking for feedback")
     .action(async (query: string, options: RecallCliOptions) => {
       const projectPath = options.project ?? process.cwd();
 
@@ -77,6 +79,17 @@ export function registerRecallCommand(cli: CAC): void {
       }
       if (options.budget) {
         recallOptions.budget = options.budget as RecallBudget;
+      }
+      if (options.dryRun) {
+        recallOptions.skipTracking = true;
+      }
+
+      // Show dry-run banner
+      if (options.dryRun && !options.quiet && !options.json) {
+        console.log("=".repeat(60));
+        console.log("DRY RUN - Results will not be tracked for feedback");
+        console.log("=".repeat(60));
+        console.log();
       }
 
       const memories = await mind.recall(query, recallOptions);

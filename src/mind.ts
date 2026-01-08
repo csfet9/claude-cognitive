@@ -568,8 +568,13 @@ export class Mind extends TypedEventEmitter {
         const memories = await this.client.recall(recallInput);
         this.emit("memory:recalled", memories);
 
-        // Track recall for feedback if enabled
-        if (this.feedbackService && this.sessionId && memories.length > 0) {
+        // Track recall for feedback if enabled (unless skipTracking)
+        if (
+          this.feedbackService &&
+          this.sessionId &&
+          memories.length > 0 &&
+          !options?.skipTracking
+        ) {
           try {
             await this.feedbackService.trackRecall(
               this.sessionId,

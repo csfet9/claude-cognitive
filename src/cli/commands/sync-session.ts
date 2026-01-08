@@ -3,6 +3,8 @@
  * @module cli/commands/sync-session
  */
 
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import type { CAC } from "cac";
 import { Mind } from "../../mind.js";
 import {
@@ -11,6 +13,11 @@ import {
   clearBuffer,
 } from "../../hooks/buffer-message.js";
 import { CLIError, ExitCode, info, output } from "../utils/index.js";
+import {
+  calculateMemoryDiff,
+  formatMemoryDiff,
+  type MemoryDiff,
+} from "../utils/diff.js";
 
 interface SyncSessionOptions {
   project?: string;
@@ -26,6 +33,7 @@ interface SyncSessionResult {
   opinionsFormed: number;
   bufferCleared: boolean;
   error?: string;
+  memoryDiff?: MemoryDiff;
 }
 
 /**
@@ -63,6 +71,11 @@ function formatSyncSessionResult(result: SyncSessionResult): string {
   lines.push(`  Opinions formed: ${result.opinionsFormed}`);
   if (result.bufferCleared) {
     lines.push(`  Buffer cleared: yes`);
+  }
+
+  if (result.memoryDiff) {
+    lines.push("");
+    lines.push(formatMemoryDiff(result.memoryDiff));
   }
 
   return lines.join("\n");
@@ -124,6 +137,15 @@ export function registerSyncSessionCommand(cli: CAC): void {
           return;
         }
 
+        // Capture memory.md content before sync for diff
+        let beforeMemoryContent: string | null = null;
+        const memoryPath = join(projectPath, ".claude", "memory.md");
+        try {
+          beforeMemoryContent = await readFile(memoryPath, "utf-8");
+        } catch {
+          // File doesn't exist yet, that's okay
+        }
+
         // Initialize Mind
         info("Connecting to Hindsight...", options);
         const mind = new Mind({ projectPath });
@@ -143,6 +165,19 @@ export function registerSyncSessionCommand(cli: CAC): void {
 
         result.synced = true;
         result.opinionsFormed = reflectResult?.opinions.length ?? 0;
+
+        // Calculate memory diff if we had content before
+        if (beforeMemoryContent !== null) {
+          try {
+            const afterMemoryContent = await readFile(memoryPath, "utf-8");
+            result.memoryDiff = calculateMemoryDiff(
+              beforeMemoryContent,
+              afterMemoryContent,
+            );
+          } catch {
+            // Ignore diff errors
+          }
+        }
 
         // Clear buffer unless --keep-buffer is set
         if (!options.keepBuffer) {

@@ -21,3 +21,4 @@ export { registerFeedbackStatsCommand } from "./feedback-stats.js";
 export { registerFeedbackSyncCommand } from "./feedback-sync.js";
 export { registerMetricsCommand } from "./metrics.js";
 export { registerConsolidateCommand } from "./consolidate.js";
+export { registerRetainCommand } from "./retain.js";

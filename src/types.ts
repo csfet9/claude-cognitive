@@ -194,6 +194,8 @@ export interface RecallOptions {
   usefulnessWeight?: number;
   /** Minimum usefulness score threshold (default: 0.0) */
   minUsefulness?: number;
+  /** Skip feedback tracking (for dry-run mode) */
+  skipTracking?: boolean;
 }
 
 /**
