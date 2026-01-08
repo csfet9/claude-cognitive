@@ -652,4 +652,98 @@ describe("HindsightClient", () => {
       expect(c).toBeInstanceOf(HindsightClient);
     });
   });
+
+  describe("getBankStats()", () => {
+    it("should get bank usefulness stats", async () => {
+      mockFetch.mockResolvedValueOnce(
+        createResponse(200, {
+          bank_id: "test-bank",
+          total_facts_with_signals: 100,
+          average_usefulness: 0.75,
+          total_signals: 250,
+          signal_distribution: {
+            used: 150,
+            ignored: 70,
+            helpful: 20,
+            not_helpful: 10,
+          },
+          top_useful_facts: [
+            { fact_id: "fact-1", score: 0.95, text: "Most useful fact" },
+          ],
+          least_useful_facts: [
+            { fact_id: "fact-2", score: 0.15, text: "Least useful fact" },
+          ],
+        }),
+      );
+
+      const stats = await client.getBankStats("test-bank");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "http://localhost:8888/v1/default/banks/test-bank/stats/usefulness",
+        expect.objectContaining({ method: "GET" }),
+      );
+      expect(stats.bankId).toBe("test-bank");
+      expect(stats.totalFactsWithSignals).toBe(100);
+      expect(stats.averageUsefulness).toBe(0.75);
+      expect(stats.totalSignals).toBe(250);
+      expect(stats.topUsefulFacts).toHaveLength(1);
+      expect(stats.topUsefulFacts[0].factId).toBe("fact-1");
+      expect(stats.leastUsefulFacts).toHaveLength(1);
+    });
+  });
+
+  describe("listMemories()", () => {
+    it("should list memories with default options", async () => {
+      mockFetch.mockResolvedValueOnce(
+        createResponse(200, {
+          items: [
+            {
+              id: "mem-1",
+              text: "Memory 1",
+              type: "world",
+              date: "2024-01-01T00:00:00Z",
+            },
+            { id: "mem-2", text: "Memory 2", type: "experience" },
+          ],
+          total: 50,
+          limit: 100,
+          offset: 0,
+        }),
+      );
+
+      const result = await client.listMemories("test-bank");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("/memories/list"),
+        expect.objectContaining({ method: "GET" }),
+      );
+      expect(result.items).toHaveLength(2);
+      expect(result.total).toBe(50);
+      expect(result.items[0].factType).toBe("world");
+    });
+
+    it("should list memories with filters", async () => {
+      mockFetch.mockResolvedValueOnce(
+        createResponse(200, {
+          items: [],
+          total: 0,
+          limit: 10,
+          offset: 5,
+        }),
+      );
+
+      await client.listMemories("test-bank", {
+        factType: "world",
+        search: "auth",
+        limit: 10,
+        offset: 5,
+      });
+
+      const calledUrl = mockFetch.mock.calls[0][0] as string;
+      expect(calledUrl).toContain("limit=10");
+      expect(calledUrl).toContain("offset=5");
+      expect(calledUrl).toContain("type=world");
+      expect(calledUrl).toContain("q=auth");
+    });
+  });
 });

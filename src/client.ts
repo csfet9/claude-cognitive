@@ -12,6 +12,7 @@ import type {
   Bank,
   BankOptions,
   BankResponseDTO,
+  BankUsefulnessStats,
   Disposition,
   FactType,
   FactUsefulnessStats,
@@ -25,6 +26,7 @@ import type {
   RetainInput,
   SignalInput,
   SignalResult,
+  SignalType,
   TimeoutConfig,
   TraitValue,
 } from "./types.js";
@@ -48,6 +50,34 @@ interface RequestOptions {
   body?: unknown;
   timeout?: number;
   params?: Record<string, string | number>;
+}
+
+/**
+ * Options for listing memories.
+ */
+interface ListMemoriesOptions {
+  /** Filter by fact type */
+  factType?: FactType;
+  /** Search query string */
+  search?: string;
+  /** Maximum number of results (default: 100) */
+  limit?: number;
+  /** Offset for pagination (default: 0) */
+  offset?: number;
+}
+
+/**
+ * Result of listing memories with pagination info.
+ */
+interface ListMemoriesResult {
+  /** List of memories */
+  items: Memory[];
+  /** Total count of matching memories */
+  total: number;
+  /** Limit used in the query */
+  limit: number;
+  /** Offset used in the query */
+  offset: number;
 }
 
 /**
@@ -583,6 +613,71 @@ export class HindsightClient {
   }
 
   /**
+   * List memories with pagination and optional filtering.
+   *
+   * @param bankId - Bank identifier
+   * @param options - List options (type filter, search, pagination)
+   * @returns Paginated list of memories
+   * @throws {HindsightError} If bank doesn't exist or request fails
+   *
+   * @example
+   * ```typescript
+   * // Get first 10 world facts
+   * const result = await client.listMemories("my-project", {
+   *   factType: "world",
+   *   limit: 10,
+   * });
+   * console.log(`Found ${result.total} world facts`);
+   * ```
+   */
+  async listMemories(
+    bankId: string,
+    options: ListMemoriesOptions = {},
+  ): Promise<ListMemoriesResult> {
+    interface ListApiResponse {
+      items: Array<{
+        id: string;
+        text: string;
+        type?: string;
+        context?: string;
+        date?: string;
+      }>;
+      total: number;
+      limit: number;
+      offset: number;
+    }
+
+    const params: Record<string, string | number> = {
+      limit: options.limit ?? 100,
+      offset: options.offset ?? 0,
+    };
+    if (options.factType) params.type = options.factType;
+    if (options.search) params.q = options.search;
+
+    const response = await this.request<ListApiResponse>(
+      "GET",
+      `/v1/default/banks/${encodeURIComponent(bankId)}/memories/list`,
+      { params },
+    );
+
+    return {
+      items: response.items.map((item): Memory => {
+        const mem: Memory = {
+          id: item.id,
+          text: item.text,
+          factType: (item.type as FactType) ?? "world",
+          createdAt: item.date ?? new Date().toISOString(),
+        };
+        if (item.context) mem.context = item.context;
+        return mem;
+      }),
+      total: response.total,
+      limit: response.limit,
+      offset: response.offset,
+    };
+  }
+
+  /**
    * Clear all memories from a bank.
    *
    * Note: The Hindsight API only supports clearing all memories at once,
@@ -704,6 +799,61 @@ export class HindsightClient {
       result.lastSignalAt = response.last_signal_at;
     }
     return result;
+  }
+
+  /**
+   * Get bank-level usefulness statistics.
+   *
+   * @param bankId - Bank identifier
+   * @returns Bank usefulness statistics
+   * @throws {HindsightError} If bank doesn't exist or request fails
+   *
+   * @example
+   * ```typescript
+   * const stats = await client.getBankStats("my-project");
+   * console.log(`Average usefulness: ${stats.averageUsefulness}`);
+   * ```
+   */
+  async getBankStats(bankId: string): Promise<BankUsefulnessStats> {
+    interface BankStatsApiResponse {
+      bank_id: string;
+      total_facts_with_signals: number;
+      average_usefulness: number;
+      total_signals: number;
+      signal_distribution: Record<string, number>;
+      top_useful_facts: Array<{ fact_id: string; score: number; text: string }>;
+      least_useful_facts: Array<{
+        fact_id: string;
+        score: number;
+        text: string;
+      }>;
+    }
+
+    const response = await this.request<BankStatsApiResponse>(
+      "GET",
+      `/v1/default/banks/${encodeURIComponent(bankId)}/stats/usefulness`,
+    );
+
+    return {
+      bankId: response.bank_id,
+      totalFactsWithSignals: response.total_facts_with_signals,
+      averageUsefulness: response.average_usefulness,
+      totalSignals: response.total_signals,
+      signalDistribution: response.signal_distribution as Record<
+        SignalType,
+        number
+      >,
+      topUsefulFacts: response.top_useful_facts.map((f) => ({
+        factId: f.fact_id,
+        score: f.score,
+        text: f.text,
+      })),
+      leastUsefulFacts: response.least_useful_facts.map((f) => ({
+        factId: f.fact_id,
+        score: f.score,
+        text: f.text,
+      })),
+    };
   }
 
   // ============================================

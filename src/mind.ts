@@ -23,11 +23,13 @@ import { OfflineFeedbackQueue } from "./feedback/offline-queue.js";
 import { OfflineMemoryStore } from "./offline.js";
 import type {
   Bank,
+  BankUsefulnessStats,
   Disposition,
   FactType,
   LearnOptions,
   LearnResult,
   Memory,
+  MetricsResult,
   MindOptions,
   RecallOptions,
   ReflectResult,
@@ -669,6 +671,90 @@ export class Mind extends TypedEventEmitter {
       bankId: this.bankId,
       signals,
     });
+  }
+
+  /**
+   * Get the underlying HindsightClient.
+   *
+   * Use with caution - prefer Mind methods for standard operations.
+   * Returns null if in degraded mode.
+   *
+   * @returns The HindsightClient instance, or null if degraded
+   */
+  getClient(): HindsightClient | null {
+    return this.degraded ? null : this.client;
+  }
+
+  /**
+   * Get memory effectiveness metrics for the current bank.
+   *
+   * Combines bank statistics with memory counts to provide
+   * a comprehensive view of memory health and usage.
+   *
+   * @returns Metrics result with bank stats and counts
+   * @throws {HindsightError} If in degraded mode (requires Hindsight connection)
+   *
+   * @example
+   * ```typescript
+   * const metrics = await mind.getMetrics();
+   * console.log(`Total facts: ${metrics.totalFacts}`);
+   * console.log(`Average usefulness: ${metrics.bankStats?.averageUsefulness}`);
+   * ```
+   */
+  async getMetrics(): Promise<MetricsResult> {
+    this.assertInitialized();
+
+    if (this.degraded || !this.client) {
+      throw new HindsightError(
+        "getMetrics() requires Hindsight connection",
+        "HINDSIGHT_UNAVAILABLE",
+        { isRetryable: false },
+      );
+    }
+
+    // Get bank info for total counts
+    const bank = await this.client.getBank(this.bankId);
+
+    // Get bank-level usefulness stats
+    let bankStats: BankUsefulnessStats | null = null;
+    try {
+      bankStats = await this.client.getBankStats(this.bankId);
+    } catch {
+      // Stats may not exist if no signals have been submitted yet
+    }
+
+    // Count facts by type
+    const factsByType: Record<FactType, number> = {
+      world: 0,
+      experience: 0,
+      opinion: 0,
+      observation: 0,
+    };
+
+    // Get counts for each type using listMemories
+    for (const factType of ["world", "experience", "opinion"] as FactType[]) {
+      try {
+        const result = await this.client.listMemories(this.bankId, {
+          factType,
+          limit: 1,
+        });
+        factsByType[factType] = result.total;
+      } catch {
+        // Ignore errors for individual type counts
+      }
+    }
+
+    // Calculate pruning candidates (facts with low usefulness)
+    const pruningCandidates =
+      bankStats?.leastUsefulFacts.filter((f) => f.score < 0.3).length ?? 0;
+
+    return {
+      bankId: this.bankId,
+      totalFacts: bank?.memoryCount ?? 0,
+      factsByType,
+      bankStats,
+      pruningCandidates,
+    };
   }
 
   /**

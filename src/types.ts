@@ -351,6 +351,106 @@ export interface FactUsefulnessStats {
 }
 
 // ============================================
+// Memory Metrics Types
+// ============================================
+
+/**
+ * Summary of a fact for display in metrics/reports.
+ */
+export interface FactSummary {
+  /** Fact UUID */
+  factId: string;
+  /** Usefulness score (0.0-1.0) */
+  score: number;
+  /** Fact text content */
+  text: string;
+}
+
+/**
+ * Bank-level usefulness statistics from Hindsight API.
+ */
+export interface BankUsefulnessStats {
+  /** Bank identifier */
+  bankId: string;
+  /** Number of facts that have received signals */
+  totalFactsWithSignals: number;
+  /** Average usefulness score across all signaled facts (0.0-1.0) */
+  averageUsefulness: number;
+  /** Total number of signals submitted */
+  totalSignals: number;
+  /** Breakdown of signals by type */
+  signalDistribution: Record<SignalType, number>;
+  /** Most useful facts by score */
+  topUsefulFacts: FactSummary[];
+  /** Least useful facts by score */
+  leastUsefulFacts: FactSummary[];
+}
+
+/**
+ * Result of the metrics command, combining bank stats with memory counts.
+ */
+export interface MetricsResult {
+  /** Bank identifier */
+  bankId: string;
+  /** Total number of facts in the bank */
+  totalFacts: number;
+  /** Facts broken down by type */
+  factsByType: Record<FactType, number>;
+  /** Bank-level usefulness stats (null if no signals exist) */
+  bankStats: BankUsefulnessStats | null;
+  /** Number of facts that are candidates for pruning */
+  pruningCandidates: number;
+}
+
+// ============================================
+// Consolidation/Pruning Types
+// ============================================
+
+/**
+ * Criteria for identifying pruning candidates.
+ */
+export interface PruningCriteria {
+  /** Minimum usefulness score threshold (default: 0.3) */
+  minUsefulness?: number;
+  /** Minimum number of signals required to consider for pruning (default: 5) */
+  minSignals?: number;
+}
+
+/**
+ * A memory fact identified as a candidate for pruning.
+ */
+export interface PruningCandidate {
+  /** Fact UUID */
+  factId: string;
+  /** Fact text content */
+  text: string;
+  /** Type of the fact */
+  factType: FactType;
+  /** Current usefulness score (0.0-1.0) */
+  usefulnessScore: number;
+  /** Total number of signals received */
+  signalCount: number;
+  /** Breakdown of signals by type */
+  signalBreakdown: Record<SignalType, number>;
+  /** Human-readable reason for pruning recommendation */
+  reason: string;
+}
+
+/**
+ * Result of the consolidation analysis.
+ */
+export interface ConsolidationReport {
+  /** Bank identifier */
+  bankId: string;
+  /** Criteria used for analysis */
+  criteria: PruningCriteria;
+  /** List of facts recommended for pruning */
+  candidates: PruningCandidate[];
+  /** Total number of memories in the bank */
+  totalMemories: number;
+}
+
+// ============================================
 // Entity Input Types
 // ============================================
 

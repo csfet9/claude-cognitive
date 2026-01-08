@@ -19,3 +19,5 @@ export { registerSyncSessionCommand } from "./sync-session.js";
 export { registerUpdateCommand } from "./update.js";
 export { registerFeedbackStatsCommand } from "./feedback-stats.js";
 export { registerFeedbackSyncCommand } from "./feedback-sync.js";
+export { registerMetricsCommand } from "./metrics.js";
+export { registerConsolidateCommand } from "./consolidate.js";

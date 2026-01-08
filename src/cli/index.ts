@@ -23,6 +23,8 @@ import {
   registerUpdateCommand,
   registerFeedbackStatsCommand,
   registerFeedbackSyncCommand,
+  registerMetricsCommand,
+  registerConsolidateCommand,
 } from "./commands/index.js";
 import { registerInjectContextCommand } from "../hooks/inject-context.js";
 import { registerProcessSessionCommand } from "../hooks/process-session.js";
@@ -56,6 +58,8 @@ function createCLI(): CAC {
   registerUpdateCommand(cli);
   registerFeedbackStatsCommand(cli);
   registerFeedbackSyncCommand(cli);
+  registerMetricsCommand(cli);
+  registerConsolidateCommand(cli);
 
   // Register hook commands
   registerInjectContextCommand(cli);
