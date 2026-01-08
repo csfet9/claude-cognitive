@@ -197,7 +197,7 @@ export function addRecalledFacts(
     factId: fact.id || `unknown-${index}`,
     text: fact.text || "",
     factType: fact.factType || "unknown",
-    score: 0, // Score may be added later from recall results
+    score: Math.round((1 / (index + 1)) * 1000) / 1000, // Derived from rank: 1/position (Hindsight doesn't expose raw scores)
     position: index + 1,
   }));
 

@@ -143,6 +143,20 @@ Tests mirror source structure under `tests/`:
 
 Vitest globals are enabled. Coverage thresholds: 80% statements/functions/lines, 75% branches.
 
+## Git Workflow
+
+Keep git history clean by batching changes:
+
+1. Make multiple related changes locally (commit each)
+2. When ready to release: bump version and push together
+3. Avoid pushing after every small change
+
+```bash
+# After multiple commits are ready
+npm version patch -m "0.x.x"  # bumps version and creates tag
+git push && git push --tags   # push everything together
+```
+
 ## Graceful Degradation & Offline Mode
 
 When Hindsight is unavailable, Mind enters offline mode:
