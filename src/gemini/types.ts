@@ -9,19 +9,13 @@
 
 /**
  * Available Gemini models.
- * "auto" resolves to AUTO_MODEL_RESOLUTION at runtime.
+ * "auto" lets the Gemini CLI choose the best model automatically.
  */
 export type GeminiModel =
   | "auto"
   | "gemini-2.5-flash"
   | "gemini-2.5-pro"
   | "gemini-2.0-flash";
-
-/**
- * Default model used when "auto" is specified.
- */
-export const AUTO_MODEL_RESOLUTION: Exclude<GeminiModel, "auto"> =
-  "gemini-2.5-flash";
 
 // ============================================
 // Configuration Types
@@ -55,8 +49,8 @@ export const DEFAULT_GEMINI_CONFIG: GeminiConfig = {
 export interface ExecuteOptions {
   /** The prompt to send to Gemini */
   prompt: string;
-  /** Model to use (required, should be resolved from "auto" already) */
-  model: Exclude<GeminiModel, "auto">;
+  /** Model to use (including "auto" which lets CLI choose) */
+  model: GeminiModel;
   /** Timeout in milliseconds */
   timeout: number;
 }
@@ -81,8 +75,8 @@ export interface PromptOptions {
 export interface GeminiResult {
   /** The response text from Gemini */
   response: string;
-  /** Model that was used */
-  model: Exclude<GeminiModel, "auto">;
+  /** Model that was used (may be "auto" if CLI chose automatically) */
+  model: GeminiModel;
   /** Execution duration in milliseconds */
   duration: number;
 }

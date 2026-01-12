@@ -8,7 +8,6 @@ import { resolve, relative, isAbsolute } from "node:path";
 import { GeminiError } from "./errors.js";
 import { GeminiExecutor } from "./executor.js";
 import {
-  AUTO_MODEL_RESOLUTION,
   DEFAULT_GEMINI_CONFIG,
   type AnalysisType,
   type GeminiConfig,
@@ -89,13 +88,13 @@ export class GeminiWrapper {
   }
 
   /**
-   * Resolve model name, converting "auto" to the actual model.
+   * Resolve model name (pass through, CLI handles "auto").
    *
-   * @param model - Model name or "auto"
-   * @returns Resolved model name
+   * @param model - Model name
+   * @returns Model name as-is
    */
-  resolveModel(model: GeminiModel): Exclude<GeminiModel, "auto"> {
-    return model === "auto" ? AUTO_MODEL_RESOLUTION : model;
+  resolveModel(model: GeminiModel): GeminiModel {
+    return model;
   }
 
   /**

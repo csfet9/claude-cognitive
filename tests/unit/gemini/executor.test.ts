@@ -161,7 +161,7 @@ describe("GeminiExecutor", () => {
   });
 
   describe("execute()", () => {
-    it("should write prompt to temp file and execute CLI", async () => {
+    it("should write prompt to temp file and execute CLI with explicit model", async () => {
       const mockProc = createMockChildProcess();
       const mockStream = createMockReadStream();
       mockSpawn.mockReturnValue(mockProc);
@@ -179,9 +179,9 @@ describe("GeminiExecutor", () => {
       await Promise.resolve();
 
       // Simulate successful response
-      const stdoutHandler = mockProc.stdout.on.mock.calls.find(
-        (call) => call[0] === "data",
-      )?.[1];
+      const stdoutHandler = (
+        mockProc.stdout!.on as ReturnType<typeof vi.fn>
+      ).mock.calls.find((call) => call[0] === "data")?.[1];
       stdoutHandler(Buffer.from("Response text"));
       mockProc.emit("close", 0);
 
@@ -206,6 +206,66 @@ describe("GeminiExecutor", () => {
       expect(mockStream.pipe).toHaveBeenCalledWith(mockProc.stdin);
     });
 
+    it("should omit model flag when model is 'auto'", async () => {
+      const mockProc = createMockChildProcess();
+      const mockStream = createMockReadStream();
+      mockSpawn.mockReturnValue(mockProc);
+      mockWriteFile.mockResolvedValue(undefined);
+      mockUnlink.mockResolvedValue(undefined);
+      mockCreateReadStream.mockReturnValue(mockStream);
+
+      const promise = executor.execute({
+        prompt: "Test prompt",
+        model: "auto",
+        timeout: 60000,
+      });
+
+      // Wait for async operations to set up handlers
+      await Promise.resolve();
+
+      // Simulate successful response
+      const stdoutHandler = (
+        mockProc.stdout!.on as ReturnType<typeof vi.fn>
+      ).mock.calls.find((call) => call[0] === "data")?.[1];
+      stdoutHandler(Buffer.from("Response text"));
+      mockProc.emit("close", 0);
+
+      const result = await promise;
+
+      expect(result).toBe("Response text");
+      // When model is "auto", CLI should be called without -m flag
+      expect(mockSpawn).toHaveBeenCalledWith(
+        "gemini",
+        ["-o", "text"],
+        expect.any(Object),
+      );
+    });
+
+    it("should accept 'auto' as a valid model", async () => {
+      const mockProc = createMockChildProcess();
+      const mockStream = createMockReadStream();
+      mockSpawn.mockReturnValue(mockProc);
+      mockWriteFile.mockResolvedValue(undefined);
+      mockUnlink.mockResolvedValue(undefined);
+      mockCreateReadStream.mockReturnValue(mockStream);
+
+      const promise = executor.execute({
+        prompt: "Test",
+        model: "auto",
+        timeout: 60000,
+      });
+
+      await Promise.resolve();
+      const stdoutHandler = (
+        mockProc.stdout!.on as ReturnType<typeof vi.fn>
+      ).mock.calls.find((call) => call[0] === "data")?.[1];
+      stdoutHandler(Buffer.from("Response"));
+      mockProc.emit("close", 0);
+
+      // Should not throw for "auto" model
+      await expect(promise).resolves.toBe("Response");
+    });
+
     it("should clean up temp file in finally block on success", async () => {
       const mockProc = createMockChildProcess();
       const mockStream = createMockReadStream();
@@ -221,9 +281,9 @@ describe("GeminiExecutor", () => {
       });
 
       await Promise.resolve();
-      const stdoutHandler = mockProc.stdout.on.mock.calls.find(
-        (call) => call[0] === "data",
-      )?.[1];
+      const stdoutHandler = (
+        mockProc.stdout!.on as ReturnType<typeof vi.fn>
+      ).mock.calls.find((call) => call[0] === "data")?.[1];
       stdoutHandler(Buffer.from("Success"));
       mockProc.emit("close", 0);
 
@@ -270,9 +330,9 @@ describe("GeminiExecutor", () => {
       });
 
       await Promise.resolve();
-      const stdoutHandler = mockProc.stdout.on.mock.calls.find(
-        (call) => call[0] === "data",
-      )?.[1];
+      const stdoutHandler = (
+        mockProc.stdout!.on as ReturnType<typeof vi.fn>
+      ).mock.calls.find((call) => call[0] === "data")?.[1];
       stdoutHandler(Buffer.from("Response"));
       mockProc.emit("close", 0);
 
@@ -324,9 +384,9 @@ describe("GeminiExecutor", () => {
       });
 
       await Promise.resolve();
-      const stderrHandler = mockProc.stderr.on.mock.calls.find(
-        (call) => call[0] === "data",
-      )?.[1];
+      const stderrHandler = (
+        mockProc.stderr!.on as ReturnType<typeof vi.fn>
+      ).mock.calls.find((call) => call[0] === "data")?.[1];
       stderrHandler(Buffer.from("Authentication required"));
       mockProc.emit("close", 1);
 
@@ -355,9 +415,9 @@ describe("GeminiExecutor", () => {
       });
 
       await Promise.resolve();
-      const stderrHandler = mockProc.stderr.on.mock.calls.find(
-        (call) => call[0] === "data",
-      )?.[1];
+      const stderrHandler = (
+        mockProc.stderr!.on as ReturnType<typeof vi.fn>
+      ).mock.calls.find((call) => call[0] === "data")?.[1];
       stderrHandler(Buffer.from("command not found: gemini"));
       mockProc.emit("close", 127);
 
@@ -386,9 +446,9 @@ describe("GeminiExecutor", () => {
       });
 
       await Promise.resolve();
-      const stderrHandler = mockProc.stderr.on.mock.calls.find(
-        (call) => call[0] === "data",
-      )?.[1];
+      const stderrHandler = (
+        mockProc.stderr!.on as ReturnType<typeof vi.fn>
+      ).mock.calls.find((call) => call[0] === "data")?.[1];
       stderrHandler(Buffer.from("Error: Authentication required. Please login."));
       mockProc.emit("close", 1);
 
@@ -417,9 +477,9 @@ describe("GeminiExecutor", () => {
       });
 
       await Promise.resolve();
-      const stderrHandler = mockProc.stderr.on.mock.calls.find(
-        (call) => call[0] === "data",
-      )?.[1];
+      const stderrHandler = (
+        mockProc.stderr!.on as ReturnType<typeof vi.fn>
+      ).mock.calls.find((call) => call[0] === "data")?.[1];
       stderrHandler(Buffer.from("Error: Invalid model specified"));
       mockProc.emit("close", 1);
 
@@ -472,9 +532,9 @@ describe("GeminiExecutor", () => {
       });
 
       await Promise.resolve();
-      const stderrHandler = mockProc.stderr.on.mock.calls.find(
-        (call) => call[0] === "data",
-      )?.[1];
+      const stderrHandler = (
+        mockProc.stderr!.on as ReturnType<typeof vi.fn>
+      ).mock.calls.find((call) => call[0] === "data")?.[1];
       stderrHandler(Buffer.from("Some generic error"));
       mockProc.emit("close", 1);
 

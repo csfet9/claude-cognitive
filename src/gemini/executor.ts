@@ -37,6 +37,7 @@ import type { ExecuteOptions } from "./types.js";
  */
 /** Valid Gemini models that can be used with the CLI */
 const VALID_MODELS = [
+  "auto",
   "gemini-2.5-flash",
   "gemini-2.5-pro",
   "gemini-2.0-flash",
@@ -139,8 +140,12 @@ export class GeminiExecutor {
     this.validateModel(model);
 
     return new Promise((resolve, reject) => {
+      // Build args conditionally: when model is "auto", omit -m flag to let CLI choose
+      const args =
+        model === "auto" ? ["-o", "text"] : ["-m", model, "-o", "text"];
+
       // Spawn gemini directly without shell
-      const proc = spawn("gemini", ["-m", model, "-o", "text"], {
+      const proc = spawn("gemini", args, {
         stdio: ["pipe", "pipe", "pipe"],
       });
 

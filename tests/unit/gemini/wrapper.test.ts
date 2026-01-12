@@ -34,8 +34,8 @@ describe("GeminiWrapper", () => {
     it("should merge config with defaults", () => {
       const w = new GeminiWrapper({ timeout: 5000 }, projectPath, mockExecutor);
 
-      // Verify by checking resolved model (uses default)
-      expect(w.resolveModel("auto")).toBe("gemini-2.5-flash");
+      // Verify by checking resolved model (passes through unchanged)
+      expect(w.resolveModel("auto")).toBe("auto");
     });
 
     it("should use custom config values", () => {
@@ -45,7 +45,7 @@ describe("GeminiWrapper", () => {
         mockExecutor,
       );
 
-      expect(w.resolveModel("auto")).toBe("gemini-2.5-flash"); // auto still resolves the same
+      expect(w.resolveModel("auto")).toBe("auto"); // auto passes through unchanged
     });
   });
 
@@ -69,13 +69,13 @@ describe("GeminiWrapper", () => {
   });
 
   describe("resolveModel()", () => {
-    it("should convert 'auto' to actual model", () => {
+    it("should pass through 'auto' unchanged", () => {
       const result = wrapper.resolveModel("auto");
 
-      expect(result).toBe("gemini-2.5-flash");
+      expect(result).toBe("auto");
     });
 
-    it("should pass through explicit model names", () => {
+    it("should pass through explicit model names unchanged", () => {
       expect(wrapper.resolveModel("gemini-2.5-pro")).toBe("gemini-2.5-pro");
       expect(wrapper.resolveModel("gemini-2.0-flash")).toBe("gemini-2.0-flash");
       expect(wrapper.resolveModel("gemini-2.5-flash")).toBe("gemini-2.5-flash");
@@ -83,17 +83,17 @@ describe("GeminiWrapper", () => {
   });
 
   describe("prompt()", () => {
-    it("should execute prompt and return result", async () => {
+    it("should execute prompt and return result with default 'auto' model", async () => {
       (mockExecutor.execute as ReturnType<typeof vi.fn>).mockResolvedValue("Test response");
 
       const result = await wrapper.prompt({ prompt: "Test prompt" });
 
       expect(result.response).toBe("Test response");
-      expect(result.model).toBe("gemini-2.5-flash");
+      expect(result.model).toBe("auto");
       expect(result.duration).toBeGreaterThanOrEqual(0);
       expect(mockExecutor.execute).toHaveBeenCalledWith({
         prompt: "Test prompt",
-        model: "gemini-2.5-flash",
+        model: "auto",
         timeout: 120000,
       });
     });

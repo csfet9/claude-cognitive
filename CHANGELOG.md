@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-01-12
+
+### Changed
+
+- **Gemini CLI model auto-selection** - Removed hardcoded model parameter from
+  Gemini CLI calls. When model is set to `"auto"` (the default), the `-m` flag
+  is now omitted, allowing Gemini CLI to auto-select the optimal model based on
+  task complexity (e.g., `gemini-3-flash-preview` for simple tasks, thinking
+  models for complex analysis).
+  - Removed `AUTO_MODEL_RESOLUTION` constant
+  - Updated `ExecuteOptions.model` and `GeminiResult.model` to allow `"auto"`
+  - Explicit model overrides (e.g., `"gemini-2.5-pro"`) still work with `-m` flag
+  - Users can override in `.claudemindrc` with `gemini.model` setting
+
 ## [0.4.11] - 2026-01-07
 
 ### Fixed

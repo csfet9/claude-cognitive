@@ -24,13 +24,13 @@ export function createMockGeminiExecutor(): GeminiExecutor {
 export function createMockGeminiWrapper(): GeminiWrapper {
   const mockResult: GeminiResult = {
     response: "Mock Gemini response",
-    model: "gemini-2.5-flash",
+    model: "auto",
     duration: 1500,
   };
 
   return {
     isAvailable: vi.fn().mockResolvedValue(true),
-    resolveModel: vi.fn().mockReturnValue("gemini-2.5-flash"),
+    resolveModel: vi.fn().mockImplementation((model: string) => model),
     prompt: vi.fn().mockResolvedValue(mockResult),
     readFiles: vi.fn().mockResolvedValue(new Map([["test.ts", "test content"]])),
     analyzeCode: vi.fn().mockResolvedValue({

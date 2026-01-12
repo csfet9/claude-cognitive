@@ -46,7 +46,7 @@ export type {
   SummarizeOptions,
 } from "./types.js";
 
-export { AUTO_MODEL_RESOLUTION, DEFAULT_GEMINI_CONFIG } from "./types.js";
+export { DEFAULT_GEMINI_CONFIG } from "./types.js";
 
 // Errors
 export type { GeminiErrorCode } from "./errors.js";

@@ -25,7 +25,7 @@ describe("MCP Gemini handlers", () => {
     it("should return formatted success response", async () => {
       (mockWrapper.prompt as ReturnType<typeof vi.fn>).mockResolvedValue({
         response: "Test response",
-        model: "gemini-2.5-flash",
+        model: "auto",
         duration: 1500,
       });
 
@@ -35,7 +35,7 @@ describe("MCP Gemini handlers", () => {
 
       expect(result.isError).toBeUndefined();
       expect(result.content[0].text).toContain("Test response");
-      expect(result.content[0].text).toContain("Model: gemini-2.5-flash");
+      expect(result.content[0].text).toContain("Model: auto");
       expect(result.content[0].text).toContain("Duration: 1.5s");
     });
 
@@ -175,7 +175,7 @@ describe("MCP Gemini handlers", () => {
     it("should return formatted success response", async () => {
       (mockWrapper.research as ReturnType<typeof vi.fn>).mockResolvedValue({
         response: "Research findings",
-        model: "gemini-2.5-flash",
+        model: "auto",
         duration: 2000,
       });
 
@@ -185,7 +185,7 @@ describe("MCP Gemini handlers", () => {
 
       expect(result.isError).toBeUndefined();
       expect(result.content[0].text).toContain("Research findings");
-      expect(result.content[0].text).toContain("Model: gemini-2.5-flash");
+      expect(result.content[0].text).toContain("Model: auto");
       expect(result.content[0].text).toContain("Duration: 2.0s");
     });
 
@@ -257,7 +257,7 @@ describe("MCP Gemini handlers", () => {
     it("should return formatted success response", async () => {
       (mockWrapper.analyzeCode as ReturnType<typeof vi.fn>).mockResolvedValue({
         response: "Security analysis results",
-        model: "gemini-2.5-flash",
+        model: "auto",
         duration: 1800,
       });
 
@@ -268,7 +268,7 @@ describe("MCP Gemini handlers", () => {
 
       expect(result.isError).toBeUndefined();
       expect(result.content[0].text).toContain("Security analysis results");
-      expect(result.content[0].text).toContain("Model: gemini-2.5-flash");
+      expect(result.content[0].text).toContain("Model: auto");
       expect(result.content[0].text).toContain("Duration: 1.8s");
     });
 
@@ -354,7 +354,7 @@ describe("MCP Gemini handlers", () => {
     it("should return formatted success response", async () => {
       (mockWrapper.summarize as ReturnType<typeof vi.fn>).mockResolvedValue({
         response: "Summary of content",
-        model: "gemini-2.5-flash",
+        model: "auto",
         duration: 1200,
       });
 
@@ -364,7 +364,7 @@ describe("MCP Gemini handlers", () => {
 
       expect(result.isError).toBeUndefined();
       expect(result.content[0].text).toContain("Summary of content");
-      expect(result.content[0].text).toContain("Model: gemini-2.5-flash");
+      expect(result.content[0].text).toContain("Model: auto");
       expect(result.content[0].text).toContain("Duration: 1.2s");
     });
 
