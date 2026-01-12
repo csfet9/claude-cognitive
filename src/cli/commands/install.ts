@@ -10,6 +10,7 @@ import { homedir } from "node:os";
 import type { CAC } from "cac";
 import { Mind } from "../../mind.js";
 import type { Disposition, TraitValue } from "../../types.js";
+import { GeminiExecutor } from "../../gemini/executor.js";
 
 interface InstallAnswers {
   projectPath: string;
@@ -929,10 +930,25 @@ export function registerInstallCommand(cli: CAC): void {
           securityReview: {
             enabled: true,
           },
+          gemini: {
+            model: "auto",
+            timeout: 120000,
+          },
         };
 
         await writeFile(rcPath, JSON.stringify(config, null, 2) + "\n");
         printSuccess(`Created ${rcPath}`);
+
+        // Check Gemini CLI availability
+        const geminiExecutor = new GeminiExecutor();
+        const geminiAvailable = await geminiExecutor.checkAvailable();
+        if (geminiAvailable) {
+          printSuccess("Gemini CLI detected - enhanced analysis available");
+        } else {
+          printInfo(
+            "Gemini CLI not found - install with: npm install -g @google/gemini-cli",
+          );
+        }
 
         // Configure Claude Code MCP (always project-local)
         if (answers.configureClaudeCode) {

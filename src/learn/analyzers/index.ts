@@ -26,3 +26,10 @@ export type {
   ModuleInfo,
   CodingConventions,
 } from "./source.js";
+
+export {
+  analyzeWithGemini,
+  isGeminiAvailable,
+  getGeminiSummary,
+} from "./gemini.js";
+export type { GeminiAnalysis } from "./gemini.js";

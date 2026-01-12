@@ -87,6 +87,10 @@ const DEFAULT_CONFIG = {
       boostWeight: 0.3,
     },
   },
+  gemini: {
+    model: "auto",
+    timeout: 120000,
+  },
 };
 
 /**
@@ -536,6 +540,12 @@ fi
           projectUpdates.push("Add 'feedback' config");
         }
 
+        // Check for missing gemini config
+        if (!("gemini" in projectConfig)) {
+          projectUpdatesNeeded++;
+          projectUpdates.push("Add 'gemini' config");
+        }
+
         // Check for missing timeouts in hindsight config
         const hindsight = projectConfig.hindsight as
           | Record<string, unknown>
@@ -571,6 +581,10 @@ fi
 
             if (!("feedback" in projectConfig)) {
               projectConfig.feedback = DEFAULT_CONFIG.feedback;
+            }
+
+            if (!("gemini" in projectConfig)) {
+              projectConfig.gemini = DEFAULT_CONFIG.gemini;
             }
 
             // Add timeouts to hindsight config if missing

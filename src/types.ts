@@ -3,6 +3,14 @@
  * @module types
  */
 
+import type { GeminiConfig as GeminiConfigType } from "./gemini/types.js";
+
+// Re-export GeminiConfig for external use
+export type { GeminiConfig } from "./gemini/types.js";
+
+// Alias for internal use
+type GeminiConfig = GeminiConfigType;
+
 // ============================================
 // Error Codes
 // ============================================
@@ -630,6 +638,8 @@ export interface ClaudeMindConfig {
   feedback?: FeedbackConfig;
   /** Security review configuration for pre-commit hooks */
   securityReview?: SecurityReviewConfig;
+  /** Gemini CLI integration configuration */
+  gemini?: GeminiConfig;
 }
 
 // ============================================

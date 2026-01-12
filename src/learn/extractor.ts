@@ -9,6 +9,7 @@ import type { PackageAnalysis } from "./analyzers/package.js";
 import type { StructureAnalysis } from "./analyzers/structure.js";
 import type { GitAnalysis } from "./analyzers/git.js";
 import type { SourceAnalysis } from "./analyzers/source.js";
+import type { GeminiAnalysis } from "./analyzers/gemini.js";
 
 /**
  * Combined analysis results for fact extraction.
@@ -19,6 +20,7 @@ export interface AnalysisResults {
   structure?: StructureAnalysis | null;
   git?: GitAnalysis | null;
   source?: SourceAnalysis | null;
+  gemini?: GeminiAnalysis | null;
 }
 
 /**
@@ -72,6 +74,11 @@ export class DefaultFactExtractor implements FactExtractor {
     // Extract from source analysis
     if (analysis.source) {
       facts.push(...this.extractFromSource(analysis.source));
+    }
+
+    // Extract from Gemini analysis
+    if (analysis.gemini) {
+      facts.push(...this.extractFromGemini(analysis.gemini));
     }
 
     return facts;
@@ -366,6 +373,66 @@ export class DefaultFactExtractor implements FactExtractor {
         content: `Code pattern: ${pattern.description}`,
         context: `Found in: ${pattern.examples.slice(0, 3).join(", ")}`,
         category: "patterns",
+      });
+    }
+
+    return facts;
+  }
+
+  /**
+   * Extract facts from Gemini analysis.
+   * @internal
+   */
+  private extractFromGemini(gemini: GeminiAnalysis): ExtractedFact[] {
+    const facts: ExtractedFact[] = [];
+
+    // Skip if analysis wasn't performed
+    if (!gemini.performed) {
+      return facts;
+    }
+
+    // Architecture insights
+    for (const insight of gemini.architectureInsights.slice(0, 5)) {
+      facts.push({
+        content: `Architecture: ${insight}`,
+        context: "Analyzed by Gemini",
+        category: "decisions",
+      });
+    }
+
+    // Code patterns
+    for (const pattern of gemini.codePatterns.slice(0, 5)) {
+      facts.push({
+        content: `Code pattern: ${pattern}`,
+        context: "Detected by Gemini analysis",
+        category: "patterns",
+      });
+    }
+
+    // Technologies
+    if (gemini.technologies.length > 0) {
+      facts.push({
+        content: `Key technologies: ${gemini.technologies.join(", ")}`,
+        context: "Identified by Gemini analysis",
+        category: "stack",
+      });
+    }
+
+    // Best practices
+    for (const practice of gemini.bestPractices.slice(0, 3)) {
+      facts.push({
+        content: `Best practice: ${practice}`,
+        context: "Recommended by Gemini analysis",
+        category: "patterns",
+      });
+    }
+
+    // Improvements (stored as decisions to track)
+    for (const improvement of gemini.improvements.slice(0, 3)) {
+      facts.push({
+        content: `Improvement opportunity: ${improvement}`,
+        context: "Suggested by Gemini analysis",
+        category: "decisions",
       });
     }
 

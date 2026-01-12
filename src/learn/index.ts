@@ -11,6 +11,8 @@ import {
   analyzeStructure,
   analyzeGitHistory,
   analyzeSource,
+  analyzeWithGemini,
+  isGeminiAvailable,
 } from "./analyzers/index.js";
 import { createFactExtractor, type AnalysisResults } from "./extractor.js";
 
@@ -193,6 +195,11 @@ async function runAnalysis(
     if (sourceFiles.length > 0) {
       results.source = await analyzeSource(projectPath, sourceFiles);
     }
+  }
+
+  // Gemini analysis: available for standard and full depth if CLI is available
+  if (opts.depth !== "quick" && (await isGeminiAvailable())) {
+    results.gemini = await analyzeWithGemini(projectPath);
   }
 
   return { results, filesAnalyzed };

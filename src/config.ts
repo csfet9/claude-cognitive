@@ -11,6 +11,7 @@ import type {
   RetainFilterConfig,
   SecurityReviewConfig,
 } from "./types.js";
+import { DEFAULT_GEMINI_CONFIG, type GeminiModel } from "./gemini/types.js";
 
 /**
  * Default retain filter configuration.
@@ -120,6 +121,9 @@ function mergeConfig(
   if (target.securityReview !== undefined) {
     result.securityReview = { ...target.securityReview };
   }
+  if (target.gemini !== undefined) {
+    result.gemini = { ...target.gemini };
+  }
 
   // Merge hindsight settings
   if (source.hindsight) {
@@ -193,6 +197,14 @@ function mergeConfig(
     result.securityReview = {
       ...result.securityReview,
       ...source.securityReview,
+    };
+  }
+
+  // Merge gemini settings
+  if (source.gemini !== undefined) {
+    result.gemini = {
+      ...result.gemini,
+      ...source.gemini,
     };
   }
 
@@ -281,6 +293,9 @@ function applyEnvConfig(config: ClaudeMindConfig): ClaudeMindConfig {
   if (config.securityReview !== undefined) {
     result.securityReview = { ...config.securityReview };
   }
+  if (config.gemini !== undefined) {
+    result.gemini = { ...config.gemini };
+  }
 
   // Hindsight connection settings
   const host = process.env["HINDSIGHT_HOST"];
@@ -305,6 +320,15 @@ function applyEnvConfig(config: ClaudeMindConfig): ClaudeMindConfig {
   const bankId = process.env["CLAUDEMIND_BANK_ID"];
   if (bankId) {
     result.bankId = bankId;
+  }
+
+  // Gemini settings
+  const geminiModel = process.env["GEMINI_MODEL"];
+  if (geminiModel) {
+    if (!result.gemini) {
+      result.gemini = { ...DEFAULT_GEMINI_CONFIG };
+    }
+    result.gemini.model = geminiModel as GeminiModel;
   }
 
   return result;
@@ -367,6 +391,9 @@ function cloneConfig(config: ClaudeMindConfig): ClaudeMindConfig {
   }
   if (config.securityReview !== undefined) {
     result.securityReview = { ...config.securityReview };
+  }
+  if (config.gemini !== undefined) {
+    result.gemini = { ...config.gemini };
   }
 
   return result;

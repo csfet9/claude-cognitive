@@ -5,6 +5,16 @@ Use this background to inform your work on this project.
 
 ---
 
+## Security Review Required
+
+**MANDATORY**: Before ANY `git commit` command, you MUST:
+1. Launch the `security-code-reviewer` agent to review all staged changes
+2. Wait for the security review to complete
+3. Address any critical/high issues found
+4. Only then proceed with the commit
+
+This policy is enforced for this project. Do not skip security review.
+
 ## Agent Orchestration
 
 You are the **orchestrator**. You do NOT write code directly. Delegate ALL coding tasks to specialized agents using the Task tool.
@@ -47,17 +57,17 @@ For ALL coding tasks, follow this workflow:
 
 
 ## Recent Activity
-- 1/7/2026: User expressed a preference for concrete code patterns, specific decisions with rationale, and file-level knowledge in a project context system | When: Wednesday, January 7, 2026 | Involving: user | T...
-- 1/7/2026: Assistant revised its assessment of the memory system to an 8/10 rating | When: Wednesday, January 7, 2026 | Involving: assistant, user | The user provided context that redundancy is a known LLM limit...
-- 1/7/2026: The user and assistant worked together on the camarilla-trader project | When: Wednesday, January 7, 2026 | Involving: user, assistant | To sort out specific issues within the project; the presence of...
-- 1/7/2026: Analysis is utilized to audit codebase composition, identify documentation density, and understand the technical stack of a repository.
-- 1/7/2026: Analysis activities included tracing the Hindsight API call flow and examining entry points to visualize how system requests are handled.
-- 1/7/2026: The results of the API flow analysis were used to generate a comprehensive flow diagram for the user on January 6, 2026.
-- 1/7/2026: An analysis of the project directory structure was conducted on January 4, 2026, to map the organization of source and test files.
-- 1/7/2026: A file extension analysis performed on January 4, 2026, identified 121 files, comprising 92 TypeScript files, 14 Markdown files, 8 JSON files, 2 SVG files, and 5 files without extensions.
-- 1/7/2026: The user implemented a feedback system for Hindsight to address the issue of memory redundancy | When: Wednesday, January 7, 2026 | Involving: user | The feedback system uses signals like 'used', 'ign...
-- 1/7/2026: User is a software developer specializing in algorithmic trading systems, specifically building a Camarilla Pivot Points architecture for futures markets including ES, NQ, YM, and GC.
+- 1/12/2026: The assistant created a 563-line implementation plan file at .claude/gemini-wrapper-plan.md covering seven phases of development for the Gemini CLI wrapper MCP | When: Monday, January 12, 2026 | Invol...
+- 1/12/2026: The assistant confirmed that the Gemini integration commits were local only and never pushed to the origin, meaning the local state at version 0.5.9 is in sync with the remote repository | When: Monda...
+- 1/12/2026: The user integrates Gemini into projects like claude-cognitive to extend context windows and optimize codebase scanning.
+- 1/12/2026: The user manages a full release cycle that includes updating READMEs and changelogs, bumping npm versions to 0.6.0, and performing GitHub releases.
+- 1/12/2026: The user incorporates Gemini setup as a default option within 'install' and 'update' commands, specifically for 'learning' environments.
+- 1/12/2026: The user troubleshoot technical issues related to exactOptionalPropertyTypes, type mismatches in tool schemas, and mock function parameters during testing.
+- 1/12/2026: The user requested that documentation and configurations reflect Gemini 3 models (specifically gemini-2.5-flash) instead of Gemini 2 models.
+- 1/12/2026: The user is developing a Gemini integration that involves implementing a Model Context Protocol (MCP) server, integrating Zod schemas, and configuring dynamic model selection via a .claudemindrc file.
+- 1/12/2026: The user prefers authenticating the Gemini CLI using a Google account OAuth login rather than an API key to utilize their Google subscription directly.
+- 1/12/2026: The assistant verified that the .mcp.json configuration file is clean and only contains the 'claude-cognitive' entry, with no external Gemini MCP present | When: Monday, January 12, 2026 | Involving: ...
 
 ---
 
-*Auto-recalled at 2026-01-07T18:50:32+01:00*
+*Auto-recalled at 2026-01-12T20:35:59+01:00*

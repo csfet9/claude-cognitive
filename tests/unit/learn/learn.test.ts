@@ -48,6 +48,18 @@ vi.mock("../../../src/learn/analyzers/index.js", () => ({
     errorHandling: "try-catch",
     patterns: [],
   }),
+  // Gemini analyzer mocks - Gemini is not available in tests by default
+  isGeminiAvailable: vi.fn().mockResolvedValue(false),
+  analyzeWithGemini: vi.fn().mockResolvedValue({
+    performed: false,
+    architectureInsights: [],
+    codePatterns: [],
+    bestPractices: [],
+    improvements: [],
+    technologies: [],
+    documentationNotes: [],
+    error: "Gemini CLI not available",
+  }),
 }));
 
 // Mock extractor
