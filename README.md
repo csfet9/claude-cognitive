@@ -184,7 +184,7 @@ If you have the [Gemini CLI](https://github.com/google/gemini-cli) installed, cl
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `model` | `"auto"` | Model to use (`"auto"`, `"gemini-2.5-flash"`, `"gemini-2.5-pro"`) |
+| `model` | `"auto"` | Model to use (`"auto"`, `"gemini-3-flash-preview"`, `"gemini-3-pro-preview"`) |
 | `timeout` | `0` | CLI timeout in ms (0 = no timeout) |
 | `maxConcurrentRequests` | `3` | Max parallel Gemini operations |
 
