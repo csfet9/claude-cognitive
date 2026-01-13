@@ -32,7 +32,9 @@ export function createMockGeminiWrapper(): GeminiWrapper {
     isAvailable: vi.fn().mockResolvedValue(true),
     resolveModel: vi.fn().mockImplementation((model: string) => model),
     prompt: vi.fn().mockResolvedValue(mockResult),
-    readFiles: vi.fn().mockResolvedValue(new Map([["test.ts", "test content"]])),
+    readFiles: vi
+      .fn()
+      .mockResolvedValue(new Map([["test.ts", "test content"]])),
     analyzeCode: vi.fn().mockResolvedValue({
       ...mockResult,
       response: "Code analysis result",

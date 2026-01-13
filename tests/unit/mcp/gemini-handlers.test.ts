@@ -110,7 +110,10 @@ describe("MCP Gemini handlers", () => {
 
     it("should format FILE_NOT_FOUND error", async () => {
       (mockWrapper.prompt as ReturnType<typeof vi.fn>).mockRejectedValue(
-        new GeminiError("File not found: test.ts", GeminiErrorCode.FILE_NOT_FOUND),
+        new GeminiError(
+          "File not found: test.ts",
+          GeminiErrorCode.FILE_NOT_FOUND,
+        ),
       );
 
       const result = await handleGeminiPrompt(mockWrapper, { prompt: "Test" });
@@ -457,9 +460,21 @@ describe("MCP Gemini handlers", () => {
         [GeminiErrorCode.AUTH_REQUIRED, "Auth error", "gemini auth login"],
         [GeminiErrorCode.CLI_NOT_FOUND, "CLI error", "npm install -g"],
         [GeminiErrorCode.TIMEOUT, "Timeout error", "timed out"],
-        [GeminiErrorCode.FILE_NOT_FOUND, "File not found: test.ts", "File not found"],
-        [GeminiErrorCode.FILE_TOO_LARGE, "File too large: test.ts", "File too large"],
-        [GeminiErrorCode.SECURITY_ERROR, "Security violation", "Security violation"],
+        [
+          GeminiErrorCode.FILE_NOT_FOUND,
+          "File not found: test.ts",
+          "File not found",
+        ],
+        [
+          GeminiErrorCode.FILE_TOO_LARGE,
+          "File too large: test.ts",
+          "File too large",
+        ],
+        [
+          GeminiErrorCode.SECURITY_ERROR,
+          "Security violation",
+          "Security violation",
+        ],
       ];
 
       for (const [code, errorMessage, expectedText] of errorTypes) {

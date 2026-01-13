@@ -20,7 +20,10 @@ describe("GeminiError", () => {
     });
 
     it("should set isRetryable to false by default", () => {
-      const error = new GeminiError("Test error", GeminiErrorCode.AUTH_REQUIRED);
+      const error = new GeminiError(
+        "Test error",
+        GeminiErrorCode.AUTH_REQUIRED,
+      );
 
       expect(error.isRetryable).toBe(false);
     });

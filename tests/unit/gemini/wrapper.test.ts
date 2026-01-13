@@ -51,7 +51,9 @@ describe("GeminiWrapper", () => {
 
   describe("isAvailable()", () => {
     it("should delegate to executor", async () => {
-      (mockExecutor.checkAvailable as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+      (
+        mockExecutor.checkAvailable as ReturnType<typeof vi.fn>
+      ).mockResolvedValue(true);
 
       const result = await wrapper.isAvailable();
 
@@ -60,7 +62,9 @@ describe("GeminiWrapper", () => {
     });
 
     it("should return false when executor returns false", async () => {
-      (mockExecutor.checkAvailable as ReturnType<typeof vi.fn>).mockResolvedValue(false);
+      (
+        mockExecutor.checkAvailable as ReturnType<typeof vi.fn>
+      ).mockResolvedValue(false);
 
       const result = await wrapper.isAvailable();
 
@@ -84,7 +88,9 @@ describe("GeminiWrapper", () => {
 
   describe("prompt()", () => {
     it("should execute prompt and return result with default 'auto' model", async () => {
-      (mockExecutor.execute as ReturnType<typeof vi.fn>).mockResolvedValue("Test response");
+      (mockExecutor.execute as ReturnType<typeof vi.fn>).mockResolvedValue(
+        "Test response",
+      );
 
       const result = await wrapper.prompt({ prompt: "Test prompt" });
 
@@ -94,12 +100,14 @@ describe("GeminiWrapper", () => {
       expect(mockExecutor.execute).toHaveBeenCalledWith({
         prompt: "Test prompt",
         model: "auto",
-        timeout: 120000,
+        timeout: 0,
       });
     });
 
     it("should build full prompt with context", async () => {
-      (mockExecutor.execute as ReturnType<typeof vi.fn>).mockResolvedValue("Response");
+      (mockExecutor.execute as ReturnType<typeof vi.fn>).mockResolvedValue(
+        "Response",
+      );
 
       await wrapper.prompt({
         prompt: "Question here",
@@ -114,7 +122,9 @@ describe("GeminiWrapper", () => {
     });
 
     it("should use model override", async () => {
-      (mockExecutor.execute as ReturnType<typeof vi.fn>).mockResolvedValue("Response");
+      (mockExecutor.execute as ReturnType<typeof vi.fn>).mockResolvedValue(
+        "Response",
+      );
 
       const result = await wrapper.prompt({
         prompt: "Test",
@@ -130,7 +140,9 @@ describe("GeminiWrapper", () => {
     });
 
     it("should use timeout override", async () => {
-      (mockExecutor.execute as ReturnType<typeof vi.fn>).mockResolvedValue("Response");
+      (mockExecutor.execute as ReturnType<typeof vi.fn>).mockResolvedValue(
+        "Response",
+      );
 
       await wrapper.prompt({
         prompt: "Test",
@@ -256,7 +268,10 @@ describe("GeminiWrapper", () => {
     });
 
     it("should reject files larger than 10MB", async () => {
-      mockStat.mockResolvedValue({ size: 11 * 1024 * 1024, isFile: () => true }); // 11MB
+      mockStat.mockResolvedValue({
+        size: 11 * 1024 * 1024,
+        isFile: () => true,
+      }); // 11MB
       mockRealpath.mockResolvedValue(`${projectPath}/large-file.ts`);
 
       try {
@@ -272,7 +287,10 @@ describe("GeminiWrapper", () => {
     });
 
     it("should accept files at exactly 10MB", async () => {
-      mockStat.mockResolvedValue({ size: 10 * 1024 * 1024, isFile: () => true }); // Exactly 10MB
+      mockStat.mockResolvedValue({
+        size: 10 * 1024 * 1024,
+        isFile: () => true,
+      }); // Exactly 10MB
       mockRealpath.mockResolvedValue(`${projectPath}/large-file.ts`);
 
       const result = await wrapper.readFiles(["large-file.ts"]);
@@ -305,7 +323,9 @@ describe("GeminiWrapper", () => {
         expect((error as GeminiError).code).toBe(
           GeminiErrorCode.SECURITY_ERROR,
         );
-        expect((error as GeminiError).message).toContain("resolves outside project");
+        expect((error as GeminiError).message).toContain(
+          "resolves outside project",
+        );
       }
     });
   });
@@ -315,14 +335,13 @@ describe("GeminiWrapper", () => {
       mockStat.mockResolvedValue({ size: 1024, isFile: () => true });
       mockReadFile.mockResolvedValue("function test() {}");
       mockRealpath.mockImplementation((path: string) => Promise.resolve(path));
-      (mockExecutor.execute as ReturnType<typeof vi.fn>).mockResolvedValue("Analysis result");
+      (mockExecutor.execute as ReturnType<typeof vi.fn>).mockResolvedValue(
+        "Analysis result",
+      );
     });
 
     it("should read files and execute analysis", async () => {
-      const result = await wrapper.analyzeCode(
-        ["src/test.ts"],
-        "security",
-      );
+      const result = await wrapper.analyzeCode(["src/test.ts"], "security");
 
       expect(result.response).toBe("Analysis result");
       expect(mockReadFile).toHaveBeenCalled();
@@ -390,7 +409,9 @@ describe("GeminiWrapper", () => {
 
   describe("research()", () => {
     beforeEach(() => {
-      (mockExecutor.execute as ReturnType<typeof vi.fn>).mockResolvedValue("Research result");
+      (mockExecutor.execute as ReturnType<typeof vi.fn>).mockResolvedValue(
+        "Research result",
+      );
     });
 
     it("should research topic without files", async () => {
@@ -452,7 +473,9 @@ describe("GeminiWrapper", () => {
 
   describe("summarize()", () => {
     beforeEach(() => {
-      (mockExecutor.execute as ReturnType<typeof vi.fn>).mockResolvedValue("Summary result");
+      (mockExecutor.execute as ReturnType<typeof vi.fn>).mockResolvedValue(
+        "Summary result",
+      );
     });
 
     it("should summarize content", async () => {

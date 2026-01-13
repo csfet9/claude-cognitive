@@ -27,7 +27,7 @@ export type GeminiModel =
 export interface GeminiConfig {
   /** Model to use (default: "auto") */
   model: GeminiModel;
-  /** Timeout in milliseconds for CLI execution (default: 120000) */
+  /** Timeout in milliseconds for CLI execution (0 = no timeout, default: 0) */
   timeout: number;
 }
 
@@ -36,7 +36,7 @@ export interface GeminiConfig {
  */
 export const DEFAULT_GEMINI_CONFIG: GeminiConfig = {
   model: "auto",
-  timeout: 120_000, // 2 minutes
+  timeout: 0, // 0 = no timeout, wait indefinitely
 };
 
 // ============================================

@@ -932,7 +932,7 @@ export function registerInstallCommand(cli: CAC): void {
           },
           gemini: {
             model: "auto",
-            timeout: 120000,
+            timeout: 0,
           },
         };
 

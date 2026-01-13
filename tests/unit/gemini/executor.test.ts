@@ -449,7 +449,9 @@ describe("GeminiExecutor", () => {
       const stderrHandler = (
         mockProc.stderr!.on as ReturnType<typeof vi.fn>
       ).mock.calls.find((call) => call[0] === "data")?.[1];
-      stderrHandler(Buffer.from("Error: Authentication required. Please login."));
+      stderrHandler(
+        Buffer.from("Error: Authentication required. Please login."),
+      );
       mockProc.emit("close", 1);
 
       try {
@@ -542,7 +544,9 @@ describe("GeminiExecutor", () => {
         await promise;
         expect.fail("Should have thrown");
       } catch (error) {
-        expect((error as GeminiError).code).toBe(GeminiErrorCode.EXECUTION_FAILED);
+        expect((error as GeminiError).code).toBe(
+          GeminiErrorCode.EXECUTION_FAILED,
+        );
         expect((error as GeminiError).isRetryable).toBe(true);
       }
     });

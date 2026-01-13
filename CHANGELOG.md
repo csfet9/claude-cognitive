@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2026-01-13
+
+### Added
+
+- **Gemini code exploration guidance** - Session context now includes guidance
+  for using Gemini MCP tools (`gemini_analyze_code`, `gemini_research`,
+  `gemini_summarize`) when Gemini is configured. Includes tool usage examples,
+  analysis types reference, and important verification warnings.
+
+### Changed
+
+- **Dynamic timeout for Gemini CLI** - Changed default timeout from 120 seconds
+  to 0 (no timeout). The Gemini CLI now waits indefinitely for requests to
+  complete, while still detecting actual errors (non-zero exit codes, stderr).
+  Users can still set explicit timeouts in `.claudemindrc` if desired.
+
 ## [0.6.1] - 2026-01-12
 
 ### Changed

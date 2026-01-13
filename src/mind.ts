@@ -24,6 +24,7 @@ import { OfflineMemoryStore } from "./offline.js";
 import type {
   Bank,
   BankUsefulnessStats,
+  ClaudeMindConfig,
   Disposition,
   FactType,
   LearnOptions,
@@ -96,6 +97,7 @@ export class Mind extends TypedEventEmitter {
   private bankId: string = "";
   private disposition: Disposition = DEFAULT_DISPOSITION;
   private background?: string;
+  private config: ClaudeMindConfig | null = null;
 
   // Client (nullable for graceful degradation)
   private client: HindsightClient | null = null;
@@ -190,6 +192,9 @@ export class Mind extends TypedEventEmitter {
       }
       // Load config with pending options as overrides
       const config = await loadConfig(this.projectPath, overrides);
+
+      // Store full config for later access
+      this.config = config;
 
       // Resolve configuration
       this.bankId = config.bankId ?? (await this.deriveBankId());
@@ -344,6 +349,12 @@ export class Mind extends TypedEventEmitter {
     const agentInstructions = this.formatAgentInstructions();
     if (agentInstructions.trim().length > 0) {
       contextParts.push(agentInstructions);
+    }
+
+    // Add Gemini code exploration guidance (if configured)
+    const geminiGuidance = this.formatGeminiGuidance();
+    if (geminiGuidance.trim().length > 0) {
+      contextParts.push(geminiGuidance);
     }
 
     // Recall recent experiences
@@ -1235,6 +1246,66 @@ ${template.outputFormat}
         mem.text.length > maxLen ? `${mem.text.slice(0, maxLen)}...` : mem.text;
       lines.push(`- ${date}: ${text}`);
     }
+    return lines.join("\n");
+  }
+
+  /**
+   * Format Gemini code exploration guidance.
+   * Only included when Gemini is configured.
+   * @internal
+   */
+  formatGeminiGuidance(): string {
+    // Only include if gemini is configured
+    if (!this.config?.gemini) {
+      return "";
+    }
+
+    const lines: string[] = [];
+    lines.push("## Gemini Code Exploration");
+    lines.push("");
+    lines.push(
+      "Use Gemini via claude-cognitive MCP for deep code analysis and exploration. Large context window = cost-effective for scanning many files.",
+    );
+    lines.push("");
+    lines.push("| Tool | Use For | Example |");
+    lines.push("|------|---------|---------|");
+    lines.push(
+      '| `gemini_analyze_code` | Security audits, quality reviews, architecture analysis | `files: ["src/app/admin/page.tsx"], analysis_type: "security"` |',
+    );
+    lines.push(
+      '| `gemini_research` | Deep topic research with file context | `topic: "multi-tenant isolation patterns", depth: "deep"` |',
+    );
+    lines.push(
+      '| `gemini_summarize` | Condensing large files or content | `files: ["src/lib/prisma.ts"], format: "technical"` |',
+    );
+    lines.push("");
+    lines.push(
+      "**Analysis Types**: security, performance, quality, architecture, documentation, testing, general",
+    );
+    lines.push("");
+    lines.push("### IMPORTANT: Gemini findings require verification");
+    lines.push("");
+    lines.push(
+      "- Gemini is for **exploration and initial analysis**, not final authority",
+    );
+    lines.push(
+      "- Always **verify critical findings** by reading the actual code",
+    );
+    lines.push(
+      "- May produce false positives or miss context-specific patterns",
+    );
+    lines.push(
+      "- Use as a **starting point**, then confirm with targeted code review",
+    );
+    lines.push("");
+    lines.push("**When to Use:**");
+    lines.push(
+      "- Initial exploration of large codebases (saves context/resources)",
+    );
+    lines.push("- Security audits before releases (then verify findings)");
+    lines.push("- Exploring unfamiliar code patterns");
+    lines.push("");
+
     return lines.join("\n");
   }
 

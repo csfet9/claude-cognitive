@@ -119,7 +119,7 @@ export async function analyzeWithGemini(
     const analysisPrompt = buildAnalysisPrompt(fileContents);
     const geminiResult = await wrapper.prompt({
       prompt: analysisPrompt,
-      timeout: config?.timeout ?? 120000,
+      timeout: config?.timeout ?? 0,
     });
 
     result.performed = true;
@@ -240,10 +240,7 @@ Be concise but thorough. Focus on actionable insights.`;
  * Parse the structured analysis response from Gemini.
  * @internal
  */
-function parseAnalysisResponse(
-  response: string,
-  result: GeminiAnalysis,
-): void {
+function parseAnalysisResponse(response: string, result: GeminiAnalysis): void {
   // Parse each section
   result.architectureInsights = parseSection(response, "ARCHITECTURE_INSIGHTS");
   result.codePatterns = parseSection(response, "CODE_PATTERNS");

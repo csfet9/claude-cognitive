@@ -153,11 +153,14 @@ export class GeminiExecutor {
       let stderr = "";
       let timedOut = false;
 
-      // Set up timeout handler
-      const timeoutId = setTimeout(() => {
-        timedOut = true;
-        proc.kill("SIGTERM");
-      }, timeout);
+      // Set up timeout handler (only if timeout > 0)
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      if (timeout > 0) {
+        timeoutId = setTimeout(() => {
+          timedOut = true;
+          proc.kill("SIGTERM");
+        }, timeout);
+      }
 
       proc.stdout.on("data", (data: Buffer) => {
         stdout += data.toString();
@@ -168,12 +171,16 @@ export class GeminiExecutor {
       });
 
       proc.on("error", (error: Error) => {
-        clearTimeout(timeoutId);
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
         reject(this.parseError(error.message, "spawn"));
       });
 
       proc.on("close", (code) => {
-        clearTimeout(timeoutId);
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
 
         if (timedOut) {
           reject(
@@ -198,7 +205,9 @@ export class GeminiExecutor {
       const stream = createReadStream(promptFile);
       stream.pipe(proc.stdin);
       stream.on("error", (err) => {
-        clearTimeout(timeoutId);
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
         proc.kill("SIGTERM");
         reject(this.parseError(err.message, "spawn"));
       });
