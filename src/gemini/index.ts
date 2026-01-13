@@ -44,6 +44,7 @@ export type {
   AnalyzeOptions,
   ResearchOptions,
   SummarizeOptions,
+  ProgressCallback,
 } from "./types.js";
 
 export { DEFAULT_GEMINI_CONFIG } from "./types.js";
@@ -57,3 +58,6 @@ export { GeminiExecutor } from "./executor.js";
 
 // Wrapper
 export { GeminiWrapper } from "./wrapper.js";
+
+// Semaphore
+export { Semaphore } from "./semaphore.js";

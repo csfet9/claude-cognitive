@@ -162,6 +162,34 @@ Each memory bank has personality traits that shape how `reflect()` reasons:
 | literalism | Flexible interpretation | Precise, literal            |
 | empathy    | Fact-focused            | Considers emotional context |
 
+### Gemini Integration (Optional)
+
+If you have the [Gemini CLI](https://github.com/google/gemini-cli) installed, claude-cognitive exposes additional MCP tools for deep code analysis:
+
+| Tool | Purpose |
+|------|---------|
+| `gemini_analyze_code` | Security audits, quality reviews, architecture analysis |
+| `gemini_research` | Deep topic research with file context |
+| `gemini_summarize` | Condensing large files or content |
+
+```json
+{
+  "gemini": {
+    "model": "auto",
+    "timeout": 0,
+    "maxConcurrentRequests": 3
+  }
+}
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `model` | `"auto"` | Model to use (`"auto"`, `"gemini-2.5-flash"`, `"gemini-2.5-pro"`) |
+| `timeout` | `0` | CLI timeout in ms (0 = no timeout) |
+| `maxConcurrentRequests` | `3` | Max parallel Gemini operations |
+
+> **Note:** Gemini findings should be verified by reading actual code. Use as a starting point for exploration.
+
 ---
 
 ## Graceful Degradation & Offline Mode

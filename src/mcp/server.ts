@@ -345,7 +345,7 @@ export class ClaudeMindMcpServer {
       GEMINI_TOOL_DEFINITIONS.gemini_prompt.name,
       GEMINI_TOOL_DEFINITIONS.gemini_prompt.description,
       GEMINI_SCHEMAS.gemini_prompt.shape,
-      async (args) => {
+      async (args, extra) => {
         const parsed = GEMINI_SCHEMAS.gemini_prompt.safeParse(args);
         if (!parsed.success) {
           return {
@@ -355,7 +355,7 @@ export class ClaudeMindMcpServer {
             isError: true,
           };
         }
-        const result = await handleGeminiPrompt(wrapper, parsed.data);
+        const result = await handleGeminiPrompt(wrapper, parsed.data, extra);
         return {
           content: result.content,
           ...(result.isError ? { isError: result.isError } : {}),
@@ -368,7 +368,7 @@ export class ClaudeMindMcpServer {
       GEMINI_TOOL_DEFINITIONS.gemini_research.name,
       GEMINI_TOOL_DEFINITIONS.gemini_research.description,
       GEMINI_SCHEMAS.gemini_research.shape,
-      async (args) => {
+      async (args, extra) => {
         const parsed = GEMINI_SCHEMAS.gemini_research.safeParse(args);
         if (!parsed.success) {
           return {
@@ -378,7 +378,7 @@ export class ClaudeMindMcpServer {
             isError: true,
           };
         }
-        const result = await handleGeminiResearch(wrapper, parsed.data);
+        const result = await handleGeminiResearch(wrapper, parsed.data, extra);
         return {
           content: result.content,
           ...(result.isError ? { isError: result.isError } : {}),
@@ -391,7 +391,7 @@ export class ClaudeMindMcpServer {
       GEMINI_TOOL_DEFINITIONS.gemini_analyze_code.name,
       GEMINI_TOOL_DEFINITIONS.gemini_analyze_code.description,
       GEMINI_SCHEMAS.gemini_analyze_code.shape,
-      async (args) => {
+      async (args, extra) => {
         const parsed = GEMINI_SCHEMAS.gemini_analyze_code.safeParse(args);
         if (!parsed.success) {
           return {
@@ -401,7 +401,7 @@ export class ClaudeMindMcpServer {
             isError: true,
           };
         }
-        const result = await handleGeminiAnalyzeCode(wrapper, parsed.data);
+        const result = await handleGeminiAnalyzeCode(wrapper, parsed.data, extra);
         return {
           content: result.content,
           ...(result.isError ? { isError: result.isError } : {}),
@@ -414,7 +414,7 @@ export class ClaudeMindMcpServer {
       GEMINI_TOOL_DEFINITIONS.gemini_summarize.name,
       GEMINI_TOOL_DEFINITIONS.gemini_summarize.description,
       GEMINI_SCHEMAS.gemini_summarize.shape,
-      async (args) => {
+      async (args, extra) => {
         const parsed = GEMINI_SCHEMAS.gemini_summarize.safeParse(args);
         if (!parsed.success) {
           return {
@@ -424,7 +424,7 @@ export class ClaudeMindMcpServer {
             isError: true,
           };
         }
-        const result = await handleGeminiSummarize(wrapper, parsed.data);
+        const result = await handleGeminiSummarize(wrapper, parsed.data, extra);
         return {
           content: result.content,
           ...(result.isError ? { isError: result.isError } : {}),

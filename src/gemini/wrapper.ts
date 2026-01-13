@@ -7,6 +7,7 @@ import { readFile, stat, realpath } from "node:fs/promises";
 import { resolve, relative, isAbsolute } from "node:path";
 import { GeminiError } from "./errors.js";
 import { GeminiExecutor } from "./executor.js";
+import { Semaphore } from "./semaphore.js";
 import {
   DEFAULT_GEMINI_CONFIG,
   type AnalysisType,
@@ -60,6 +61,7 @@ export class GeminiWrapper {
   private readonly config: GeminiConfig;
   private readonly projectPath: string;
   private readonly executor: GeminiExecutor;
+  private readonly semaphore: Semaphore;
 
   /**
    * Create a new GeminiWrapper.
@@ -76,6 +78,10 @@ export class GeminiWrapper {
     this.config = { ...DEFAULT_GEMINI_CONFIG, ...config };
     this.projectPath = resolve(projectPath);
     this.executor = executor ?? new GeminiExecutor();
+    this.semaphore =
+      this.config.maxConcurrentRequests > 0
+        ? new Semaphore(this.config.maxConcurrentRequests)
+        : new Semaphore(Number.MAX_SAFE_INTEGER);
   }
 
   /**
@@ -114,15 +120,22 @@ export class GeminiWrapper {
       fullPrompt = `${options.context}\n\n${options.prompt}`;
     }
 
-    const startTime = Date.now();
-    const response = await this.executor.execute({
-      prompt: fullPrompt,
-      model,
-      timeout,
-    });
-    const duration = Date.now() - startTime;
+    // Acquire semaphore slot for rate limiting
+    const release = await this.semaphore.acquire();
+    try {
+      const startTime = Date.now();
+      const response = await this.executor.execute({
+        prompt: fullPrompt,
+        model,
+        timeout,
+        ...(options.onProgress && { onProgress: options.onProgress }),
+      });
+      const duration = Date.now() - startTime;
 
-    return { response, model, duration };
+      return { response, model, duration };
+    } finally {
+      release();
+    }
   }
 
   /**

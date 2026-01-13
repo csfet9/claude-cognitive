@@ -29,6 +29,12 @@ export interface GeminiConfig {
   model: GeminiModel;
   /** Timeout in milliseconds for CLI execution (0 = no timeout, default: 0) */
   timeout: number;
+  /**
+   * Maximum number of concurrent Gemini CLI requests.
+   * Additional requests will queue and wait for a slot.
+   * Default: 3
+   */
+  maxConcurrentRequests: number;
 }
 
 /**
@@ -37,6 +43,7 @@ export interface GeminiConfig {
 export const DEFAULT_GEMINI_CONFIG: GeminiConfig = {
   model: "auto",
   timeout: 0, // 0 = no timeout, wait indefinitely
+  maxConcurrentRequests: 3,
 };
 
 // ============================================
@@ -46,6 +53,19 @@ export const DEFAULT_GEMINI_CONFIG: GeminiConfig = {
 /**
  * Options for low-level CLI execution.
  */
+/**
+ * Callback for sending progress notifications during long-running operations.
+ * Called periodically to prevent timeout on client side.
+ */
+export type ProgressCallback = (params: {
+  /** Current progress value */
+  progress: number;
+  /** Optional total value for completion percentage */
+  total?: number;
+  /** Optional status message */
+  message?: string;
+}) => Promise<void>;
+
 export interface ExecuteOptions {
   /** The prompt to send to Gemini */
   prompt: string;
@@ -53,6 +73,8 @@ export interface ExecuteOptions {
   model: GeminiModel;
   /** Timeout in milliseconds */
   timeout: number;
+  /** Optional progress callback for long-running operations */
+  onProgress?: ProgressCallback;
 }
 
 /**
@@ -67,6 +89,8 @@ export interface PromptOptions {
   model?: GeminiModel;
   /** Timeout override (default: from config) */
   timeout?: number;
+  /** Optional progress callback for long-running operations */
+  onProgress?: ProgressCallback;
 }
 
 /**

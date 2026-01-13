@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3] - 2026-01-13
+
+### Added
+
+- **Gemini rate limiting** - Added configurable concurrency control for Gemini CLI
+  operations. Maximum 3 parallel requests by default (configurable via
+  `gemini.maxConcurrentRequests`). Additional requests automatically queue in FIFO
+  order, preventing auth errors from concurrent token access.
+
+- **MCP progress notifications** - Gemini tools now send progress notifications
+  every 30 seconds during long-running operations. This helps prevent MCP client
+  timeouts by resetting the timeout timer (when supported by the client).
+
+- **Gemini operational guidance** - Session context now includes operational notes
+  about rate limiting, progress notifications, and expected timeout behavior for
+  Gemini tools.
+
+### Changed
+
+- **Semaphore-based request queuing** - Gemini operations use an async semaphore
+  pattern for fair FIFO scheduling. Queued requests wait efficiently without
+  consuming resources.
+
 ## [0.6.2] - 2026-01-13
 
 ### Added

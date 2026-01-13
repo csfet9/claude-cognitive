@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { GeminiError } from "./errors.js";
-import type { ExecuteOptions } from "./types.js";
+import type { ExecuteOptions, ProgressCallback } from "./types.js";
 
 /**
  * Low-level executor for Gemini CLI commands.
@@ -101,7 +101,7 @@ export class GeminiExecutor {
    * @throws {GeminiError} On CLI errors, timeout, or execution failure
    */
   async execute(options: ExecuteOptions): Promise<string> {
-    const { prompt, model, timeout } = options;
+    const { prompt, model, timeout, onProgress } = options;
 
     // Create secure temp file for prompt
     const tempPath = join(tmpdir(), `gemini-prompt-${randomUUID()}.txt`);
@@ -111,7 +111,7 @@ export class GeminiExecutor {
       await writeFile(tempPath, prompt, { mode: 0o600 });
 
       // Execute CLI with prompt from stdin
-      const response = await this.spawnGemini(tempPath, model, timeout);
+      const response = await this.spawnGemini(tempPath, model, timeout, onProgress);
       return response;
     } finally {
       // Always clean up temp file
@@ -135,6 +135,7 @@ export class GeminiExecutor {
     promptFile: string,
     model: string,
     timeout: number,
+    onProgress?: ProgressCallback,
   ): Promise<string> {
     // Validate model first to prevent injection
     this.validateModel(model);
@@ -162,6 +163,29 @@ export class GeminiExecutor {
         }, timeout);
       }
 
+      // Set up progress notifications (every 30 seconds)
+      let progressIntervalId: ReturnType<typeof setInterval> | undefined;
+      let progressCount = 0;
+      const PROGRESS_INTERVAL_MS = 30_000; // 30 seconds
+
+      if (onProgress) {
+        progressIntervalId = setInterval(() => {
+          progressCount++;
+          onProgress({
+            progress: progressCount,
+            message: `Gemini CLI processing... (${progressCount * 30}s elapsed)`,
+          }).catch((err) => {
+            console.error("[gemini-executor] Progress notification failed:", err);
+          });
+        }, PROGRESS_INTERVAL_MS);
+      }
+
+      // Helper to cleanup intervals
+      const cleanup = () => {
+        if (timeoutId) clearTimeout(timeoutId);
+        if (progressIntervalId) clearInterval(progressIntervalId);
+      };
+
       proc.stdout.on("data", (data: Buffer) => {
         stdout += data.toString();
       });
@@ -171,16 +195,12 @@ export class GeminiExecutor {
       });
 
       proc.on("error", (error: Error) => {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-        }
+        cleanup();
         reject(this.parseError(error.message, "spawn"));
       });
 
       proc.on("close", (code) => {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-        }
+        cleanup();
 
         if (timedOut) {
           reject(
@@ -205,9 +225,7 @@ export class GeminiExecutor {
       const stream = createReadStream(promptFile);
       stream.pipe(proc.stdin);
       stream.on("error", (err) => {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-        }
+        cleanup();
         proc.kill("SIGTERM");
         reject(this.parseError(err.message, "spawn"));
       });

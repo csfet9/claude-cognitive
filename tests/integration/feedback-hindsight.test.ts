@@ -4,13 +4,10 @@
  * Run with: npx vitest run tests/integration/feedback-hindsight.test.ts
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { HindsightClient } from "../../src/client.js";
 import { Mind } from "../../src/mind.js";
-import {
-  FeedbackService,
-  createFeedbackService,
-} from "../../src/feedback/index.js";
+import { createFeedbackService } from "../../src/feedback/index.js";
 import { OfflineFeedbackQueue } from "../../src/feedback/offline-queue.js";
 import type { SignalItem, Memory } from "../../src/types.js";
 import { join } from "node:path";
@@ -27,6 +24,9 @@ describe("Feedback System Integration with Hindsight", () => {
   let isHindsightAvailable = false;
 
   beforeAll(async () => {
+    // Generate bank ID once to use consistently throughout tests
+    testBankId = `test-feedback-${Date.now()}`;
+
     // Create temp directory for test data
     tempDir = await mkdtemp(join(tmpdir(), "feedback-test-"));
     await mkdir(join(tempDir, ".claude"), { recursive: true });
@@ -39,7 +39,7 @@ describe("Feedback System Integration with Hindsight", () => {
     await writeFile(
       join(tempDir, ".claudemindrc"),
       JSON.stringify({
-        bankId: `test-feedback-${Date.now()}`,
+        bankId: testBankId,
         feedback: { enabled: true, hindsight: { sendFeedback: true } },
         hindsight: { host: "localhost", port: 8888 },
       }),
@@ -51,8 +51,7 @@ describe("Feedback System Integration with Hindsight", () => {
     isHindsightAvailable = health.healthy;
 
     if (isHindsightAvailable) {
-      // Create test bank
-      testBankId = `test-feedback-${Date.now()}`;
+      // Create test bank using the same ID
       try {
         await client.createBank({
           bankId: testBankId,
@@ -67,6 +66,15 @@ describe("Feedback System Integration with Hindsight", () => {
   });
 
   afterAll(async () => {
+    // Cleanup test bank from Hindsight
+    if (isHindsightAvailable && client && testBankId) {
+      try {
+        await client.deleteBank(testBankId);
+      } catch {
+        // Ignore errors if bank doesn't exist or already deleted
+      }
+    }
+
     // Cleanup temp directory
     if (tempDir) {
       await rm(tempDir, { recursive: true, force: true });
@@ -420,7 +428,7 @@ describe("Feedback System Integration with Hindsight", () => {
           context: "some context",
         };
 
-        const [id] = await queue.enqueueBatch([originalSignal]);
+        await queue.enqueueBatch([originalSignal]);
         const [queued] = await queue.getUnsynced();
 
         const converted = OfflineFeedbackQueue.toSignalItem(queued);

@@ -3,6 +3,11 @@
  * @module mcp/gemini-handlers
  */
 
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
+import type {
+  ServerRequest,
+  ServerNotification,
+} from "@modelcontextprotocol/sdk/types.js";
 import type { ToolResult } from "./types.js";
 import type { GeminiWrapper } from "../gemini/wrapper.js";
 import type {
@@ -84,6 +89,39 @@ function formatError(error: unknown): ToolResult {
   };
 }
 
+/**
+ * Create a progress callback from MCP request metadata.
+ *
+ * Sends progress notifications to prevent client-side timeout during long operations.
+ *
+ * @param extra - Request handler extra data from MCP SDK
+ * @returns Progress callback or undefined if no progress token available
+ */
+function createProgressCallback(
+  extra?: RequestHandlerExtra<ServerRequest, ServerNotification>,
+): ((params: { progress: number; message?: string }) => Promise<void>) | undefined {
+  if (!extra?.sendNotification || !extra._meta?.progressToken) {
+    return undefined;
+  }
+
+  const progressToken = extra._meta.progressToken;
+
+  return async (params) => {
+    try {
+      await extra.sendNotification({
+        method: "notifications/progress",
+        params: {
+          progressToken,
+          progress: params.progress,
+          message: params.message,
+        },
+      });
+    } catch (error) {
+      console.error("[gemini-handlers] Progress notification failed:", error);
+    }
+  };
+}
+
 // ============================================
 // Handlers
 // ============================================
@@ -95,16 +133,20 @@ function formatError(error: unknown): ToolResult {
  *
  * @param wrapper - GeminiWrapper instance to use for execution
  * @param input - Tool input with prompt and optional context
+ * @param extra - Optional MCP request handler extra data for progress notifications
  * @returns Tool result with formatted response or error
  */
 export async function handleGeminiPrompt(
   wrapper: GeminiWrapper,
   input: GeminiPromptInput,
+  extra?: RequestHandlerExtra<ServerRequest, ServerNotification>,
 ): Promise<ToolResult> {
   try {
+    const onProgress = createProgressCallback(extra);
     const result = await wrapper.prompt({
       prompt: input.prompt,
       ...(input.context ? { context: input.context } : {}),
+      ...(onProgress ? { onProgress } : {}),
     });
     return formatSuccess(result.response, result.model, result.duration);
   } catch (error) {
@@ -119,13 +161,16 @@ export async function handleGeminiPrompt(
  *
  * @param wrapper - GeminiWrapper instance to use for execution
  * @param input - Tool input with topic, optional files, and depth
+ * @param extra - Optional MCP request handler extra data for progress notifications
  * @returns Tool result with formatted research findings or error
  */
 export async function handleGeminiResearch(
   wrapper: GeminiWrapper,
   input: GeminiResearchInput,
+  _extra?: RequestHandlerExtra<ServerRequest, ServerNotification>,
 ): Promise<ToolResult> {
   try {
+    // Note: progress callback not yet supported by wrapper.research()
     const result = await wrapper.research(
       input.topic,
       input.files,
@@ -144,13 +189,16 @@ export async function handleGeminiResearch(
  *
  * @param wrapper - GeminiWrapper instance to use for execution
  * @param input - Tool input with files, analysis type, and optional focus
+ * @param extra - Optional MCP request handler extra data for progress notifications
  * @returns Tool result with formatted analysis or error
  */
 export async function handleGeminiAnalyzeCode(
   wrapper: GeminiWrapper,
   input: GeminiAnalyzeCodeInput,
+  _extra?: RequestHandlerExtra<ServerRequest, ServerNotification>,
 ): Promise<ToolResult> {
   try {
+    // Note: progress callback not yet supported by wrapper.analyzeCode()
     const result = await wrapper.analyzeCode(
       input.files,
       input.analysis_type ?? "general",
@@ -170,11 +218,13 @@ export async function handleGeminiAnalyzeCode(
  *
  * @param wrapper - GeminiWrapper instance to use for execution
  * @param input - Tool input with content/files and format
+ * @param extra - Optional MCP request handler extra data for progress notifications
  * @returns Tool result with formatted summary or error
  */
 export async function handleGeminiSummarize(
   wrapper: GeminiWrapper,
   input: GeminiSummarizeInput,
+  _extra?: RequestHandlerExtra<ServerRequest, ServerNotification>,
 ): Promise<ToolResult> {
   try {
     // Validate that either content or files is provided
@@ -187,6 +237,7 @@ export async function handleGeminiSummarize(
       };
     }
 
+    // Note: progress callback not yet supported by wrapper.summarize()
     const result = await wrapper.summarize(
       input.content,
       input.files,
