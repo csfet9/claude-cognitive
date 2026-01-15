@@ -44,7 +44,7 @@ export interface GeminiConfig {
 export const DEFAULT_GEMINI_CONFIG: GeminiConfig = {
   model: "auto",
   timeout: 0, // 0 = no timeout, wait indefinitely
-  maxConcurrentRequests: 3,
+  maxConcurrentRequests: 1,
 };
 
 // ============================================

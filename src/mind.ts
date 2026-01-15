@@ -1305,17 +1305,16 @@ ${template.outputFormat}
     lines.push("- Security audits before releases (then verify findings)");
     lines.push("- Exploring unfamiliar code patterns");
     lines.push("");
-    lines.push("### Operational Notes");
+    lines.push("### CRITICAL: Serial Requests Only");
     lines.push("");
     lines.push(
-      `- **Rate Limit**: Max ${this.config.gemini.maxConcurrentRequests ?? 3} parallel Gemini requests (additional requests queue automatically)`,
+      "**DO NOT make parallel Gemini requests.** Make ONE request at a time and wait for it to complete before making another.",
     );
-    lines.push(
-      "- **Long Operations**: Progress notifications sent every 30s to prevent timeout",
-    );
-    lines.push(
-      "- **Timeout**: Operations may take 60+ seconds for large file sets",
-    );
+    lines.push("");
+    lines.push("- Gemini CLI can timeout under concurrent load");
+    lines.push("- Always wait for each Gemini call to finish before starting the next");
+    lines.push("- Operations may take 60+ seconds for large file sets - this is normal");
+    lines.push("- Progress notifications sent every 30s during long operations");
     lines.push("");
 
     return lines.join("\n");

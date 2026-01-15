@@ -177,7 +177,7 @@ If you have the [Gemini CLI](https://github.com/google/gemini-cli) installed, cl
   "gemini": {
     "model": "auto",
     "timeout": 0,
-    "maxConcurrentRequests": 3
+    "maxConcurrentRequests": 1
   }
 }
 ```
@@ -186,7 +186,7 @@ If you have the [Gemini CLI](https://github.com/google/gemini-cli) installed, cl
 |--------|---------|-------------|
 | `model` | `"auto"` | Model to use (`"auto"`, `"gemini-3-flash-preview"`, `"gemini-3-pro-preview"`) |
 | `timeout` | `0` | CLI timeout in ms (0 = no timeout) |
-| `maxConcurrentRequests` | `3` | Max parallel Gemini operations |
+| `maxConcurrentRequests` | `1` | Max parallel Gemini operations |
 
 > **Note:** Gemini findings should be verified by reading actual code. Use as a starting point for exploration.
 
