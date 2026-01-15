@@ -24,8 +24,8 @@ describe("Feedback System Integration with Hindsight", () => {
   let isHindsightAvailable = false;
 
   beforeAll(async () => {
-    // Generate bank ID once to use consistently throughout tests
-    testBankId = `test-feedback-${Date.now()}`;
+    // Use a fixed bank ID to avoid creating orphan banks on test failures
+    testBankId = `test-feedback-integration`;
 
     // Create temp directory for test data
     tempDir = await mkdtemp(join(tmpdir(), "feedback-test-"));
