@@ -164,13 +164,20 @@ Each memory bank has personality traits that shape how `reflect()` reasons:
 
 ### Gemini Integration (Optional)
 
-If you have the [Gemini CLI](https://github.com/google/gemini-cli) installed, claude-cognitive exposes additional MCP tools for deep code analysis:
+If you have the [Gemini CLI](https://github.com/google/gemini-cli) installed, session context automatically includes CLI usage guidance. Use Gemini directly via Bash for deep code analysis:
 
-| Tool | Purpose |
-|------|---------|
-| `gemini_analyze_code` | Security audits, quality reviews, architecture analysis |
-| `gemini_research` | Deep topic research with file context |
-| `gemini_summarize` | Condensing large files or content |
+```bash
+# Analyze a file
+echo "Review this code for security issues: $(cat src/auth.ts)" | gemini -y
+
+# Research a topic with context
+echo "Explain the authentication flow in this codebase" | gemini -y
+
+# Summarize large content
+cat docs/architecture.md | gemini -y "Summarize this in 3 bullet points"
+```
+
+The `learn` command uses Gemini for codebase analysis when configured:
 
 ```json
 {
@@ -186,7 +193,7 @@ If you have the [Gemini CLI](https://github.com/google/gemini-cli) installed, cl
 |--------|---------|-------------|
 | `model` | `"auto"` | Model to use (`"auto"`, `"gemini-3-flash-preview"`, `"gemini-3-pro-preview"`) |
 | `timeout` | `0` | CLI timeout in ms (0 = no timeout) |
-| `maxConcurrentRequests` | `1` | Max parallel Gemini operations |
+| `maxConcurrentRequests` | `1` | Max parallel Gemini operations during `learn` |
 
 > **Note:** Gemini findings should be verified by reading actual code. Use as a starting point for exploration.
 
