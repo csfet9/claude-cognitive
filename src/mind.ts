@@ -1261,27 +1261,34 @@ ${template.outputFormat}
     }
 
     const lines: string[] = [];
-    lines.push("## Gemini Code Exploration");
+    lines.push("## Gemini CLI for Code Exploration");
     lines.push("");
     lines.push(
-      "Use Gemini via claude-cognitive MCP for deep code analysis and exploration. Large context window = cost-effective for scanning many files.",
+      "The Gemini CLI is configured for this project. Use it directly via Bash for deep code analysis. Large context window = cost-effective for scanning many files.",
     );
     lines.push("");
-    lines.push("| Tool | Use For | Example |");
-    lines.push("|------|---------|---------|");
-    lines.push(
-      '| `gemini_analyze_code` | Security audits, quality reviews, architecture analysis | `files: ["src/app/admin/page.tsx"], analysis_type: "security"` |',
-    );
-    lines.push(
-      '| `gemini_research` | Deep topic research with file context | `topic: "multi-tenant isolation patterns", depth: "deep"` |',
-    );
-    lines.push(
-      '| `gemini_summarize` | Condensing large files or content | `files: ["src/lib/prisma.ts"], format: "technical"` |',
-    );
+    lines.push("### CLI Usage Patterns");
     lines.push("");
-    lines.push(
-      "**Analysis Types**: security, performance, quality, architecture, documentation, testing, general",
-    );
+    lines.push("```bash");
+    lines.push("# Quick summary");
+    lines.push('echo "Summarize this file in 3 bullets: $(cat path/to/file.py)" | gemini -y');
+    lines.push("");
+    lines.push("# Architecture analysis (let Gemini read files directly)");
+    lines.push('echo "Analyze the architecture in src/core/. Explain patterns and data flow." | gemini -y');
+    lines.push("");
+    lines.push("# Code review");
+    lines.push('echo "Review this code for bugs and security issues: $(cat path/to/file.ts)" | gemini -y');
+    lines.push("");
+    lines.push("# Multi-file research");
+    lines.push('echo "Read the files in src/auth/ and explain the authentication flow" | gemini -y');
+    lines.push("```");
+    lines.push("");
+    lines.push("### Guidelines");
+    lines.push("");
+    lines.push("- Use `-y` flag to auto-approve Gemini's tool calls");
+    lines.push("- Let Gemini read files directly for multi-file analysis (more reliable)");
+    lines.push("- Pipe file content for single-file analysis (faster)");
+    lines.push("- If Gemini fails, fall back to direct file reading with Glob/Grep/Read");
     lines.push("");
     lines.push("### IMPORTANT: Gemini findings require verification");
     lines.push("");
@@ -1297,24 +1304,6 @@ ${template.outputFormat}
     lines.push(
       "- Use as a **starting point**, then confirm with targeted code review",
     );
-    lines.push("");
-    lines.push("**When to Use:**");
-    lines.push(
-      "- Initial exploration of large codebases (saves context/resources)",
-    );
-    lines.push("- Security audits before releases (then verify findings)");
-    lines.push("- Exploring unfamiliar code patterns");
-    lines.push("");
-    lines.push("### CRITICAL: Serial Requests Only");
-    lines.push("");
-    lines.push(
-      "**DO NOT make parallel Gemini requests.** Make ONE request at a time and wait for it to complete before making another.",
-    );
-    lines.push("");
-    lines.push("- Gemini CLI can timeout under concurrent load");
-    lines.push("- Always wait for each Gemini call to finish before starting the next");
-    lines.push("- Operations may take 60+ seconds for large file sets - this is normal");
-    lines.push("- Progress notifications sent every 30s during long operations");
     lines.push("");
 
     return lines.join("\n");

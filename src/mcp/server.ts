@@ -10,22 +10,13 @@ import type { Server } from "node:http";
 import { randomUUID } from "node:crypto";
 import type { Mind } from "../mind.js";
 import { loadConfig } from "../config.js";
-import { GeminiWrapper } from "../gemini/wrapper.js";
-import type { ClaudeMindConfig } from "../types.js";
 import { handleRecall, handleReflect, handleSignal } from "./handlers.js";
-import {
-  handleGeminiPrompt,
-  handleGeminiResearch,
-  handleGeminiAnalyzeCode,
-  handleGeminiSummarize,
-} from "./gemini-handlers.js";
 import {
   TOOL_DEFINITIONS,
   recallInputSchema,
   reflectInputSchema,
   signalInputSchema,
 } from "./tools.js";
-import { GEMINI_TOOL_DEFINITIONS, GEMINI_SCHEMAS } from "./gemini-tools.js";
 import type {
   HttpTransportConfig,
   McpServerOptions,
@@ -81,8 +72,6 @@ export class ClaudeMindMcpServer {
   private httpServer: Server | null = null;
   private expressApp: Express | null = null;
   private running = false;
-  private config: ClaudeMindConfig | null = null;
-  private geminiWrapper: GeminiWrapper | null = null;
 
   constructor(options: McpServerOptions) {
     this.mind = options.mind;
@@ -108,11 +97,8 @@ export class ClaudeMindMcpServer {
       throw new Error("MCP server is already running");
     }
 
-    // Load config for Gemini settings
-    this.config = await loadConfig(this.projectPath);
-
-    // Initialize Gemini if available
-    await this.initGeminiWrapper();
+    // Load config (for future use)
+    await loadConfig(this.projectPath);
 
     // Create and configure MCP server
     this.mcpServer = new McpServer({
@@ -300,131 +286,6 @@ export class ClaudeMindMcpServer {
         }
 
         const result = await handleSignal(this.mind, parsed.data);
-        return {
-          content: result.content,
-          ...(result.isError ? { isError: result.isError } : {}),
-        };
-      },
-    );
-
-    // Register Gemini tools if available
-    this.registerGeminiTools();
-  }
-
-  /**
-   * Initialize Gemini wrapper if CLI is available.
-   * @internal
-   */
-  private async initGeminiWrapper(): Promise<void> {
-    const wrapper = new GeminiWrapper(
-      this.config?.gemini ?? {},
-      this.projectPath,
-    );
-
-    if (await wrapper.isAvailable()) {
-      this.geminiWrapper = wrapper;
-      console.error("[claude-cognitive] Gemini CLI detected - tools enabled");
-    } else {
-      console.error("[claude-cognitive] Gemini CLI not found - tools disabled");
-    }
-  }
-
-  /**
-   * Register Gemini CLI tools.
-   * Only called if geminiWrapper is available.
-   * @internal
-   */
-  private registerGeminiTools(): void {
-    if (!this.geminiWrapper || !this.mcpServer) return;
-
-    const wrapper = this.geminiWrapper;
-    const server = this.mcpServer;
-
-    // gemini_prompt
-    server.tool(
-      GEMINI_TOOL_DEFINITIONS.gemini_prompt.name,
-      GEMINI_TOOL_DEFINITIONS.gemini_prompt.description,
-      GEMINI_SCHEMAS.gemini_prompt.shape,
-      async (args, extra) => {
-        const parsed = GEMINI_SCHEMAS.gemini_prompt.safeParse(args);
-        if (!parsed.success) {
-          return {
-            content: [
-              { type: "text", text: `Invalid input: ${parsed.error.message}` },
-            ],
-            isError: true,
-          };
-        }
-        const result = await handleGeminiPrompt(wrapper, parsed.data, extra);
-        return {
-          content: result.content,
-          ...(result.isError ? { isError: result.isError } : {}),
-        };
-      },
-    );
-
-    // gemini_research
-    server.tool(
-      GEMINI_TOOL_DEFINITIONS.gemini_research.name,
-      GEMINI_TOOL_DEFINITIONS.gemini_research.description,
-      GEMINI_SCHEMAS.gemini_research.shape,
-      async (args, extra) => {
-        const parsed = GEMINI_SCHEMAS.gemini_research.safeParse(args);
-        if (!parsed.success) {
-          return {
-            content: [
-              { type: "text", text: `Invalid input: ${parsed.error.message}` },
-            ],
-            isError: true,
-          };
-        }
-        const result = await handleGeminiResearch(wrapper, parsed.data, extra);
-        return {
-          content: result.content,
-          ...(result.isError ? { isError: result.isError } : {}),
-        };
-      },
-    );
-
-    // gemini_analyze_code
-    server.tool(
-      GEMINI_TOOL_DEFINITIONS.gemini_analyze_code.name,
-      GEMINI_TOOL_DEFINITIONS.gemini_analyze_code.description,
-      GEMINI_SCHEMAS.gemini_analyze_code.shape,
-      async (args, extra) => {
-        const parsed = GEMINI_SCHEMAS.gemini_analyze_code.safeParse(args);
-        if (!parsed.success) {
-          return {
-            content: [
-              { type: "text", text: `Invalid input: ${parsed.error.message}` },
-            ],
-            isError: true,
-          };
-        }
-        const result = await handleGeminiAnalyzeCode(wrapper, parsed.data, extra);
-        return {
-          content: result.content,
-          ...(result.isError ? { isError: result.isError } : {}),
-        };
-      },
-    );
-
-    // gemini_summarize
-    server.tool(
-      GEMINI_TOOL_DEFINITIONS.gemini_summarize.name,
-      GEMINI_TOOL_DEFINITIONS.gemini_summarize.description,
-      GEMINI_SCHEMAS.gemini_summarize.shape,
-      async (args, extra) => {
-        const parsed = GEMINI_SCHEMAS.gemini_summarize.safeParse(args);
-        if (!parsed.success) {
-          return {
-            content: [
-              { type: "text", text: `Invalid input: ${parsed.error.message}` },
-            ],
-            isError: true,
-          };
-        }
-        const result = await handleGeminiSummarize(wrapper, parsed.data, extra);
         return {
           content: result.content,
           ...(result.isError ? { isError: result.isError } : {}),
