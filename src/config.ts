@@ -115,9 +115,6 @@ function mergeConfig(
   if (target.context !== undefined) {
     result.context = { ...target.context };
   }
-  if (target.feedback !== undefined) {
-    result.feedback = { ...target.feedback };
-  }
   if (target.securityReview !== undefined) {
     result.securityReview = { ...target.securityReview };
   }
@@ -182,14 +179,6 @@ function mergeConfig(
       ...result.context,
       ...source.context,
     };
-  }
-
-  // Merge feedback settings
-  if (source.feedback !== undefined) {
-    result.feedback = {
-      ...result.feedback,
-      ...source.feedback,
-    } as typeof source.feedback;
   }
 
   // Merge securityReview settings
@@ -287,9 +276,6 @@ function applyEnvConfig(config: ClaudeMindConfig): ClaudeMindConfig {
   if (config.context !== undefined) {
     result.context = { ...config.context };
   }
-  if (config.feedback !== undefined) {
-    result.feedback = { ...config.feedback };
-  }
   if (config.securityReview !== undefined) {
     result.securityReview = { ...config.securityReview };
   }
@@ -385,9 +371,6 @@ function cloneConfig(config: ClaudeMindConfig): ClaudeMindConfig {
   }
   if (config.context !== undefined) {
     result.context = { ...config.context };
-  }
-  if (config.feedback !== undefined) {
-    result.feedback = { ...config.feedback };
   }
   if (config.securityReview !== undefined) {
     result.securityReview = { ...config.securityReview };

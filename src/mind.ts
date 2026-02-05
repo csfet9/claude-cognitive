@@ -18,24 +18,18 @@ import { HindsightClient } from "./client.js";
 import { loadConfig } from "./config.js";
 import { HindsightError } from "./errors.js";
 import { TypedEventEmitter } from "./events.js";
-import { FeedbackService, createFeedbackService } from "./feedback/index.js";
-import { OfflineFeedbackQueue } from "./feedback/offline-queue.js";
 import { OfflineMemoryStore } from "./offline.js";
 import type {
   Bank,
-  BankUsefulnessStats,
   ClaudeMindConfig,
   Disposition,
   FactType,
   LearnOptions,
   LearnResult,
   Memory,
-  MetricsResult,
   MindOptions,
   RecallOptions,
   ReflectResult,
-  SignalItem,
-  SignalResult,
   TimeoutConfig,
 } from "./types.js";
 
@@ -105,12 +99,6 @@ export class Mind extends TypedEventEmitter {
   // Offline memory store (always available)
   private offlineStore: OfflineMemoryStore | null = null;
 
-  // Feedback service (optional, enabled via config)
-  private feedbackService: FeedbackService | null = null;
-
-  // Offline feedback queue (for degraded mode)
-  private feedbackQueue: OfflineFeedbackQueue | null = null;
-
   // State
   private initialized = false;
   private initializing = false;
@@ -118,8 +106,6 @@ export class Mind extends TypedEventEmitter {
   private sessionActive = false;
   /** Session start time. Used for duration tracking. */
   private sessionStartTime: Date | null = null;
-  /** Current session ID for feedback tracking */
-  private sessionId: string | null = null;
 
   // Agent templates (loaded in init())
   private customAgents: AgentTemplate[] = [];
@@ -242,18 +228,6 @@ export class Mind extends TypedEventEmitter {
         projectPath: this.projectPath,
       });
 
-      // Initialize feedback service if enabled
-      if (config.feedback?.enabled) {
-        this.feedbackService = createFeedbackService(
-          config.feedback,
-          this.projectPath,
-        );
-        // Initialize offline feedback queue alongside the service
-        this.feedbackQueue = new OfflineFeedbackQueue({
-          projectPath: this.projectPath,
-        });
-      }
-
       // Mark initialized
       this.initialized = true;
 
@@ -341,7 +315,6 @@ export class Mind extends TypedEventEmitter {
     }
     this.sessionActive = true;
     this.sessionStartTime = new Date();
-    this.sessionId = `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
     const contextParts: string[] = [];
 
@@ -401,21 +374,15 @@ export class Mind extends TypedEventEmitter {
   }
 
   /**
-   * Called at session end. Reflects on session and stores observations.
+   * Called at session end. Stores transcript observations.
    *
    * This method:
    * 1. Retains transcript if provided (online or offline)
-   * 2. Reflects on the session (online only)
-   * 3. Emits opinion events
    *
    * @param transcript - Optional session transcript to store
-   * @param sessionId - Optional session ID (extracted from transcript, or falls back to internal)
    * @returns Reflection result, or null in degraded mode
    */
-  async onSessionEnd(
-    transcript?: string,
-    sessionId?: string | null,
-  ): Promise<ReflectResult | null> {
+  async onSessionEnd(transcript?: string): Promise<ReflectResult | null> {
     this.assertInitialized();
 
     // Retain transcript if provided
@@ -455,75 +422,11 @@ export class Mind extends TypedEventEmitter {
       }
     }
 
-    // Process feedback if enabled
-    // Use provided sessionId (from transcript) or fall back to internal sessionId
-    // Always use a fallback for event emission consistency
-    const feedbackSessionId = sessionId || this.sessionId;
-    const effectiveFeedbackSessionId = feedbackSessionId ?? "unknown";
-    if (this.feedbackService && transcript) {
-      try {
-        const feedbackResult = await this.feedbackService.processFeedback(
-          feedbackSessionId,
-          {
-            conversationText: transcript,
-          },
-        );
-
-        if (feedbackResult.success && feedbackResult.feedback.length > 0) {
-          if (!this.degraded && this.client) {
-            // Online mode: Submit feedback signals to Hindsight
-            await this.client.signal({
-              bankId: this.bankId,
-              signals: feedbackResult.feedback,
-            });
-
-            this.emit("feedback:processed", {
-              sessionId: effectiveFeedbackSessionId,
-              summary: feedbackResult.summary,
-            });
-          } else if (this.feedbackQueue) {
-            // Degraded mode: Queue signals for later sync
-            await this.feedbackQueue.enqueueBatch(feedbackResult.feedback);
-
-            this.emit("feedback:queued", {
-              sessionId: effectiveFeedbackSessionId,
-              count: feedbackResult.feedback.length,
-            });
-          }
-        }
-      } catch (error) {
-        // Silently ignore feedback processing errors - non-critical
-        this.emit(
-          "error",
-          error instanceof Error
-            ? error
-            : new Error("Feedback processing failed"),
-        );
-      }
-    }
-
-    // Reflect on session (if not degraded)
     let result: ReflectResult | null = null;
-    if (!this.degraded && this.client) {
-      try {
-        result = await this.client.reflect({
-          bankId: this.bankId,
-          query: "What insights can I draw from this session?",
-        });
-
-        // Emit opinion events
-        for (const opinion of result.opinions) {
-          this.emit("opinion:formed", opinion);
-        }
-      } catch (error) {
-        this.handleError(error, "onSessionEnd reflect");
-      }
-    }
 
     // Reset session state
     this.sessionActive = false;
     this.sessionStartTime = null;
-    this.sessionId = null;
 
     return result;
   }
@@ -555,9 +458,6 @@ export class Mind extends TypedEventEmitter {
           factType?: FactType | "all";
           maxTokens?: number;
           includeEntities?: boolean;
-          boostByUsefulness?: boolean;
-          usefulnessWeight?: number;
-          minUsefulness?: number;
         } = {
           bankId: this.bankId,
           query,
@@ -569,33 +469,9 @@ export class Mind extends TypedEventEmitter {
           recallInput.maxTokens = options.maxTokens;
         if (options?.includeEntities !== undefined)
           recallInput.includeEntities = options.includeEntities;
-        if (options?.boostByUsefulness !== undefined)
-          recallInput.boostByUsefulness = options.boostByUsefulness;
-        if (options?.usefulnessWeight !== undefined)
-          recallInput.usefulnessWeight = options.usefulnessWeight;
-        if (options?.minUsefulness !== undefined)
-          recallInput.minUsefulness = options.minUsefulness;
 
         const memories = await this.client.recall(recallInput);
         this.emit("memory:recalled", memories);
-
-        // Track recall for feedback if enabled (unless skipTracking)
-        if (
-          this.feedbackService &&
-          this.sessionId &&
-          memories.length > 0 &&
-          !options?.skipTracking
-        ) {
-          try {
-            await this.feedbackService.trackRecall(
-              this.sessionId,
-              query,
-              memories,
-            );
-          } catch {
-            // Silently ignore feedback tracking errors
-          }
-        }
 
         return memories;
       } catch (error) {
@@ -666,30 +542,6 @@ export class Mind extends TypedEventEmitter {
   }
 
   /**
-   * Submit feedback signals for recalled facts.
-   *
-   * @param signals - Array of signal items with factId, signalType, etc.
-   * @returns Signal result
-   * @throws {HindsightError} If in degraded mode (signal requires Hindsight)
-   */
-  async signal(signals: SignalItem[]): Promise<SignalResult> {
-    this.assertInitialized();
-
-    if (this.degraded || !this.client) {
-      throw new HindsightError(
-        "signal() requires Hindsight connection",
-        "HINDSIGHT_UNAVAILABLE",
-        { isRetryable: false },
-      );
-    }
-
-    return this.client.signal({
-      bankId: this.bankId,
-      signals,
-    });
-  }
-
-  /**
    * Get the underlying HindsightClient.
    *
    * Use with caution - prefer Mind methods for standard operations.
@@ -699,78 +551,6 @@ export class Mind extends TypedEventEmitter {
    */
   getClient(): HindsightClient | null {
     return this.degraded ? null : this.client;
-  }
-
-  /**
-   * Get memory effectiveness metrics for the current bank.
-   *
-   * Combines bank statistics with memory counts to provide
-   * a comprehensive view of memory health and usage.
-   *
-   * @returns Metrics result with bank stats and counts
-   * @throws {HindsightError} If in degraded mode (requires Hindsight connection)
-   *
-   * @example
-   * ```typescript
-   * const metrics = await mind.getMetrics();
-   * console.log(`Total facts: ${metrics.totalFacts}`);
-   * console.log(`Average usefulness: ${metrics.bankStats?.averageUsefulness}`);
-   * ```
-   */
-  async getMetrics(): Promise<MetricsResult> {
-    this.assertInitialized();
-
-    if (this.degraded || !this.client) {
-      throw new HindsightError(
-        "getMetrics() requires Hindsight connection",
-        "HINDSIGHT_UNAVAILABLE",
-        { isRetryable: false },
-      );
-    }
-
-    // Get bank info for total counts
-    const bank = await this.client.getBank(this.bankId);
-
-    // Get bank-level usefulness stats
-    let bankStats: BankUsefulnessStats | null = null;
-    try {
-      bankStats = await this.client.getBankStats(this.bankId);
-    } catch {
-      // Stats may not exist if no signals have been submitted yet
-    }
-
-    // Count facts by type
-    const factsByType: Record<FactType, number> = {
-      world: 0,
-      experience: 0,
-      opinion: 0,
-      observation: 0,
-    };
-
-    // Get counts for each type using listMemories
-    for (const factType of ["world", "experience", "opinion"] as FactType[]) {
-      try {
-        const result = await this.client.listMemories(this.bankId, {
-          factType,
-          limit: 1,
-        });
-        factsByType[factType] = result.total;
-      } catch {
-        // Ignore errors for individual type counts
-      }
-    }
-
-    // Calculate pruning candidates (facts with low usefulness)
-    const pruningCandidates =
-      bankStats?.leastUsefulFacts.filter((f) => f.score < 0.3).length ?? 0;
-
-    return {
-      bankId: this.bankId,
-      totalFacts: bank?.memoryCount ?? 0,
-      factsByType,
-      bankStats,
-      pruningCandidates,
-    };
   }
 
   /**
@@ -996,9 +776,6 @@ ${template.outputFormat}
       // Auto-sync offline memories
       await this.syncOfflineMemories();
 
-      // Auto-sync offline feedback signals
-      await this.syncOfflineFeedback();
-
       return true;
     }
 
@@ -1070,61 +847,6 @@ ${template.outputFormat}
       );
       return 0;
     }
-  }
-
-  /**
-   * Sync offline feedback signals to Hindsight.
-   * Called automatically on recovery from degraded mode.
-   *
-   * @returns Number of feedback signals synced
-   */
-  async syncOfflineFeedback(): Promise<number> {
-    if (!this.client || this.degraded || !this.feedbackQueue) {
-      return 0;
-    }
-
-    try {
-      await this.feedbackQueue.recordSyncAttempt();
-      const unsynced = await this.feedbackQueue.getUnsynced();
-
-      if (unsynced.length === 0) {
-        return 0;
-      }
-
-      // Convert offline signals back to SignalItem format
-      const signals: SignalItem[] = unsynced.map(
-        OfflineFeedbackQueue.toSignalItem,
-      );
-
-      // Submit all signals in one batch
-      await this.client.signal({
-        bankId: this.bankId,
-        signals,
-      });
-
-      // Mark all as synced
-      const ids = unsynced.map((s) => s.id);
-      await this.feedbackQueue.markSynced(ids);
-      this.emit("feedback:synced", { count: ids.length });
-
-      // Clear synced signals to save space
-      await this.feedbackQueue.clearSynced();
-
-      return ids.length;
-    } catch (error) {
-      this.emit(
-        "error",
-        error instanceof Error ? error : new Error(String(error)),
-      );
-      return 0;
-    }
-  }
-
-  /**
-   * Get offline feedback queue (for CLI commands).
-   */
-  getOfflineFeedbackQueue(): OfflineFeedbackQueue | null {
-    return this.feedbackQueue;
   }
 
   /**
@@ -1271,24 +993,36 @@ ${template.outputFormat}
     lines.push("");
     lines.push("```bash");
     lines.push("# Quick summary");
-    lines.push('echo "Summarize this file in 3 bullets: $(cat path/to/file.py)" | gemini -y');
+    lines.push(
+      'echo "Summarize this file in 3 bullets: $(cat path/to/file.py)" | gemini -y',
+    );
     lines.push("");
     lines.push("# Architecture analysis (let Gemini read files directly)");
-    lines.push('echo "Analyze the architecture in src/core/. Explain patterns and data flow." | gemini -y');
+    lines.push(
+      'echo "Analyze the architecture in src/core/. Explain patterns and data flow." | gemini -y',
+    );
     lines.push("");
     lines.push("# Code review");
-    lines.push('echo "Review this code for bugs and security issues: $(cat path/to/file.ts)" | gemini -y');
+    lines.push(
+      'echo "Review this code for bugs and security issues: $(cat path/to/file.ts)" | gemini -y',
+    );
     lines.push("");
     lines.push("# Multi-file research");
-    lines.push('echo "Read the files in src/auth/ and explain the authentication flow" | gemini -y');
+    lines.push(
+      'echo "Read the files in src/auth/ and explain the authentication flow" | gemini -y',
+    );
     lines.push("```");
     lines.push("");
     lines.push("### Guidelines");
     lines.push("");
     lines.push("- Use `-y` flag to auto-approve Gemini's tool calls");
-    lines.push("- Let Gemini read files directly for multi-file analysis (more reliable)");
+    lines.push(
+      "- Let Gemini read files directly for multi-file analysis (more reliable)",
+    );
     lines.push("- Pipe file content for single-file analysis (faster)");
-    lines.push("- If Gemini fails, fall back to direct file reading with Glob/Grep/Read");
+    lines.push(
+      "- If Gemini fails, fall back to direct file reading with Glob/Grep/Read",
+    );
     lines.push("");
     lines.push("### IMPORTANT: Gemini findings require verification");
     lines.push("");
@@ -1431,15 +1165,12 @@ ${template.outputFormat}
     // Clear references
     this.client = null;
     this.offlineStore = null;
-    this.feedbackService = null;
-    this.feedbackQueue = null;
     this.customAgents = [];
 
     // Reset state
     this.initialized = false;
     this.sessionActive = false;
     this.sessionStartTime = null;
-    this.sessionId = null;
     this.degraded = false;
   }
 }

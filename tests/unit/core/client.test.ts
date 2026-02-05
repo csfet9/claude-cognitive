@@ -425,31 +425,6 @@ describe("HindsightClient", () => {
       expect(mem.occurredStart).toBe("2024-01-01");
       expect(mem.occurredEnd).toBe("2024-01-02");
     });
-
-    it("should include usefulness boosting params in request", async () => {
-      mockFetch.mockResolvedValueOnce(createResponse(200, { results: [] }));
-
-      await client.recall({
-        bankId: "my-bank",
-        query: "query",
-        boostByUsefulness: true,
-        usefulnessWeight: 0.3,
-        minUsefulness: 0.2,
-      });
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          body: JSON.stringify({
-            query: "query",
-            budget: "mid",
-            boost_by_usefulness: true,
-            usefulness_weight: 0.3,
-            min_usefulness: 0.2,
-          }),
-        }),
-      );
-    });
   });
 
   describe("reflect()", () => {
@@ -650,45 +625,6 @@ describe("HindsightClient", () => {
 
       // Just verify construction works - timeout testing requires mocking AbortSignal.timeout
       expect(c).toBeInstanceOf(HindsightClient);
-    });
-  });
-
-  describe("getBankStats()", () => {
-    it("should get bank usefulness stats", async () => {
-      mockFetch.mockResolvedValueOnce(
-        createResponse(200, {
-          bank_id: "test-bank",
-          total_facts_with_signals: 100,
-          average_usefulness: 0.75,
-          total_signals: 250,
-          signal_distribution: {
-            used: 150,
-            ignored: 70,
-            helpful: 20,
-            not_helpful: 10,
-          },
-          top_useful_facts: [
-            { fact_id: "fact-1", score: 0.95, text: "Most useful fact" },
-          ],
-          least_useful_facts: [
-            { fact_id: "fact-2", score: 0.15, text: "Least useful fact" },
-          ],
-        }),
-      );
-
-      const stats = await client.getBankStats("test-bank");
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8888/v1/default/banks/test-bank/stats/usefulness",
-        expect.objectContaining({ method: "GET" }),
-      );
-      expect(stats.bankId).toBe("test-bank");
-      expect(stats.totalFactsWithSignals).toBe(100);
-      expect(stats.averageUsefulness).toBe(0.75);
-      expect(stats.totalSignals).toBe(250);
-      expect(stats.topUsefulFacts).toHaveLength(1);
-      expect(stats.topUsefulFacts[0].factId).toBe("fact-1");
-      expect(stats.leastUsefulFacts).toHaveLength(1);
     });
   });
 

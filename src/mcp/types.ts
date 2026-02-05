@@ -82,21 +82,3 @@ export interface RecallToolInput {
 export interface ReflectToolInput {
   query: string;
 }
-
-/**
- * Single signal item for the signal tool.
- */
-export interface SignalToolInputItem {
-  factId: string;
-  signalType: "used" | "ignored" | "helpful" | "not_helpful";
-  confidence?: number | undefined;
-  context?: string | undefined;
-}
-
-/**
- * Signal tool input schema type.
- */
-export interface SignalToolInput {
-  signals: SignalToolInputItem[];
-  query: string;
-}

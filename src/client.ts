@@ -12,11 +12,8 @@ import type {
   Bank,
   BankOptions,
   BankResponseDTO,
-  BankUsefulnessStats,
   Disposition,
   FactType,
-  FactUsefulnessStats,
-  FactStatsInput,
   HealthStatus,
   HindsightClientOptions,
   Memory,
@@ -24,9 +21,6 @@ import type {
   ReflectInput,
   ReflectResult,
   RetainInput,
-  SignalInput,
-  SignalResult,
-  SignalType,
   TimeoutConfig,
   TraitValue,
 } from "./types.js";
@@ -116,27 +110,12 @@ interface ListMemoriesResult {
  *   query: 'authentication issues'
  * });
  *
- * // Recall with usefulness boosting
- * const boosted = await client.recall({
- *   bankId: 'my-project',
- *   query: 'authentication issues',
- *   boostByUsefulness: true,
- *   usefulnessWeight: 0.3
- * });
- *
  * // Reflect and form opinions
  * const reflection = await client.reflect({
  *   bankId: 'my-project',
  *   query: 'What patterns have I noticed?'
  * });
  *
- * // Submit feedback signals
- * await client.signal({
- *   bankId: 'my-project',
- *   signals: [
- *     { factId: memories[0].id, signalType: 'used', query: 'auth issues' }
- *   ]
- * });
  * ```
  */
 export class HindsightClient {
@@ -368,26 +347,15 @@ export class HindsightClient {
    * Results are fused using Reciprocal Rank Fusion (RRF),
    * then reranked with a neural cross-encoder.
    *
-   * Optionally boost results by usefulness score (based on feedback signals).
-   *
    * @param input - Recall input with bankId, query, and optional search options
    * @returns Ranked list of matching memories
    * @throws {HindsightError} If bank doesn't exist
    *
    * @example
    * ```typescript
-   * // Basic recall
    * const memories = await client.recall({
    *   bankId: 'my-project',
    *   query: 'authentication issues'
-   * });
-   *
-   * // With usefulness boosting
-   * const boosted = await client.recall({
-   *   bankId: 'my-project',
-   *   query: 'authentication issues',
-   *   boostByUsefulness: true,
-   *   usefulnessWeight: 0.3
    * });
    * ```
    */
@@ -420,17 +388,6 @@ export class HindsightClient {
     // Add max tokens if specified
     if (input.maxTokens !== undefined) {
       body.max_tokens = input.maxTokens;
-    }
-
-    // Add usefulness boosting parameters
-    if (input.boostByUsefulness) {
-      body.boost_by_usefulness = true;
-      if (input.usefulnessWeight !== undefined) {
-        body.usefulness_weight = input.usefulnessWeight;
-      }
-      if (input.minUsefulness !== undefined) {
-        body.min_usefulness = input.minUsefulness;
-      }
     }
 
     const response = await this.request<RecallApiResponse>(
@@ -698,162 +655,6 @@ export class HindsightClient {
    */
   async forget(bankId: string, _memoryId?: string): Promise<void> {
     await this.forgetAll(bankId);
-  }
-
-  // ============================================
-  // Feedback Signal Operations
-  // ============================================
-
-  /**
-   * Submit feedback signals for recalled facts.
-   *
-   * Signal types and their weights:
-   * - `used`: Fact was referenced in response (weight: +1.0)
-   * - `ignored`: Fact was recalled but not used (weight: -0.5)
-   * - `helpful`: Explicit positive feedback (weight: +1.5)
-   * - `not_helpful`: Explicit negative feedback (weight: -1.0)
-   *
-   * @param input - Signal input with bankId and array of signals
-   * @returns Result with number of signals processed
-   * @throws {HindsightError} If bank doesn't exist
-   *
-   * @example
-   * ```typescript
-   * await client.signal({
-   *   bankId: 'my-project',
-   *   signals: [
-   *     { factId: 'fact-1', signalType: 'used', query: 'auth issues', confidence: 1.0 },
-   *     { factId: 'fact-2', signalType: 'ignored', query: 'auth issues', confidence: 0.5 }
-   *   ]
-   * });
-   * ```
-   */
-  async signal(input: SignalInput): Promise<SignalResult> {
-    interface SignalApiResponse {
-      success: boolean;
-      signals_processed: number;
-      updated_facts: string[];
-    }
-    const response = await this.request<SignalApiResponse>(
-      "POST",
-      `/v1/default/banks/${encodeURIComponent(input.bankId)}/signal`,
-      {
-        body: {
-          signals: input.signals.map((s) => ({
-            fact_id: s.factId,
-            signal_type: s.signalType,
-            confidence: s.confidence ?? 1.0,
-            query: s.query,
-            context: s.context,
-          })),
-        },
-      },
-    );
-    return {
-      success: response.success,
-      signalsProcessed: response.signals_processed,
-      updatedFacts: response.updated_facts,
-    };
-  }
-
-  /**
-   * Get usefulness statistics for a specific fact.
-   *
-   * @param input - Input with bankId and factId
-   * @returns Usefulness statistics for the fact
-   * @throws {HindsightError} If bank or fact doesn't exist
-   *
-   * @example
-   * ```typescript
-   * const stats = await client.getFactStats({
-   *   bankId: 'my-project',
-   *   factId: 'fact-123'
-   * });
-   * console.log(`Usefulness: ${stats.usefulnessScore}`);
-   * ```
-   */
-  async getFactStats(input: FactStatsInput): Promise<FactUsefulnessStats> {
-    interface FactStatsApiResponse {
-      fact_id: string;
-      usefulness_score: number;
-      signal_count: number;
-      signal_breakdown: Record<string, number>;
-      last_signal_at: string | null;
-      created_at: string;
-    }
-    const response = await this.request<FactStatsApiResponse>(
-      "GET",
-      `/v1/default/banks/${encodeURIComponent(input.bankId)}/facts/${encodeURIComponent(input.factId)}/stats`,
-    );
-    const result: FactUsefulnessStats = {
-      factId: response.fact_id,
-      usefulnessScore: response.usefulness_score,
-      signalCount: response.signal_count,
-      signalBreakdown: response.signal_breakdown as Record<
-        "used" | "ignored" | "helpful" | "not_helpful",
-        number
-      >,
-      createdAt: response.created_at,
-    };
-    if (response.last_signal_at) {
-      result.lastSignalAt = response.last_signal_at;
-    }
-    return result;
-  }
-
-  /**
-   * Get bank-level usefulness statistics.
-   *
-   * @param bankId - Bank identifier
-   * @returns Bank usefulness statistics
-   * @throws {HindsightError} If bank doesn't exist or request fails
-   *
-   * @example
-   * ```typescript
-   * const stats = await client.getBankStats("my-project");
-   * console.log(`Average usefulness: ${stats.averageUsefulness}`);
-   * ```
-   */
-  async getBankStats(bankId: string): Promise<BankUsefulnessStats> {
-    interface BankStatsApiResponse {
-      bank_id: string;
-      total_facts_with_signals: number;
-      average_usefulness: number;
-      total_signals: number;
-      signal_distribution: Record<string, number>;
-      top_useful_facts: Array<{ fact_id: string; score: number; text: string }>;
-      least_useful_facts: Array<{
-        fact_id: string;
-        score: number;
-        text: string;
-      }>;
-    }
-
-    const response = await this.request<BankStatsApiResponse>(
-      "GET",
-      `/v1/default/banks/${encodeURIComponent(bankId)}/stats/usefulness`,
-    );
-
-    return {
-      bankId: response.bank_id,
-      totalFactsWithSignals: response.total_facts_with_signals,
-      averageUsefulness: response.average_usefulness,
-      totalSignals: response.total_signals,
-      signalDistribution: response.signal_distribution as Record<
-        SignalType,
-        number
-      >,
-      topUsefulFacts: response.top_useful_facts.map((f) => ({
-        factId: f.fact_id,
-        score: f.score,
-        text: f.text,
-      })),
-      leastUsefulFacts: response.least_useful_facts.map((f) => ({
-        factId: f.fact_id,
-        score: f.score,
-        text: f.text,
-      })),
-    };
   }
 
   // ============================================

@@ -112,7 +112,12 @@ export class GeminiExecutor {
       await writeFile(tempPath, prompt, { mode: 0o600 });
 
       // Execute CLI with prompt from stdin
-      const response = await this.spawnGemini(tempPath, model, timeout, onProgress);
+      const response = await this.spawnGemini(
+        tempPath,
+        model,
+        timeout,
+        onProgress,
+      );
       return response;
     } finally {
       // Always clean up temp file
@@ -176,7 +181,10 @@ export class GeminiExecutor {
             progress: progressCount,
             message: `Gemini CLI processing... (${progressCount * 30}s elapsed)`,
           }).catch((err) => {
-            console.error("[gemini-executor] Progress notification failed:", err);
+            console.error(
+              "[gemini-executor] Progress notification failed:",
+              err,
+            );
           });
         }, PROGRESS_INTERVAL_MS);
       }

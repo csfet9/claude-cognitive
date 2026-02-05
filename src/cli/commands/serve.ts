@@ -62,8 +62,7 @@ export function registerServeCommand(cli: CAC): void {
 
       await mind.init();
 
-      // Start session to enable feedback tracking
-      // This sets sessionId which is required for recall tracking
+      // Start session to prepare context
       await mind.onSessionStart();
 
       if (mind.isDegraded) {

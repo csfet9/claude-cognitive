@@ -196,14 +196,6 @@ export interface RecallOptions {
   maxTokens?: number;
   /** Include entity metadata in results */
   includeEntities?: boolean;
-  /** Enable usefulness boosting (default: false) */
-  boostByUsefulness?: boolean;
-  /** Weight for usefulness vs semantic (0.0-1.0, default: 0.3) */
-  usefulnessWeight?: number;
-  /** Minimum usefulness score threshold (default: 0.0) */
-  minUsefulness?: number;
-  /** Skip feedback tracking (for dry-run mode) */
-  skipTracking?: boolean;
 }
 
 /**
@@ -228,12 +220,6 @@ export interface RecallInput {
   maxTokens?: number;
   /** Include entity metadata in results */
   includeEntities?: boolean;
-  /** Enable usefulness boosting (default: false) */
-  boostByUsefulness?: boolean;
-  /** Weight for usefulness vs semantic (0.0-1.0, default: 0.3) */
-  usefulnessWeight?: number;
-  /** Minimum usefulness score threshold (default: 0.0) */
-  minUsefulness?: number;
 }
 
 /**
@@ -264,26 +250,6 @@ export interface ReflectInput {
   context?: string;
 }
 
-/**
- * Input for HindsightClient.signal() operation.
- */
-export interface SignalInput {
-  /** Memory bank identifier */
-  bankId: string;
-  /** Array of feedback signals */
-  signals: SignalItem[];
-}
-
-/**
- * Input for HindsightClient.getFactStats() operation.
- */
-export interface FactStatsInput {
-  /** Memory bank identifier */
-  bankId: string;
-  /** Fact UUID */
-  factId: string;
-}
-
 // ============================================
 // Reflect Types
 // ============================================
@@ -311,153 +277,6 @@ export interface ReflectResult {
     /** Prior opinions used in reasoning */
     opinion: Memory[];
   };
-}
-
-// ============================================
-// Feedback Signal Types
-// ============================================
-
-/** Types of usefulness signals for facts */
-export type SignalType = "used" | "ignored" | "helpful" | "not_helpful";
-
-/** A single feedback signal for a fact */
-export interface SignalItem {
-  /** UUID of the fact to signal */
-  factId: string;
-  /** Type of signal */
-  signalType: SignalType;
-  /** Confidence in the signal (0.0-1.0), default 1.0 */
-  confidence?: number;
-  /** The query that triggered the recall (required for query-context aware scoring) */
-  query: string;
-  /** Optional context about the signal */
-  context?: string;
-}
-
-/** Result from submitting feedback signals */
-export interface SignalResult {
-  /** Whether the operation succeeded */
-  success: boolean;
-  /** Number of signals processed */
-  signalsProcessed: number;
-  /** Fact IDs that were updated */
-  updatedFacts: string[];
-}
-
-/** Usefulness statistics for a single fact */
-export interface FactUsefulnessStats {
-  /** Fact UUID */
-  factId: string;
-  /** Current usefulness score (0.0-1.0) */
-  usefulnessScore: number;
-  /** Total number of signals received */
-  signalCount: number;
-  /** Count of signals by type */
-  signalBreakdown: Record<SignalType, number>;
-  /** When the last signal was received (ISO 8601) */
-  lastSignalAt?: string;
-  /** When the fact was created (ISO 8601) */
-  createdAt: string;
-}
-
-// ============================================
-// Memory Metrics Types
-// ============================================
-
-/**
- * Summary of a fact for display in metrics/reports.
- */
-export interface FactSummary {
-  /** Fact UUID */
-  factId: string;
-  /** Usefulness score (0.0-1.0) */
-  score: number;
-  /** Fact text content */
-  text: string;
-}
-
-/**
- * Bank-level usefulness statistics from Hindsight API.
- */
-export interface BankUsefulnessStats {
-  /** Bank identifier */
-  bankId: string;
-  /** Number of facts that have received signals */
-  totalFactsWithSignals: number;
-  /** Average usefulness score across all signaled facts (0.0-1.0) */
-  averageUsefulness: number;
-  /** Total number of signals submitted */
-  totalSignals: number;
-  /** Breakdown of signals by type */
-  signalDistribution: Record<SignalType, number>;
-  /** Most useful facts by score */
-  topUsefulFacts: FactSummary[];
-  /** Least useful facts by score */
-  leastUsefulFacts: FactSummary[];
-}
-
-/**
- * Result of the metrics command, combining bank stats with memory counts.
- */
-export interface MetricsResult {
-  /** Bank identifier */
-  bankId: string;
-  /** Total number of facts in the bank */
-  totalFacts: number;
-  /** Facts broken down by type */
-  factsByType: Record<FactType, number>;
-  /** Bank-level usefulness stats (null if no signals exist) */
-  bankStats: BankUsefulnessStats | null;
-  /** Number of facts that are candidates for pruning */
-  pruningCandidates: number;
-}
-
-// ============================================
-// Consolidation/Pruning Types
-// ============================================
-
-/**
- * Criteria for identifying pruning candidates.
- */
-export interface PruningCriteria {
-  /** Minimum usefulness score threshold (default: 0.3) */
-  minUsefulness?: number;
-  /** Minimum number of signals required to consider for pruning (default: 5) */
-  minSignals?: number;
-}
-
-/**
- * A memory fact identified as a candidate for pruning.
- */
-export interface PruningCandidate {
-  /** Fact UUID */
-  factId: string;
-  /** Fact text content */
-  text: string;
-  /** Type of the fact */
-  factType: FactType;
-  /** Current usefulness score (0.0-1.0) */
-  usefulnessScore: number;
-  /** Total number of signals received */
-  signalCount: number;
-  /** Breakdown of signals by type */
-  signalBreakdown: Record<SignalType, number>;
-  /** Human-readable reason for pruning recommendation */
-  reason: string;
-}
-
-/**
- * Result of the consolidation analysis.
- */
-export interface ConsolidationReport {
-  /** Bank identifier */
-  bankId: string;
-  /** Criteria used for analysis */
-  criteria: PruningCriteria;
-  /** List of facts recommended for pruning */
-  candidates: PruningCandidate[];
-  /** Total number of memories in the bank */
-  totalMemories: number;
 }
 
 // ============================================
@@ -552,44 +371,6 @@ export interface RetainFilterConfig {
   skipToolOnlySessions?: boolean;
 }
 
-// ============================================
-// Feedback Configuration Types
-// ============================================
-
-/** Detection method configuration for feedback loop */
-export interface FeedbackDetectionConfig {
-  /** Enable explicit reference detection (default: true) */
-  explicit?: boolean;
-  /** Enable semantic similarity matching (default: true) */
-  semantic?: boolean;
-  /** Enable behavioral signal detection (default: true) */
-  behavioral?: boolean;
-  /** Jaccard similarity threshold for semantic matching (default: 0.5) */
-  semanticThreshold?: number;
-}
-
-/** Hindsight API integration settings for feedback */
-export interface FeedbackHindsightConfig {
-  /** Send feedback signals to Hindsight API (default: true) */
-  sendFeedback?: boolean;
-  /** Enable usefulness boosting in recalls (default: true) */
-  boostByUsefulness?: boolean;
-  /** Default usefulness weight for boosted recalls (default: 0.3) */
-  boostWeight?: number;
-}
-
-/** Full feedback loop configuration */
-export interface FeedbackConfig {
-  /** Enable feedback loop (default: false) */
-  enabled?: boolean;
-  /** Detection method configuration */
-  detection?: FeedbackDetectionConfig;
-  /** Hindsight API integration settings */
-  hindsight?: FeedbackHindsightConfig;
-  /** Enable debug logging (default: false) */
-  debug?: boolean;
-}
-
 /**
  * Security review configuration for pre-commit hooks.
  * Enables automated security analysis before commits.
@@ -634,8 +415,6 @@ export interface ClaudeMindConfig {
     /** Maximum number of recent memories to inject (default: 3) */
     recentMemoryLimit?: number;
   };
-  /** Feedback loop configuration for tracking fact usefulness */
-  feedback?: FeedbackConfig;
   /** Security review configuration for pre-commit hooks */
   securityReview?: SecurityReviewConfig;
   /** Gemini CLI integration configuration */

@@ -189,11 +189,11 @@ The `learn` command uses Gemini for codebase analysis when configured:
 }
 ```
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `model` | `"auto"` | Model to use (`"auto"`, `"gemini-3-flash-preview"`, `"gemini-3-pro-preview"`) |
-| `timeout` | `0` | CLI timeout in ms (0 = no timeout) |
-| `maxConcurrentRequests` | `1` | Max parallel Gemini operations during `learn` |
+| Option                  | Default  | Description                                                                   |
+| ----------------------- | -------- | ----------------------------------------------------------------------------- |
+| `model`                 | `"auto"` | Model to use (`"auto"`, `"gemini-3-flash-preview"`, `"gemini-3-pro-preview"`) |
+| `timeout`               | `0`      | CLI timeout in ms (0 = no timeout)                                            |
+| `maxConcurrentRequests` | `1`      | Max parallel Gemini operations during `learn`                                 |
 
 > **Note:** Gemini findings should be verified by reading actual code. Use as a starting point for exploration.
 

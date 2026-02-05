@@ -913,20 +913,6 @@ export function registerInstallCommand(cli: CAC): void {
             maxCodeBlockLines: 30,
             minSessionLength: 500,
           },
-          feedback: {
-            enabled: true,
-            detection: {
-              explicit: true,
-              semantic: true,
-              behavioral: true,
-              semanticThreshold: 0.5,
-            },
-            hindsight: {
-              sendFeedback: true,
-              boostByUsefulness: true,
-              boostWeight: 0.3,
-            },
-          },
           securityReview: {
             enabled: true,
           },

@@ -73,20 +73,6 @@ const DEFAULT_CONFIG = {
     maxCodeBlockLines: 30,
     minSessionLength: 500,
   },
-  feedback: {
-    enabled: true,
-    detection: {
-      explicit: true,
-      semantic: true,
-      behavioral: true,
-      semanticThreshold: 0.5,
-    },
-    hindsight: {
-      sendFeedback: true,
-      boostByUsefulness: true,
-      boostWeight: 0.3,
-    },
-  },
   gemini: {
     model: "auto",
     timeout: 120000,
@@ -534,12 +520,6 @@ fi
           projectUpdates.push("Add 'retain' config");
         }
 
-        // Check for missing feedback config
-        if (!("feedback" in projectConfig)) {
-          projectUpdatesNeeded++;
-          projectUpdates.push("Add 'feedback' config");
-        }
-
         // Check for missing gemini config
         if (!("gemini" in projectConfig)) {
           projectUpdatesNeeded++;
@@ -579,8 +559,9 @@ fi
               projectConfig.retain = DEFAULT_CONFIG.retain;
             }
 
-            if (!("feedback" in projectConfig)) {
-              projectConfig.feedback = DEFAULT_CONFIG.feedback;
+            // Remove obsolete feedback config
+            if ("feedback" in projectConfig) {
+              delete projectConfig.feedback;
             }
 
             if (!("gemini" in projectConfig)) {
