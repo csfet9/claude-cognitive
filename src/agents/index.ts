@@ -9,7 +9,11 @@ export type {
   AgentContext,
   BuiltInAgentType,
   GetAgentContextOptions,
+  ModelTier,
+  TaskCategory,
 } from "./types.js";
+
+export { costForModel } from "./types.js";
 
 // Built-in templates
 export {
@@ -25,6 +29,7 @@ export {
 // Custom agent loading
 export {
   parseAgentMarkdown,
+  parseFrontmatter,
   loadCustomAgents,
   templateToMarkdown,
 } from "./loader.js";

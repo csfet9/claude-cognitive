@@ -5,6 +5,40 @@
 
 import type { Memory } from "../types.js";
 
+// ============================================
+// Model & Cost Routing Types
+// ============================================
+
+/** Claude model tiers for agent delegation */
+export type ModelTier = "opus" | "sonnet" | "haiku";
+
+/** Derive cost from model tier (opus→expensive, sonnet→standard, haiku→cheap) */
+const MODEL_COST: Record<ModelTier, string> = {
+  opus: "expensive",
+  sonnet: "standard",
+  haiku: "cheap",
+};
+
+export function costForModel(model: ModelTier): string {
+  return MODEL_COST[model];
+}
+
+/** Task categories that map to model tiers */
+export type TaskCategory =
+  | "exploration" // Read-only codebase analysis → haiku
+  | "implementation" // Write code, standard complexity → sonnet
+  | "review" // Code/security review → sonnet (security → opus)
+  | "architecture" // Design, complex planning → sonnet/opus
+  | "research" // Web search, doc lookup → haiku
+  | "testing" // Write/run tests → sonnet
+  | "debugging" // Trace issues, fix bugs → sonnet
+  | "security" // Security analysis → opus
+  | "reasoning"; // Deep reasoning, memory ops → opus
+
+// ============================================
+// Agent Template Types
+// ============================================
+
 /**
  * Base agent template structure.
  * Defines what an agent does and how it operates.
@@ -22,6 +56,10 @@ export interface AgentTemplate {
   constraints: string[];
   /** Optional system prompt additions */
   systemPromptAdditions?: string;
+  /** Model tier for this agent */
+  model?: ModelTier;
+  /** Task categories this agent handles */
+  categories?: TaskCategory[];
 }
 
 /**

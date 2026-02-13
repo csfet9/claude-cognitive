@@ -8,12 +8,16 @@ import { basename, join } from "node:path";
 import {
   type AgentTemplate,
   type GetAgentContextOptions,
+  type ModelTier,
+  type TaskCategory,
   BUILT_IN_TEMPLATES,
   getAgentContext as prepareAgentContext,
   formatAgentPrompt,
   loadCustomAgents,
   isBuiltInAgent,
+  costForModel,
 } from "./agents/index.js";
+import { DEFAULT_CATEGORY_ROUTING } from "./config.js";
 import { HindsightClient } from "./client.js";
 import { loadConfig } from "./config.js";
 import { HindsightError } from "./errors.js";
@@ -317,18 +321,6 @@ export class Mind extends TypedEventEmitter {
     this.sessionStartTime = new Date();
 
     const contextParts: string[] = [];
-
-    // Add agent orchestration instructions
-    const agentInstructions = this.formatAgentInstructions();
-    if (agentInstructions.trim().length > 0) {
-      contextParts.push(agentInstructions);
-    }
-
-    // Add Gemini code exploration guidance (if configured)
-    const geminiGuidance = this.formatGeminiGuidance();
-    if (geminiGuidance.trim().length > 0) {
-      contextParts.push(geminiGuidance);
-    }
 
     // Recall recent experiences
     // Only fetch a small number (default 3) to keep context small
@@ -744,6 +736,61 @@ ${template.outputFormat}
     );
 
     return formatAgentPrompt(context);
+  }
+
+  // ============================================
+  // Model Routing
+  // ============================================
+
+  /**
+   * Resolve the optimal model for a task based on priority:
+   * 1. Agent-specific override (from config agentOverrides)
+   * 2. Agent's default model (from template)
+   * 3. Category-based routing (if task categories provided)
+   * 4. Default model (from config, falls back to "sonnet")
+   *
+   * @param agentName - Name of the agent
+   * @param categories - Optional task categories for routing
+   * @returns The resolved model tier
+   */
+  resolveModelForTask(
+    agentName: string,
+    categories?: TaskCategory[],
+  ): ModelTier {
+    const routing = this.config?.modelRouting;
+
+    // 1. Agent-specific override from config
+    if (routing?.agentOverrides?.[agentName]) {
+      return routing.agentOverrides[agentName];
+    }
+
+    // 2. Agent's own model from template
+    const template = this.getAgentTemplate(agentName);
+    if (template?.model) {
+      return template.model;
+    }
+
+    // 3. Category-based routing (use highest-cost category)
+    if (categories && categories.length > 0) {
+      const categoryRules = routing?.categories ?? DEFAULT_CATEGORY_ROUTING;
+      const costOrder: Record<ModelTier, number> = {
+        haiku: 0,
+        sonnet: 1,
+        opus: 2,
+      };
+      let highestModel: ModelTier = "haiku";
+
+      for (const cat of categories) {
+        const rule = categoryRules[cat];
+        if (rule && costOrder[rule.model] > costOrder[highestModel]) {
+          highestModel = rule.model;
+        }
+      }
+      return highestModel;
+    }
+
+    // 4. Default model from config
+    return routing?.defaultModel ?? "sonnet";
   }
 
   // ============================================
@@ -1173,4 +1220,158 @@ ${template.outputFormat}
     this.sessionStartTime = null;
     this.degraded = false;
   }
+}
+
+// ============================================
+// Static Helpers
+// ============================================
+
+/**
+ * Generate compact policy section for CLAUDE.md.
+ * Called during install/update to write stable policies once.
+ * This is a static helper -- does not require Mind initialization.
+ */
+export function generateClaudeMdSection(options: {
+  securityReview?: boolean;
+  geminiAvailable?: boolean;
+  agents?: Array<{
+    name: string;
+    model?: string;
+    categories?: string[];
+  }>;
+  enableTeams?: boolean;
+}): string {
+  const lines: string[] = [];
+  lines.push("## Claude Cognitive");
+  lines.push("");
+
+  if (options.securityReview) {
+    lines.push("### Pre-Commit Security Review");
+    lines.push("");
+    lines.push(
+      "Before ANY `git commit`, you MUST launch the `security-code-reviewer` agent to review all staged changes. Wait for completion. Address critical/high issues before committing. Do not skip.",
+    );
+    lines.push("");
+  }
+
+  lines.push("### Agent Orchestration");
+  lines.push("");
+  lines.push(
+    "You are the **orchestrator**. Delegate ALL coding to agents — never write code directly.",
+  );
+  lines.push("");
+  lines.push("| Role | Agents |");
+  lines.push("|------|--------|");
+  lines.push("| Explore | `code-explorer` (Explore agent) |");
+  lines.push("| Design | `code-architect` (Plan agent) |");
+  lines.push(
+    "| Implement | bloom-developer, frontend-engineer, or domain agents in `.claude/agents/` |",
+  );
+  lines.push("| Review | `code-reviewer`, security-code-reviewer |");
+  lines.push("");
+  lines.push(
+    "Workflow: Explore → Clarify → Design → Implement → Review. Launch multiple agents in parallel when possible. Only YOU access memory — agents get context from you.",
+  );
+  lines.push("");
+
+  // Model Routing Table (when agents provided)
+  if (options.agents && options.agents.length > 0) {
+    lines.push("### Model Routing");
+    lines.push("");
+    lines.push(
+      "When delegating to agents, use these model assignments for cost-effective execution:",
+    );
+    lines.push("");
+    lines.push("| Agent | Model | Cost | Categories |");
+    lines.push("|-------|-------|------|------------|");
+    for (const agent of options.agents) {
+      const model = (agent.model ?? "sonnet") as ModelTier;
+      const cost = costForModel(model);
+      const cats =
+        agent.categories && agent.categories.length > 0
+          ? agent.categories.join(", ")
+          : "-";
+      lines.push(`| \`${agent.name}\` | **${model}** | ${cost} | ${cats} |`);
+    }
+    lines.push("");
+  }
+
+  // Category Routing Guide (generated from DEFAULT_CATEGORY_ROUTING)
+  const CATEGORY_DESCRIPTIONS: Record<TaskCategory, string> = {
+    exploration: "File search, pattern matching, codebase scanning",
+    research: "Doc lookup, web search, quick questions",
+    implementation: "Write code, tests, standard features",
+    review: "Code review, quality checks",
+    debugging: "Trace bugs, fix issues",
+    architecture: "Design, planning (escalate to opus for novel problems)",
+    testing: "Write and run tests",
+    security: "Security review, vulnerability analysis",
+    reasoning: "Deep system reasoning, complex memory operations",
+  };
+
+  lines.push("### Task Category Routing");
+  lines.push("");
+  lines.push("Classify the task, then route to the right model:");
+  lines.push("");
+  lines.push("| Category | Model | Use For |");
+  lines.push("|----------|-------|---------|");
+  for (const [category, rule] of Object.entries(DEFAULT_CATEGORY_ROUTING)) {
+    const desc = CATEGORY_DESCRIPTIONS[category as TaskCategory] ?? "";
+    lines.push(`| ${category} | **${rule.model}** | ${desc} |`);
+  }
+  lines.push("");
+  lines.push(
+    "**Cost optimization**: Fire cheap (haiku) exploration agents in parallel FIRST to gather context, then delegate to the appropriate model for execution.",
+  );
+  lines.push("");
+
+  // Agent Teams guidance
+  if (options.enableTeams) {
+    lines.push("### Agent Teams");
+    lines.push("");
+    lines.push(
+      "For complex multi-agent work, use Agent Teams (Shift+Tab for delegate mode):",
+    );
+    lines.push("");
+    lines.push("**When to use teams vs subagents:**");
+    lines.push(
+      "- **Subagents**: Focused tasks where only the result matters (exploration, single-file review)",
+    );
+    lines.push(
+      "- **Agent Teams**: Complex work requiring discussion between teammates (cross-layer refactoring, competing hypotheses, parallel feature development)",
+    );
+    lines.push("");
+    lines.push("**Team composition pattern:**");
+    lines.push(
+      "1. Lead (you): Coordinates, never writes code. Use delegate mode (Shift+Tab)",
+    );
+    lines.push(
+      "2. Explorers (haiku): 1-3 teammates for parallel codebase discovery",
+    );
+    lines.push(
+      "3. Implementers (sonnet): Teammates that own specific files/features",
+    );
+    lines.push("4. Reviewer (sonnet/opus): Validates work before completion");
+    lines.push("");
+    lines.push("**Model selection for teammates:**");
+    lines.push(
+      '- Specify model when spawning: "Create a teammate using Sonnet to implement the auth module"',
+    );
+    lines.push("- Use haiku for research-only teammates");
+    lines.push(
+      "- Use opus only for security review or novel architecture teammates",
+    );
+    lines.push("");
+  }
+
+  if (options.geminiAvailable) {
+    lines.push("### Gemini CLI");
+    lines.push("");
+    lines.push(
+      'Available for cost-effective multi-file analysis: `echo "prompt" | gemini -y`. Verify all findings by reading actual code — Gemini is for exploration, not final authority.',
+    );
+    lines.push("");
+  }
+
+  return lines.join("\n");
 }

@@ -6,11 +6,13 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type {
+  CategoryRoutingRule,
   ClaudeMindConfig,
   Disposition,
   RetainFilterConfig,
   SecurityReviewConfig,
 } from "./types.js";
+import type { TaskCategory } from "./agents/types.js";
 import { DEFAULT_GEMINI_CONFIG, type GeminiModel } from "./gemini/types.js";
 
 /**
@@ -49,6 +51,25 @@ export const DEFAULT_SECURITY_REVIEW_CONFIG: SecurityReviewConfig = {
     ".h",
     ".rb",
   ],
+};
+
+/**
+ * Default category-to-model routing rules.
+ * Maps task categories to the cheapest model that delivers quality results.
+ */
+export const DEFAULT_CATEGORY_ROUTING: Record<
+  TaskCategory,
+  CategoryRoutingRule
+> = {
+  exploration: { model: "haiku", background: true },
+  research: { model: "haiku", background: true },
+  implementation: { model: "sonnet" },
+  review: { model: "sonnet" },
+  testing: { model: "sonnet" },
+  debugging: { model: "sonnet" },
+  architecture: { model: "sonnet" },
+  security: { model: "opus" },
+  reasoning: { model: "opus" },
 };
 
 /**
@@ -92,35 +113,7 @@ function mergeConfig(
   target: ClaudeMindConfig,
   source: PartialConfig,
 ): ClaudeMindConfig {
-  const result: ClaudeMindConfig = {
-    hindsight: { ...target.hindsight },
-  };
-
-  // Copy optional fields from target only if defined
-  if (target.semantic !== undefined) {
-    result.semantic = { ...target.semantic };
-  }
-  if (target.bankId !== undefined) {
-    result.bankId = target.bankId;
-  }
-  if (target.disposition !== undefined) {
-    result.disposition = target.disposition;
-  }
-  if (target.background !== undefined) {
-    result.background = target.background;
-  }
-  if (target.retainFilter !== undefined) {
-    result.retainFilter = { ...target.retainFilter };
-  }
-  if (target.context !== undefined) {
-    result.context = { ...target.context };
-  }
-  if (target.securityReview !== undefined) {
-    result.securityReview = { ...target.securityReview };
-  }
-  if (target.gemini !== undefined) {
-    result.gemini = { ...target.gemini };
-  }
+  const result = structuredClone(target);
 
   // Merge hindsight settings
   if (source.hindsight) {
@@ -197,6 +190,32 @@ function mergeConfig(
     };
   }
 
+  // Merge modelRouting settings (deep merge for nested objects)
+  if (source.modelRouting !== undefined) {
+    const existing = result.modelRouting ?? {};
+    result.modelRouting = {
+      ...existing,
+      ...source.modelRouting,
+      // Deep merge agentOverrides
+      agentOverrides: {
+        ...existing.agentOverrides,
+        ...source.modelRouting.agentOverrides,
+      },
+      // Deep merge categories
+      categories: {
+        ...existing.categories,
+        ...source.modelRouting.categories,
+      },
+    };
+    // Clean up empty objects
+    if (Object.keys(result.modelRouting.agentOverrides!).length === 0) {
+      delete result.modelRouting.agentOverrides;
+    }
+    if (Object.keys(result.modelRouting.categories!).length === 0) {
+      delete result.modelRouting.categories;
+    }
+  }
+
   return result;
 }
 
@@ -253,35 +272,7 @@ async function loadRcConfig(
  * @internal
  */
 function applyEnvConfig(config: ClaudeMindConfig): ClaudeMindConfig {
-  const result: ClaudeMindConfig = {
-    hindsight: { ...config.hindsight },
-  };
-
-  // Copy optional fields from config only if defined
-  if (config.semantic !== undefined) {
-    result.semantic = { ...config.semantic };
-  }
-  if (config.bankId !== undefined) {
-    result.bankId = config.bankId;
-  }
-  if (config.disposition !== undefined) {
-    result.disposition = config.disposition;
-  }
-  if (config.background !== undefined) {
-    result.background = config.background;
-  }
-  if (config.retainFilter !== undefined) {
-    result.retainFilter = { ...config.retainFilter };
-  }
-  if (config.context !== undefined) {
-    result.context = { ...config.context };
-  }
-  if (config.securityReview !== undefined) {
-    result.securityReview = { ...config.securityReview };
-  }
-  if (config.gemini !== undefined) {
-    result.gemini = { ...config.gemini };
-  }
+  const result = structuredClone(config);
 
   // Hindsight connection settings
   const host = process.env["HINDSIGHT_HOST"];
@@ -346,43 +337,6 @@ function validateDisposition(disposition: unknown): disposition is Disposition {
 }
 
 /**
- * Clone a configuration object.
- * @internal
- */
-function cloneConfig(config: ClaudeMindConfig): ClaudeMindConfig {
-  const result: ClaudeMindConfig = {
-    hindsight: { ...config.hindsight },
-  };
-
-  if (config.semantic !== undefined) {
-    result.semantic = { ...config.semantic };
-  }
-  if (config.bankId !== undefined) {
-    result.bankId = config.bankId;
-  }
-  if (config.disposition !== undefined) {
-    result.disposition = { ...config.disposition };
-  }
-  if (config.background !== undefined) {
-    result.background = config.background;
-  }
-  if (config.retainFilter !== undefined) {
-    result.retainFilter = { ...config.retainFilter };
-  }
-  if (config.context !== undefined) {
-    result.context = { ...config.context };
-  }
-  if (config.securityReview !== undefined) {
-    result.securityReview = { ...config.securityReview };
-  }
-  if (config.gemini !== undefined) {
-    result.gemini = { ...config.gemini };
-  }
-
-  return result;
-}
-
-/**
  * Load configuration from multiple sources with priority order:
  *
  * 1. Constructor overrides (highest priority)
@@ -411,7 +365,7 @@ export async function loadConfig(
   overrides?: PartialConfig,
 ): Promise<ClaudeMindConfig> {
   // Start with defaults
-  let config: ClaudeMindConfig = cloneConfig(DEFAULT_CONFIG);
+  let config: ClaudeMindConfig = structuredClone(DEFAULT_CONFIG);
 
   // Load from package.json "claudemind" key (lowest priority file config)
   const pkgConfig = await loadPackageJsonConfig(projectPath);
@@ -448,5 +402,5 @@ export async function loadConfig(
  * Useful for testing or when you want explicit control.
  */
 export function getDefaultConfig(): ClaudeMindConfig {
-  return cloneConfig(DEFAULT_CONFIG);
+  return structuredClone(DEFAULT_CONFIG);
 }

@@ -5,40 +5,140 @@
 
 import { readFile, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
-import type { AgentTemplate } from "./types.js";
+import type { AgentTemplate, ModelTier, TaskCategory } from "./types.js";
+
+/** Valid model tier values */
+const VALID_MODELS: ReadonlySet<string> = new Set(["opus", "sonnet", "haiku"]);
+
+/** Valid task category values */
+const VALID_CATEGORIES: ReadonlySet<string> = new Set([
+  "exploration",
+  "implementation",
+  "review",
+  "architecture",
+  "research",
+  "testing",
+  "debugging",
+  "security",
+  "reasoning",
+]);
+
+/**
+ * Parsed frontmatter from a markdown agent file.
+ * @internal
+ */
+interface Frontmatter {
+  name?: string;
+  model?: ModelTier;
+  categories?: TaskCategory[];
+}
+
+/**
+ * Parse YAML-like frontmatter from markdown content.
+ * Supports simple `key: value` pairs between `---` delimiters.
+ * Does not require a full YAML parser.
+ *
+ * @param content - Full markdown content
+ * @returns Parsed frontmatter and remaining content
+ * @internal
+ */
+export function parseFrontmatter(content: string): {
+  frontmatter: Frontmatter;
+  body: string;
+} {
+  const trimmed = content.trimStart();
+  if (!trimmed.startsWith("---")) {
+    return { frontmatter: {}, body: content };
+  }
+
+  // Find closing delimiter
+  const endIdx = trimmed.indexOf("---", 3);
+  if (endIdx === -1) {
+    return { frontmatter: {}, body: content };
+  }
+
+  const fmBlock = trimmed.slice(3, endIdx).trim();
+  const body = trimmed.slice(endIdx + 3).trimStart();
+  const frontmatter: Frontmatter = {};
+
+  for (const line of fmBlock.split("\n")) {
+    const colonIdx = line.indexOf(":");
+    if (colonIdx === -1) continue;
+
+    const key = line.slice(0, colonIdx).trim();
+    const value = line.slice(colonIdx + 1).trim();
+
+    switch (key) {
+      case "name":
+        if (value) frontmatter.name = value;
+        break;
+      case "model":
+        if (VALID_MODELS.has(value)) frontmatter.model = value as ModelTier;
+        break;
+      case "categories": {
+        // Parse comma-separated or YAML-style list
+        const cats = value
+          .replace(/^\[|\]$/g, "") // strip [] if present
+          .split(",")
+          .map((c) => c.trim())
+          .filter((c) => VALID_CATEGORIES.has(c)) as TaskCategory[];
+        if (cats.length > 0) frontmatter.categories = cats;
+        break;
+      }
+      // Ignore unknown keys (description, etc.)
+    }
+  }
+
+  return { frontmatter, body };
+}
 
 /**
  * Parse a markdown agent template file.
  *
- * Expected format:
+ * Supports two formats:
+ * 1. With YAML frontmatter (model, cost, categories):
  * ```markdown
- * # Agent: name
- *
+ * ---
+ * name: agent-name
+ * model: sonnet
+ * cost: standard
+ * categories: implementation, testing
+ * ---
+ * # Agent: agent-name
  * ## Mission
  * ...
+ * ```
  *
- * ## Tools Available
- * - Tool 1
- * - Tool 2
- *
- * ## Output Format
+ * 2. Without frontmatter (original format):
+ * ```markdown
+ * # Agent: name
+ * ## Mission
  * ...
- *
- * ## Constraints
- * - Constraint 1
- * - Constraint 2
  * ```
  *
  * @param content - Markdown file content
  * @returns Parsed AgentTemplate, or null if parsing failed
  */
 export function parseAgentMarkdown(content: string): AgentTemplate | null {
-  const lines = content.split("\n");
+  // Extract frontmatter if present
+  const { frontmatter, body } = parseFrontmatter(content);
 
-  // Extract name from # Agent: name
+  const lines = body.split("\n");
+
+  // Extract name from # Agent: name (primary) or frontmatter (secondary)
   const nameLine = lines.find((l) => l.startsWith("# Agent:"));
-  if (!nameLine) return null;
-  const name = nameLine.replace("# Agent:", "").trim();
+  let name: string;
+
+  if (nameLine) {
+    const headerName = nameLine.replace("# Agent:", "").trim();
+    if (!headerName && !frontmatter.name) return null;
+    name = headerName || frontmatter.name || "";
+  } else if (frontmatter.name) {
+    name = frontmatter.name;
+  } else {
+    return null;
+  }
+
   if (!name) return null;
 
   // Parse sections
@@ -63,13 +163,19 @@ export function parseAgentMarkdown(content: string): AgentTemplate | null {
   }
 
   // Build template
-  return {
+  const template: AgentTemplate = {
     name,
     mission: sections["Mission"] || "",
     tools: parseList(sections["Tools Available"] || ""),
     outputFormat: sections["Output Format"] || "",
     constraints: parseList(sections["Constraints"] || ""),
   };
+
+  // Apply frontmatter fields
+  if (frontmatter.model) template.model = frontmatter.model;
+  if (frontmatter.categories) template.categories = frontmatter.categories;
+
+  return template;
 }
 
 /**
@@ -133,13 +239,24 @@ export async function loadCustomAgents(
 /**
  * Generate markdown content from an agent template.
  *
- * Useful for creating template files programmatically.
+ * Outputs frontmatter when model, cost, or categories are set.
  *
  * @param template - Agent template to convert
  * @returns Markdown string
  */
 export function templateToMarkdown(template: AgentTemplate): string {
   const sections: string[] = [];
+
+  // Output frontmatter if any routing fields are set
+  if (template.model || template.categories) {
+    sections.push("---");
+    if (template.model) sections.push(`model: ${template.model}`);
+    if (template.categories && template.categories.length > 0) {
+      sections.push(`categories: ${template.categories.join(", ")}`);
+    }
+    sections.push("---");
+    sections.push("");
+  }
 
   sections.push(`# Agent: ${template.name}`);
   sections.push("");

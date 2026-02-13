@@ -6,6 +6,56 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-02-13
+
+### Added
+
+- **Model routing system** - Cost-effective agent delegation via category-based
+  model selection
+  - New `ModelTier` (`opus`/`sonnet`/`haiku`) and `TaskCategory` types
+  - `Mind.resolveModelForTask()` resolves model by agent override → template
+    default → category routing → config default
+  - `DEFAULT_CATEGORY_ROUTING` maps 9 task categories to optimal models
+  - `ModelRoutingConfig` in `.claudemindrc` with `agentOverrides` and
+    per-category rules
+  - Built-in agents now declare `model` and `categories` (e.g. code-explorer →
+    haiku/exploration+research)
+
+- **CLAUDE.md policy generation** - `generateClaudeMdSection()` writes a managed
+  block into CLAUDE.md covering agent orchestration, model routing table,
+  category routing guide, Agent Teams guidance, and Gemini CLI notes
+  - `injectClaudeMdPolicies()` upserts the managed `<!-- claude-cognitive:start/end -->`
+    section
+
+- **Agent frontmatter parsing** - Custom agents in `.claude/agents/*.md` now
+  support YAML frontmatter (`name`, `model`, `categories`) parsed by
+  `parseFrontmatter()`
+
+### Changed
+
+- **`update` command brought to parity with `install`** - Replaced ~260 lines of
+  duplicated hook migration with shared `configureHooks()`, and added all missing
+  features:
+  - Project-local `.mcp.json` server entry (was only checking global)
+  - CLAUDE.md policy regeneration
+  - `modelRouting` and `securityReview` defaults in `.claudemindrc`
+  - Agent Teams env var (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`)
+  - SessionStart hook setup
+  - tmux availability check
+
+- **Stable policies moved from hooks to CLAUDE.md** - Security review mandate,
+  agent orchestration rules, and Gemini guidance are now written once at
+  install/update time instead of injected on every session start. Session start
+  hook now only injects Hindsight memories.
+
+- **Simplified `mergeConfig()`** - Replaced field-by-field copy with
+  `structuredClone()` + targeted merges. Added deep merge for `modelRouting`
+  nested objects.
+
+- **Exported shared helpers from install.ts** - `configureHooks()`,
+  `checkTmuxAvailable()`, `getServeCommand()`, `readMcpConfig()` are now
+  reusable by update.ts
+
 ## [0.6.3] - 2026-01-13
 
 ### Added
@@ -439,6 +489,7 @@ and this project adheres to
   - Unit, integration, and E2E tests
   - Performance benchmarks
 
+[0.8.1]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.8.1
 [0.4.0]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.4.0
 [0.3.4]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.3.4
 [0.3.2]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.3.2

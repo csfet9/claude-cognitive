@@ -13,6 +13,8 @@ import type { AgentTemplate, BuiltInAgentType } from "./types.js";
  */
 export const CODE_EXPLORER_TEMPLATE: AgentTemplate = {
   name: "code-explorer",
+  model: "haiku",
+  categories: ["exploration", "research"],
   mission: `Deeply analyze existing codebase features by tracing execution paths,
 mapping architecture layers, and documenting dependencies. Your goal is to
 build understanding, not to make changes.`,
@@ -56,6 +58,8 @@ build understanding, not to make changes.`,
  */
 export const CODE_ARCHITECT_TEMPLATE: AgentTemplate = {
   name: "code-architect",
+  model: "sonnet",
+  categories: ["architecture"],
   mission: `Design implementation solutions and create technical blueprints.
 Analyze requirements, consider trade-offs, and produce detailed plans that
 others can follow to implement features correctly.`,
@@ -109,6 +113,8 @@ others can follow to implement features correctly.`,
  */
 export const CODE_REVIEWER_TEMPLATE: AgentTemplate = {
   name: "code-reviewer",
+  model: "sonnet",
+  categories: ["review"],
   mission: `Review code changes for quality, correctness, and adherence to
 project patterns. Identify bugs, security issues, performance problems,
 and maintainability concerns. Provide constructive feedback.`,

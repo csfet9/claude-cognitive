@@ -382,5 +382,129 @@ describe("config", () => {
         expect(config.background).toBe("Developer assistant for React app");
       });
     });
+
+    describe("modelRouting configuration", () => {
+      it("should load modelRouting from .claudemindrc", async () => {
+        await writeFile(
+          join(tempDir, ".claudemindrc"),
+          JSON.stringify({
+            modelRouting: {
+              defaultModel: "haiku",
+              categories: {
+                exploration: { model: "haiku", background: true },
+              },
+            },
+          }),
+        );
+
+        const config = await loadConfig(tempDir);
+
+        expect(config.modelRouting).toBeDefined();
+        expect(config.modelRouting?.defaultModel).toBe("haiku");
+        expect(config.modelRouting?.categories?.exploration?.model).toBe(
+          "haiku",
+        );
+      });
+
+      it("should merge modelRouting agentOverrides from multiple sources", async () => {
+        // package.json has one override
+        await writeFile(
+          join(tempDir, "package.json"),
+          JSON.stringify({
+            claudemind: {
+              modelRouting: {
+                agentOverrides: { "code-explorer": "sonnet" },
+              },
+            },
+          }),
+        );
+
+        // .claudemindrc adds another override
+        await writeFile(
+          join(tempDir, ".claudemindrc"),
+          JSON.stringify({
+            modelRouting: {
+              agentOverrides: { "code-reviewer": "opus" },
+            },
+          }),
+        );
+
+        const config = await loadConfig(tempDir);
+
+        expect(config.modelRouting?.agentOverrides?.["code-explorer"]).toBe(
+          "sonnet",
+        );
+        expect(config.modelRouting?.agentOverrides?.["code-reviewer"]).toBe(
+          "opus",
+        );
+      });
+
+      it("should merge modelRouting categories from multiple sources", async () => {
+        await writeFile(
+          join(tempDir, "package.json"),
+          JSON.stringify({
+            claudemind: {
+              modelRouting: {
+                categories: {
+                  security: { model: "opus" },
+                },
+              },
+            },
+          }),
+        );
+
+        await writeFile(
+          join(tempDir, ".claudemindrc"),
+          JSON.stringify({
+            modelRouting: {
+              categories: {
+                exploration: { model: "haiku", background: true },
+              },
+            },
+          }),
+        );
+
+        const config = await loadConfig(tempDir);
+
+        expect(config.modelRouting?.categories?.security?.model).toBe("opus");
+        expect(config.modelRouting?.categories?.exploration?.model).toBe(
+          "haiku",
+        );
+      });
+
+      it("should allow overrides to take priority for modelRouting", async () => {
+        await writeFile(
+          join(tempDir, ".claudemindrc"),
+          JSON.stringify({
+            modelRouting: {
+              defaultModel: "haiku",
+            },
+          }),
+        );
+
+        const config = await loadConfig(tempDir, {
+          modelRouting: {
+            defaultModel: "opus",
+          },
+        });
+
+        expect(config.modelRouting?.defaultModel).toBe("opus");
+      });
+
+      it("should load enableTeams setting", async () => {
+        await writeFile(
+          join(tempDir, ".claudemindrc"),
+          JSON.stringify({
+            modelRouting: {
+              enableTeams: true,
+            },
+          }),
+        );
+
+        const config = await loadConfig(tempDir);
+
+        expect(config.modelRouting?.enableTeams).toBe(true);
+      });
+    });
   });
 });

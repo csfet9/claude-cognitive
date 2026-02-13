@@ -4,9 +4,13 @@
  */
 
 import type { GeminiConfig as GeminiConfigType } from "./gemini/types.js";
+import type { ModelTier, TaskCategory } from "./agents/types.js";
 
 // Re-export GeminiConfig for external use
 export type { GeminiConfig } from "./gemini/types.js";
+
+// Re-export routing types for convenience
+export type { ModelTier, TaskCategory } from "./agents/types.js";
 
 // Alias for internal use
 type GeminiConfig = GeminiConfigType;
@@ -386,6 +390,30 @@ export interface SecurityReviewConfig {
   codeExtensions?: string[];
 }
 
+// ============================================
+// Model Routing Types
+// ============================================
+
+/** Category-to-model mapping rule */
+export interface CategoryRoutingRule {
+  /** Model to use for this category */
+  model: ModelTier;
+  /** Whether to run in background (parallel exploration) */
+  background?: boolean;
+}
+
+/** Model routing configuration */
+export interface ModelRoutingConfig {
+  /** Default model when no rule matches */
+  defaultModel?: ModelTier;
+  /** Per-agent model overrides (highest priority) */
+  agentOverrides?: Record<string, ModelTier>;
+  /** Category-based routing rules */
+  categories?: Partial<Record<TaskCategory, CategoryRoutingRule>>;
+  /** Enable Agent Teams for complex multi-agent work */
+  enableTeams?: boolean;
+}
+
 /** Full configuration schema for claude-cognitive */
 export interface ClaudeMindConfig {
   /** Hindsight server connection settings */
@@ -419,6 +447,8 @@ export interface ClaudeMindConfig {
   securityReview?: SecurityReviewConfig;
   /** Gemini CLI integration configuration */
   gemini?: GeminiConfig;
+  /** Model routing configuration for cost-effective agent delegation */
+  modelRouting?: ModelRoutingConfig;
 }
 
 // ============================================

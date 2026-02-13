@@ -4,7 +4,6 @@
  */
 
 import type { CAC } from "cac";
-import { loadConfig } from "../config.js";
 import { Mind } from "../mind.js";
 
 interface InjectContextOptions {
@@ -59,38 +58,15 @@ export function registerInjectContextCommand(cli: CAC): void {
       const timeout = options.timeout ?? DEFAULT_TIMEOUT;
 
       try {
-        // Load config to check for security review settings
-        const config = await loadConfig(projectPath);
-        const securityReviewEnabled = config.securityReview?.enabled === true;
-
         // Initialize Mind with timeout
         const mind = await initWithTimeout(projectPath, timeout);
 
-        // Get session context
+        // Get session context (Hindsight memories only)
         const context = await mind.onSessionStart();
 
-        // Build output with optional security review section at TOP
-        const outputParts: string[] = [];
-
-        if (securityReviewEnabled) {
-          outputParts.push(`## Security Review Required
-
-**MANDATORY**: Before ANY \`git commit\` command, you MUST:
-1. Launch the \`security-code-reviewer\` agent to review all staged changes
-2. Wait for the security review to complete
-3. Address any critical/high issues found
-4. Only then proceed with the commit
-
-This policy is enforced for this project. Do not skip security review.`);
-        }
-
+        // Output to stdout (if any memories were recalled)
         if (context.trim().length > 0) {
-          outputParts.push(context);
-        }
-
-        // Output combined context to stdout
-        if (outputParts.length > 0) {
-          console.log(outputParts.join("\n\n"));
+          console.log(context);
         }
 
         process.exit(0);

@@ -8,9 +8,13 @@ import { mkdir, writeFile, readFile, access } from "node:fs/promises";
 import { join, basename } from "node:path";
 import { homedir } from "node:os";
 import type { CAC } from "cac";
-import { Mind } from "../../mind.js";
+import { Mind, generateClaudeMdSection } from "../../mind.js";
 import type { Disposition, TraitValue } from "../../types.js";
 import { GeminiExecutor } from "../../gemini/executor.js";
+import {
+  getAllBuiltInTemplates,
+  loadCustomAgents,
+} from "../../agents/index.js";
 
 interface InstallAnswers {
   projectPath: string;
@@ -62,6 +66,20 @@ function printSuccess(text: string): void {
 
 function printInfo(text: string): void {
   print(color(`  ${text}`, "dim"));
+}
+
+/**
+ * Check if tmux is available on the system.
+ * Used to inform users about Agent Teams split-pane mode.
+ */
+export async function checkTmuxAvailable(): Promise<boolean> {
+  try {
+    const { execSync } = await import("node:child_process");
+    execSync("which tmux", { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -259,7 +277,7 @@ export async function createStartHookScript(
 
   const scriptContent = `#!/bin/bash
 # Claude Code SessionStart hook wrapper for claude-cognitive (project-local)
-# Injects context from Hindsight at session start
+# Injects Hindsight memories at session start (stable policies live in CLAUDE.md)
 # Writes to .claude/rules/ which Claude Code auto-loads
 # Skips projects without .claudemindrc
 
@@ -301,10 +319,9 @@ CONTEXT_OUTPUT=$(claude-cognitive inject-context --project "$PROJECT_DIR" 2>/dev
 # Write context to rules file
 if [ -n "$CONTEXT_OUTPUT" ]; then
   cat > "$CONTEXT_FILE" << CONTEXT_EOF
-# Session Context (Auto-Recalled)
+# Hindsight Memory (Auto-Recalled)
 
-This context was automatically recalled from memory at session start.
-Use this background to inform your work on this project.
+Recent activity recalled from Hindsight memory at session start.
 
 ---
 
@@ -317,10 +334,9 @@ CONTEXT_EOF
 else
   # No memories - create minimal placeholder
   cat > "$CONTEXT_FILE" << CONTEXT_EOF
-# Session Context
+# Hindsight Memory
 
-No prior memories found for this project yet.
-Memory will be stored automatically when the session ends.
+No prior memories recalled. Memory is stored automatically when sessions end.
 
 *Generated at $(date -Iseconds)*
 CONTEXT_EOF
@@ -601,6 +617,71 @@ Remember: You are the last line of defense before code reaches production. Be th
 }
 
 /**
+ * Marker comments used to identify the managed section in CLAUDE.md.
+ */
+const CLAUDE_MD_SECTION_START = "<!-- claude-cognitive:start -->";
+const CLAUDE_MD_SECTION_END = "<!-- claude-cognitive:end -->";
+
+/**
+ * Inject stable policies into the project's CLAUDE.md.
+ * Uses HTML comment markers to identify the managed section.
+ * If the section exists, it's replaced (upsert). If not, it's appended.
+ */
+export async function injectClaudeMdPolicies(
+  projectPath: string,
+  options: {
+    securityReview?: boolean;
+    geminiAvailable?: boolean;
+    agents?: Array<{
+      name: string;
+      model?: string;
+      categories?: string[];
+    }>;
+    enableTeams?: boolean;
+  },
+): Promise<{
+  claudeMdPath: string;
+  action: "created" | "updated" | "appended";
+}> {
+  const claudeMdPath = join(projectPath, "CLAUDE.md");
+
+  // Generate the section content
+  const sectionContent = generateClaudeMdSection(options);
+  const managedBlock = `${CLAUDE_MD_SECTION_START}\n${sectionContent}\n${CLAUDE_MD_SECTION_END}`;
+
+  let existing = "";
+  let action: "created" | "updated" | "appended";
+
+  try {
+    existing = await readFile(claudeMdPath, "utf-8");
+  } catch {
+    // CLAUDE.md doesn't exist — create it with just our section
+    await writeFile(claudeMdPath, managedBlock + "\n");
+    return { claudeMdPath, action: "created" };
+  }
+
+  // Check if our managed section already exists
+  const startIdx = existing.indexOf(CLAUDE_MD_SECTION_START);
+  const endIdx = existing.indexOf(CLAUDE_MD_SECTION_END);
+
+  if (startIdx !== -1 && endIdx !== -1) {
+    // Replace existing section
+    const before = existing.slice(0, startIdx);
+    const after = existing.slice(endIdx + CLAUDE_MD_SECTION_END.length);
+    const updated = before + managedBlock + after;
+    await writeFile(claudeMdPath, updated);
+    action = "updated";
+  } else {
+    // Append to end of file
+    const separator = existing.endsWith("\n") ? "\n" : "\n\n";
+    await writeFile(claudeMdPath, existing + separator + managedBlock + "\n");
+    action = "appended";
+  }
+
+  return { claudeMdPath, action };
+}
+
+/**
  * Configure hooks in project-local Claude Code settings.
  * Hooks are stored in PROJECT/.claude/settings.json to keep them project-specific.
  *
@@ -608,7 +689,7 @@ Remember: You are the last line of defense before code reaches production. Be th
  * - SessionEnd: Processes session transcript at session end (calls process-session)
  * - SessionStart: Injects context at session start (calls inject-context)
  */
-async function configureHooks(
+export async function configureHooks(
   projectPath: string,
 ): Promise<{ settingsPath: string; legacyGlobalHookExists: boolean }> {
   const settingsPath = getProjectSettingsPath(projectPath);
@@ -704,6 +785,11 @@ async function configureHooks(
 
   settings.hooks = hooks;
 
+  // Enable Agent Teams via env
+  const env = (settings.env as Record<string, string>) || {};
+  env["CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"] = "1";
+  settings.env = env;
+
   // Ensure project .claude directory exists
   await mkdir(join(projectPath, ".claude"), { recursive: true });
 
@@ -714,7 +800,7 @@ async function configureHooks(
 /**
  * Read existing MCP config or return empty object.
  */
-async function readMcpConfig(path: string): Promise<Record<string, unknown>> {
+export async function readMcpConfig(path: string): Promise<Record<string, unknown>> {
   try {
     const content = await readFile(path, "utf-8");
     return JSON.parse(content);
@@ -727,7 +813,7 @@ async function readMcpConfig(path: string): Promise<Record<string, unknown>> {
  * Get the command to run claude-cognitive serve.
  * Detects if globally installed or uses local path.
  */
-async function getServeCommand(): Promise<{ command: string; args: string[] }> {
+export async function getServeCommand(): Promise<{ command: string; args: string[] }> {
   // Check if claude-cognitive is globally installed
   try {
     const { execSync } = await import("node:child_process");
@@ -920,6 +1006,15 @@ export function registerInstallCommand(cli: CAC): void {
             model: "auto",
             timeout: 0,
           },
+          modelRouting: {
+            defaultModel: "sonnet",
+            categories: {
+              exploration: { model: "haiku", background: true },
+              research: { model: "haiku", background: true },
+              security: { model: "opus" },
+              reasoning: { model: "opus" },
+            },
+          },
         };
 
         await writeFile(rcPath, JSON.stringify(config, null, 2) + "\n");
@@ -1000,6 +1095,60 @@ export function registerInstallCommand(cli: CAC): void {
               ),
             );
           }
+
+          // Agent Teams setup info
+          printSuccess("Enabled Agent Teams (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1)");
+          const tmuxAvailable = await checkTmuxAvailable();
+          if (tmuxAvailable) {
+            printSuccess("tmux detected - split-pane mode available");
+            printInfo(
+              "Run Claude inside tmux for split-pane Agent Teams: tmux new -s claude",
+            );
+          } else {
+            printInfo(
+              "tmux not found - Agent Teams will use in-process mode",
+            );
+            printInfo(
+              "For split-pane mode: brew install tmux (macOS) or apt install tmux (Linux)",
+            );
+          }
+        }
+
+        // Load all agent templates for routing table
+        const builtInAgents = getAllBuiltInTemplates();
+        const customAgentsLoaded = await loadCustomAgents(answers.projectPath);
+        const allAgents = [...builtInAgents, ...customAgentsLoaded].map((a) => {
+          const entry: {
+            name: string;
+            model?: string;
+            categories?: string[];
+          } = { name: a.name };
+          if (a.model) entry.model = a.model;
+          if (a.categories) entry.categories = a.categories;
+          return entry;
+        });
+
+        // Inject stable policies into CLAUDE.md (doesn't require Hindsight)
+        try {
+          const { claudeMdPath, action } = await injectClaudeMdPolicies(
+            answers.projectPath,
+            {
+              securityReview: config.securityReview?.enabled === true,
+              geminiAvailable: geminiAvailable,
+              agents: allAgents,
+              enableTeams: true,
+            },
+          );
+          printSuccess(
+            `${action === "updated" ? "Updated" : action === "appended" ? "Added to" : "Created"} CLAUDE.md policies (${claudeMdPath})`,
+          );
+        } catch (error) {
+          print(
+            color(
+              `  ⚠ Could not update CLAUDE.md: ${error instanceof Error ? error.message : error}`,
+              "yellow",
+            ),
+          );
         }
 
         // Initialize Mind

@@ -262,7 +262,7 @@ describe("Mind", () => {
   });
 
   describe("onSessionStart()", () => {
-    it("should return agent orchestration context in degraded mode", async () => {
+    it("should return empty context in degraded mode with no offline memories", async () => {
       mockHealth.mockResolvedValue({
         healthy: false,
         error: "Connection refused",
@@ -272,10 +272,9 @@ describe("Mind", () => {
       await mind.init();
 
       const result = await mind.onSessionStart();
-      // In degraded mode, still returns agent orchestration instructions
-      // (just no memories from Hindsight)
-      expect(result).toContain("Agent Orchestration");
-      expect(result).toContain("code-explorer");
+      // In degraded mode with no offline memories, returns empty context
+      // (agent orchestration is in formatAgentInstructions(), not onSessionStart())
+      expect(result).toBe("");
     });
   });
 
@@ -389,6 +388,65 @@ describe("Mind", () => {
       await mind.init();
 
       await expect(mind.learn()).rejects.toThrow("requires Hindsight");
+    });
+  });
+
+  describe("resolveModelForTask()", () => {
+    it("should return agent's own model when set", async () => {
+      mockHealth.mockResolvedValue({ healthy: false, error: "Test" });
+
+      const mind = createMindWithErrorHandler();
+      await mind.init();
+
+      // code-explorer has model: haiku set in its template
+      const model = mind.resolveModelForTask("code-explorer");
+      expect(model).toBe("haiku");
+    });
+
+    it("should use category routing when no agent model", async () => {
+      mockHealth.mockResolvedValue({ healthy: false, error: "Test" });
+
+      const mind = createMindWithErrorHandler();
+      await mind.init();
+
+      // Unknown agent with security category should route to opus
+      const model = mind.resolveModelForTask("unknown-agent", ["security"]);
+      expect(model).toBe("opus");
+    });
+
+    it("should use highest cost category when multiple provided", async () => {
+      mockHealth.mockResolvedValue({ healthy: false, error: "Test" });
+
+      const mind = createMindWithErrorHandler();
+      await mind.init();
+
+      // exploration (haiku) + security (opus) → should pick opus
+      const model = mind.resolveModelForTask("unknown-agent", [
+        "exploration",
+        "security",
+      ]);
+      expect(model).toBe("opus");
+    });
+
+    it("should fall back to sonnet when no matches", async () => {
+      mockHealth.mockResolvedValue({ healthy: false, error: "Test" });
+
+      const mind = createMindWithErrorHandler();
+      await mind.init();
+
+      const model = mind.resolveModelForTask("unknown-agent");
+      expect(model).toBe("sonnet");
+    });
+
+    it("should prefer agent model over category routing", async () => {
+      mockHealth.mockResolvedValue({ healthy: false, error: "Test" });
+
+      const mind = createMindWithErrorHandler();
+      await mind.init();
+
+      // code-explorer has model: haiku, even if we pass security category
+      const model = mind.resolveModelForTask("code-explorer", ["security"]);
+      expect(model).toBe("haiku");
     });
   });
 });
