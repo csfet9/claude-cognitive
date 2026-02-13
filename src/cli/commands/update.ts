@@ -13,6 +13,7 @@ import {
   getServeCommand,
   readMcpConfig,
   injectClaudeMdPolicies,
+  injectGlobalClaudeMd,
 } from "./install.js";
 import {
   getAllBuiltInTemplates,
@@ -380,6 +381,25 @@ export function registerUpdateCommand(cli: CAC): void {
         } catch (error) {
           printWarn(
             `Could not update CLAUDE.md: ${error instanceof Error ? error.message : error}`,
+          );
+        }
+      }
+
+      // ============================================
+      // Global ~/.claude/CLAUDE.md orchestrator core
+      // ============================================
+      if (dryRun) {
+        printInfo("Global orchestrator (~/.claude/CLAUDE.md) will be regenerated");
+      } else {
+        try {
+          const { path: globalPath, action: globalAction } =
+            await injectGlobalClaudeMd();
+          printSuccess(
+            `${globalAction === "updated" ? "Updated" : globalAction === "appended" ? "Added to" : "Created"} global orchestrator (${globalPath})`,
+          );
+        } catch (error) {
+          printWarn(
+            `Could not update global CLAUDE.md: ${error instanceof Error ? error.message : error}`,
           );
         }
       }

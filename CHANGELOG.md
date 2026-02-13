@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] - 2026-02-13
+
+### Added
+
+- **Global orchestrator core installation** - `install` and `update` commands now
+  inject orchestrator mode instructions into `~/.claude/CLAUDE.md`, making
+  orchestrator personality the default across all Claude Code sessions
+- `generateOrchestratorCore()` exported from `mind.ts` for generating the static
+  orchestrator content (intent classification, delegation protocol, workflow, etc.)
+- `injectGlobalClaudeMd()` in install module using marker-based upsert
+  (`<!-- claude-cognitive-orchestrator:start/end -->`) to manage the global section
+
 ## [0.9.0] - 2026-02-13
 
 ### Added

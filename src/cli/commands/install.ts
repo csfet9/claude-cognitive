@@ -8,7 +8,7 @@ import { mkdir, writeFile, readFile, access } from "node:fs/promises";
 import { join, basename } from "node:path";
 import { homedir } from "node:os";
 import type { CAC } from "cac";
-import { Mind, generateClaudeMdSection } from "../../mind.js";
+import { Mind, generateClaudeMdSection, generateOrchestratorCore } from "../../mind.js";
 import type { Disposition, TraitValue } from "../../types.js";
 import { GeminiExecutor } from "../../gemini/executor.js";
 import {
@@ -683,6 +683,62 @@ export async function injectClaudeMdPolicies(
 }
 
 /**
+ * Marker comments used to identify the managed section in global ~/.claude/CLAUDE.md.
+ */
+const GLOBAL_CLAUDE_MD_SECTION_START = "<!-- claude-cognitive-orchestrator:start -->";
+const GLOBAL_CLAUDE_MD_SECTION_END = "<!-- claude-cognitive-orchestrator:end -->";
+
+/**
+ * Inject orchestrator core into the global ~/.claude/CLAUDE.md.
+ * Uses HTML comment markers to identify the managed section.
+ * If the section exists, it's replaced (upsert). If not, it's appended.
+ */
+export async function injectGlobalClaudeMd(): Promise<{
+  path: string;
+  action: "created" | "updated" | "appended";
+}> {
+  const claudeDir = join(homedir(), ".claude");
+  const claudeMdPath = join(claudeDir, "CLAUDE.md");
+
+  const sectionContent = generateOrchestratorCore();
+  const managedBlock = `${GLOBAL_CLAUDE_MD_SECTION_START}\n${sectionContent}\n${GLOBAL_CLAUDE_MD_SECTION_END}`;
+
+  // Ensure ~/.claude directory exists
+  await mkdir(claudeDir, { recursive: true });
+
+  let existing = "";
+  let action: "created" | "updated" | "appended";
+
+  try {
+    existing = await readFile(claudeMdPath, "utf-8");
+  } catch {
+    // File doesn't exist — create with just our section
+    await writeFile(claudeMdPath, managedBlock + "\n");
+    return { path: claudeMdPath, action: "created" };
+  }
+
+  // Check if our managed section already exists
+  const startIdx = existing.indexOf(GLOBAL_CLAUDE_MD_SECTION_START);
+  const endIdx = existing.indexOf(GLOBAL_CLAUDE_MD_SECTION_END);
+
+  if (startIdx !== -1 && endIdx !== -1) {
+    // Replace existing section
+    const before = existing.slice(0, startIdx);
+    const after = existing.slice(endIdx + GLOBAL_CLAUDE_MD_SECTION_END.length);
+    const updated = before + managedBlock + after;
+    await writeFile(claudeMdPath, updated);
+    action = "updated";
+  } else {
+    // Append to end of file
+    const separator = existing.endsWith("\n") ? "\n" : "\n\n";
+    await writeFile(claudeMdPath, existing + separator + managedBlock + "\n");
+    action = "appended";
+  }
+
+  return { path: claudeMdPath, action };
+}
+
+/**
  * Configure hooks in project-local Claude Code settings.
  * Hooks are stored in PROJECT/.claude/settings.json to keep them project-specific.
  *
@@ -1159,6 +1215,22 @@ export function registerInstallCommand(cli: CAC): void {
           print(
             color(
               `  ⚠ Could not update CLAUDE.md: ${error instanceof Error ? error.message : error}`,
+              "yellow",
+            ),
+          );
+        }
+
+        // Inject orchestrator core into global ~/.claude/CLAUDE.md
+        try {
+          const { path: globalPath, action: globalAction } =
+            await injectGlobalClaudeMd();
+          printSuccess(
+            `${globalAction === "updated" ? "Updated" : globalAction === "appended" ? "Added to" : "Created"} global orchestrator (${globalPath})`,
+          );
+        } catch (error) {
+          print(
+            color(
+              `  ⚠ Could not update global CLAUDE.md: ${error instanceof Error ? error.message : error}`,
               "yellow",
             ),
           );
