@@ -101,7 +101,8 @@ src/
 │   ├── extractor.ts     # Fact extraction from analysis
 │   └── analyzers/       # Codebase analyzers (git, package, readme, source, structure)
 ├── agents/              # Agent templates
-│   ├── templates.ts     # Built-in: code-explorer, code-architect, code-reviewer
+│   ├── templates.ts     # Built-in: orchestrator, deep-worker, plan-executor, + 8 more
+│   ├── agent-files.ts   # Generates .claude/agents/*.md from built-in templates
 │   ├── loader.ts        # Custom agent loading from .claude/agents/
 │   └── context.ts       # Agent context preparation with memory
 └── hooks/               # Claude Code hooks
@@ -168,3 +169,97 @@ When Hindsight is unavailable, Mind enters offline mode:
 - Session context still injected from offline store
 
 Offline memories auto-sync to Hindsight when connection is restored.
+
+<!-- claude-cognitive:start -->
+## Claude Cognitive
+
+### Pre-Commit Security Review
+
+Before ANY `git commit`, you MUST launch the `security-code-reviewer` agent to review all staged changes. Wait for completion. Address critical/high issues before committing. Do not skip.
+
+### Agent Orchestration
+
+You are the **orchestrator**. Delegate ALL coding to agents — never write code directly.
+
+| Role | Agents |
+|------|--------|
+| Explore | `explorer`, `researcher` |
+| Plan | `strategic-planner`, `pre-analyzer` |
+| Implement | `task-executor`, `deep-worker`, or domain agents in `.claude/agents/` |
+| Review | `plan-validator`, `advisor`, security-code-reviewer |
+
+Workflow: Explore → Clarify → Plan → Implement → Review. Launch multiple agents in parallel when possible. Only YOU access memory — agents get context from you.
+
+### Model Routing
+
+When delegating to agents, use these model assignments for cost-effective execution:
+
+| Agent | Model | Cost | Categories |
+|-------|-------|------|------------|
+| `orchestrator` | **opus** | expensive | reasoning, architecture |
+| `deep-worker` | **opus** | expensive | implementation, reasoning |
+| `plan-executor` | **sonnet** | standard | implementation |
+| `strategic-planner` | **opus** | expensive | architecture |
+| `advisor` | **opus** | expensive | reasoning, architecture |
+| `researcher` | **haiku** | cheap | research, exploration |
+| `explorer` | **haiku** | cheap | exploration |
+| `pre-analyzer` | **opus** | expensive | reasoning, architecture |
+| `plan-validator` | **sonnet** | standard | review |
+| `task-executor` | **sonnet** | standard | implementation |
+| `vision-analyzer` | **haiku** | cheap | exploration |
+| `advisor` | **opus** | expensive | reasoning, architecture |
+| `deep-worker` | **opus** | expensive | implementation, reasoning |
+| `explorer` | **haiku** | cheap | exploration |
+| `graceful-degradation-reviewer` | **sonnet** | standard | review, debugging |
+| `hooks-integrator` | **sonnet** | standard | implementation |
+| `mcp-tool-developer` | **sonnet** | standard | implementation |
+| `memory-system-expert` | **opus** | expensive | reasoning, architecture |
+| `orchestrator` | **opus** | expensive | reasoning, architecture |
+| `plan-executor` | **sonnet** | standard | implementation |
+| `plan-validator` | **sonnet** | standard | review |
+| `pre-analyzer` | **opus** | expensive | reasoning, architecture |
+| `researcher` | **haiku** | cheap | research, exploration |
+| `security-code-reviewer` | **opus** | expensive | - |
+| `strategic-planner` | **opus** | expensive | architecture |
+| `task-executor` | **sonnet** | standard | implementation |
+| `test-coverage-specialist` | **sonnet** | standard | testing |
+| `vision-analyzer` | **haiku** | cheap | exploration |
+
+### Task Category Routing
+
+Classify the task, then route to the right model:
+
+| Category | Model | Use For |
+|----------|-------|---------|
+| exploration | **haiku** | File search, pattern matching, codebase scanning |
+| research | **haiku** | Doc lookup, web search, quick questions |
+| implementation | **sonnet** | Write code, tests, standard features |
+| review | **sonnet** | Code review, quality checks |
+| testing | **sonnet** | Write and run tests |
+| debugging | **sonnet** | Trace bugs, fix issues |
+| architecture | **sonnet** | Design, planning (escalate to opus for novel problems) |
+| security | **opus** | Security review, vulnerability analysis |
+| reasoning | **opus** | Deep system reasoning, complex memory operations |
+
+**Cost optimization**: Fire cheap (haiku) exploration agents in parallel FIRST to gather context, then delegate to the appropriate model for execution.
+
+### Agent Teams
+
+For complex multi-agent work, use Agent Teams (Shift+Tab for delegate mode):
+
+**When to use teams vs subagents:**
+- **Subagents**: Focused tasks where only the result matters (exploration, single-file review)
+- **Agent Teams**: Complex work requiring discussion between teammates (cross-layer refactoring, competing hypotheses, parallel feature development)
+
+**Team composition pattern:**
+1. Lead (you): Coordinates, never writes code. Use delegate mode (Shift+Tab)
+2. Explorers (haiku): 1-3 teammates for parallel codebase discovery
+3. Implementers (sonnet): Teammates that own specific files/features
+4. Reviewer (sonnet/opus): Validates work before completion
+
+**Model selection for teammates:**
+- Specify model when spawning: "Create a teammate using Sonnet to implement the auth module"
+- Use haiku for research-only teammates
+- Use opus only for security review or novel architecture teammates
+
+<!-- claude-cognitive:end -->

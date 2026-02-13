@@ -119,7 +119,7 @@ describe("agent loader", () => {
 
   describe("parseAgentMarkdown()", () => {
     it("should parse a valid agent template", () => {
-      const content = `# Agent: code-explorer
+      const content = `# Agent: explorer
 
 ## Mission
 Explore and understand codebases.
@@ -140,7 +140,7 @@ Return findings in structured markdown.
       const result = parseAgentMarkdown(content);
 
       expect(result).not.toBeNull();
-      expect(result?.name).toBe("code-explorer");
+      expect(result?.name).toBe("explorer");
       expect(result?.mission).toBe("Explore and understand codebases.");
       expect(result?.tools).toContain("Read");
       expect(result?.tools).toContain("Glob");

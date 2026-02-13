@@ -14,6 +14,7 @@ import { GeminiExecutor } from "../../gemini/executor.js";
 import {
   getAllBuiltInTemplates,
   loadCustomAgents,
+  generateBuiltInAgentFiles,
 } from "../../agents/index.js";
 
 interface InstallAnswers {
@@ -800,7 +801,9 @@ export async function configureHooks(
 /**
  * Read existing MCP config or return empty object.
  */
-export async function readMcpConfig(path: string): Promise<Record<string, unknown>> {
+export async function readMcpConfig(
+  path: string,
+): Promise<Record<string, unknown>> {
   try {
     const content = await readFile(path, "utf-8");
     return JSON.parse(content);
@@ -813,7 +816,10 @@ export async function readMcpConfig(path: string): Promise<Record<string, unknow
  * Get the command to run claude-cognitive serve.
  * Detects if globally installed or uses local path.
  */
-export async function getServeCommand(): Promise<{ command: string; args: string[] }> {
+export async function getServeCommand(): Promise<{
+  command: string;
+  args: string[];
+}> {
   // Check if claude-cognitive is globally installed
   try {
     const { execSync } = await import("node:child_process");
@@ -1097,7 +1103,9 @@ export function registerInstallCommand(cli: CAC): void {
           }
 
           // Agent Teams setup info
-          printSuccess("Enabled Agent Teams (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1)");
+          printSuccess(
+            "Enabled Agent Teams (CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1)",
+          );
           const tmuxAvailable = await checkTmuxAvailable();
           if (tmuxAvailable) {
             printSuccess("tmux detected - split-pane mode available");
@@ -1105,13 +1113,18 @@ export function registerInstallCommand(cli: CAC): void {
               "Run Claude inside tmux for split-pane Agent Teams: tmux new -s claude",
             );
           } else {
-            printInfo(
-              "tmux not found - Agent Teams will use in-process mode",
-            );
+            printInfo("tmux not found - Agent Teams will use in-process mode");
             printInfo(
               "For split-pane mode: brew install tmux (macOS) or apt install tmux (Linux)",
             );
           }
+
+          // Generate built-in agent markdown files
+          const agentFiles =
+            await generateBuiltInAgentFiles(answers.projectPath);
+          printSuccess(
+            `Generated ${agentFiles.length} built-in agent files (.claude/agents/)`,
+          );
         }
 
         // Load all agent templates for routing table

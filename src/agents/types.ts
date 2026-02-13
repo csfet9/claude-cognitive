@@ -35,6 +35,47 @@ export type TaskCategory =
   | "security" // Security analysis → opus
   | "reasoning"; // Deep reasoning, memory ops → opus
 
+/** Agent execution mode */
+export type AgentMode = "primary" | "subagent";
+
+/** Agent cost classification */
+export type AgentCost = "free" | "cheap" | "standard" | "expensive";
+
+/** When to automatically delegate to this agent */
+export interface DelegationTrigger {
+  /** Problem domain */
+  domain: string;
+  /** Specific trigger condition */
+  trigger: string;
+}
+
+/** Agent category for prompt building */
+export type AgentCategory =
+  | "exploration"
+  | "specialist"
+  | "advisor"
+  | "utility";
+
+/** Rich metadata for dynamic prompt generation */
+export interface AgentPromptMetadata {
+  /** Agent category */
+  category: AgentCategory;
+  /** Cost classification */
+  cost: AgentCost;
+  /** Conditions that trigger delegation to this agent */
+  triggers: DelegationTrigger[];
+  /** When to use this agent */
+  useWhen?: string[];
+  /** When NOT to use this agent */
+  avoidWhen?: string[];
+  /** Optional dedicated prompt section for orchestrator */
+  dedicatedSection?: string;
+  /** Display name alias */
+  promptAlias?: string;
+  /** Critical trigger for Phase 0 routing */
+  keyTrigger?: string;
+}
+
 // ============================================
 // Agent Template Types
 // ============================================
@@ -60,6 +101,12 @@ export interface AgentTemplate {
   model?: ModelTier;
   /** Task categories this agent handles */
   categories?: TaskCategory[];
+  /** Agent execution mode */
+  mode?: AgentMode;
+  /** Tools this agent is NOT allowed to use */
+  deniedTools?: string[];
+  /** Rich metadata for orchestrator prompt generation */
+  metadata?: AgentPromptMetadata;
 }
 
 /**
@@ -80,9 +127,17 @@ export interface AgentContext {
  * Built-in agent type identifiers.
  */
 export type BuiltInAgentType =
-  | "code-explorer"
-  | "code-architect"
-  | "code-reviewer";
+  | "orchestrator"
+  | "deep-worker"
+  | "plan-executor"
+  | "strategic-planner"
+  | "advisor"
+  | "researcher"
+  | "explorer"
+  | "pre-analyzer"
+  | "plan-validator"
+  | "task-executor"
+  | "vision-analyzer";
 
 /**
  * Options for preparing agent context.

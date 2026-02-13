@@ -6,6 +6,60 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-02-13
+
+### Added
+
+- **11 built-in agent templates** - Expanded from 3 generic agents to 11
+  specialized agents adapted from oh-my-opencode architecture:
+  - `orchestrator` (opus) - Multi-agent coordinator with intent classification,
+    6-section delegation protocol, task management, and failure recovery
+  - `deep-worker` (opus) - Autonomous implementation with EXPLORE→PLAN→DECIDE→
+    EXECUTE→VERIFY loop and 3-attempt problem-solving protocol
+  - `plan-executor` (sonnet) - Conductor-style delegator that never writes code,
+    one task per delegation, verifies after each step
+  - `strategic-planner` (opus) - Interview→research→consult→generate→self-review
+    planning workflow, planner not implementer
+  - `advisor` (opus) - Pragmatic minimalist with Bottom Line→Action Plan→Why→
+    Watch Out→Effort Estimate response structure
+  - `researcher` (haiku) - 4 request types (Conceptual/Implementation/Context/
+    Comprehensive), evidence-based, date-aware
+  - `explorer` (haiku) - 3+ parallel tools on first action, absolute paths,
+    intent analysis for fast codebase navigation
+  - `pre-analyzer` (opus) - 6 intent types, AI slop detection, Zero User
+    Intervention Principle for task decomposition
+  - `plan-validator` (sonnet) - Approval bias, max 3 blockers, BLOCKER-finder
+    not PERFECTIONIST
+  - `task-executor` (sonnet) - Direct execution, never delegates, dense output
+  - `vision-analyzer` (haiku) - PDF/image/diagram extraction, read-only
+
+- **Agent file generation** - New `generateBuiltInAgentFiles()` in
+  `src/agents/agent-files.ts` writes rich `.claude/agents/*.md` files with
+  frontmatter and behavioral instructions for each built-in agent
+  - Runs automatically during `install` and `update` commands
+  - Preserves custom project agents (security-code-reviewer, test-coverage-
+    specialist, graceful-degradation-reviewer, hooks-integrator,
+    mcp-tool-developer, memory-system-expert)
+
+- **Agent metadata** - Templates now include `mode` (primary/subagent),
+  `cost` (cheap/standard/expensive), `delegationTriggers`, and
+  `promptMetadata` with structured sections
+
+### Changed
+
+- **Agent type system** - `BuiltInAgentType` expanded from 3 to 11 types with
+  new `AgentMode`, `AgentCost`, `DelegationTrigger`, and `AgentPromptMetadata`
+  types
+- **Mind agent resolution** - `resolveAgent()` updated for new agent names,
+  `getAvailableAgents()` returns all 11 built-in agents
+- **CLAUDE.md architecture section** - Updated to reflect new agent structure
+  and `agent-files.ts` module
+
+### Removed
+
+- **Old agent templates** - Replaced `code-explorer`, `code-architect`,
+  `code-reviewer` with the 11 new specialized agents
+
 ## [0.8.1] - 2026-02-13
 
 ### Added
@@ -489,6 +543,7 @@ and this project adheres to
   - Unit, integration, and E2E tests
   - Performance benchmarks
 
+[0.9.0]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.9.0
 [0.8.1]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.8.1
 [0.4.0]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.4.0
 [0.3.4]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.3.4

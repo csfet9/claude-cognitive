@@ -17,6 +17,7 @@ import {
 import {
   getAllBuiltInTemplates,
   loadCustomAgents,
+  generateBuiltInAgentFiles,
 } from "../../agents/index.js";
 
 const COLORS = {
@@ -291,9 +292,7 @@ export function registerUpdateCommand(cli: CAC): void {
 
         if (legacyGlobalHookExists) {
           printWarn("Legacy global hook detected at ~/.local/bin/");
-          printInfo(
-            "  To remove: rm ~/.local/bin/claude-cognitive-*-hook.sh",
-          );
+          printInfo("  To remove: rm ~/.local/bin/claude-cognitive-*-hook.sh");
           printInfo(
             "  Also check ~/.config/claude/settings.json for global hooks.",
           );
@@ -332,6 +331,18 @@ export function registerUpdateCommand(cli: CAC): void {
       }
 
       // ============================================
+      // Built-in agent files (.claude/agents/)
+      // ============================================
+      if (dryRun) {
+        printInfo("Built-in agent files will be regenerated");
+      } else {
+        const agentFiles = await generateBuiltInAgentFiles(projectPath);
+        printSuccess(
+          `Generated ${agentFiles.length} built-in agent files (.claude/agents/)`,
+        );
+      }
+
+      // ============================================
       // CLAUDE.md policy regeneration
       // ============================================
       const builtInAgents = getAllBuiltInTemplates();
@@ -349,8 +360,7 @@ export function registerUpdateCommand(cli: CAC): void {
 
       const securityEnabled =
         ((projectConfig.securityReview as Record<string, unknown>) ?? {})
-          .enabled === true ||
-        DEFAULT_CONFIG.securityReview.enabled;
+          .enabled === true || DEFAULT_CONFIG.securityReview.enabled;
 
       if (dryRun) {
         printInfo("CLAUDE.md policies will be regenerated");

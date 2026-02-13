@@ -172,12 +172,12 @@ describe("TypedEventEmitter", () => {
 
       emitter.on("agent:context-prepared", listener);
       emitter.emit("agent:context-prepared", {
-        agent: "code-explorer",
+        agent: "explorer",
         task: "analyze codebase",
       });
 
       expect(listener).toHaveBeenCalledWith({
-        agent: "code-explorer",
+        agent: "explorer",
         task: "analyze codebase",
       });
     });

@@ -320,9 +320,9 @@ describe("Mind", () => {
       const templates = mind.getAgentTemplates();
 
       expect(templates.length).toBeGreaterThanOrEqual(3);
-      expect(templates.some((t) => t.name === "code-explorer")).toBe(true);
-      expect(templates.some((t) => t.name === "code-architect")).toBe(true);
-      expect(templates.some((t) => t.name === "code-reviewer")).toBe(true);
+      expect(templates.some((t) => t.name === "explorer")).toBe(true);
+      expect(templates.some((t) => t.name === "strategic-planner")).toBe(true);
+      expect(templates.some((t) => t.name === "plan-validator")).toBe(true);
     });
   });
 
@@ -333,10 +333,10 @@ describe("Mind", () => {
       const mind = createMindWithErrorHandler();
       await mind.init();
 
-      const template = mind.getAgentTemplate("code-explorer");
+      const template = mind.getAgentTemplate("explorer");
 
       expect(template).toBeDefined();
-      expect(template?.name).toBe("code-explorer");
+      expect(template?.name).toBe("explorer");
     });
 
     it("should return undefined for unknown template", async () => {
@@ -398,8 +398,8 @@ describe("Mind", () => {
       const mind = createMindWithErrorHandler();
       await mind.init();
 
-      // code-explorer has model: haiku set in its template
-      const model = mind.resolveModelForTask("code-explorer");
+      // explorer has model: haiku set in its template
+      const model = mind.resolveModelForTask("explorer");
       expect(model).toBe("haiku");
     });
 
@@ -444,8 +444,8 @@ describe("Mind", () => {
       const mind = createMindWithErrorHandler();
       await mind.init();
 
-      // code-explorer has model: haiku, even if we pass security category
-      const model = mind.resolveModelForTask("code-explorer", ["security"]);
+      // explorer has model: haiku, even if we pass security category
+      const model = mind.resolveModelForTask("explorer", ["security"]);
       expect(model).toBe("haiku");
     });
   });

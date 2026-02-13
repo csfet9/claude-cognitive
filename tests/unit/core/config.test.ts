@@ -413,7 +413,7 @@ describe("config", () => {
           JSON.stringify({
             claudemind: {
               modelRouting: {
-                agentOverrides: { "code-explorer": "sonnet" },
+                agentOverrides: { explorer: "sonnet" },
               },
             },
           }),
@@ -424,17 +424,17 @@ describe("config", () => {
           join(tempDir, ".claudemindrc"),
           JSON.stringify({
             modelRouting: {
-              agentOverrides: { "code-reviewer": "opus" },
+              agentOverrides: { "plan-validator": "opus" },
             },
           }),
         );
 
         const config = await loadConfig(tempDir);
 
-        expect(config.modelRouting?.agentOverrides?.["code-explorer"]).toBe(
+        expect(config.modelRouting?.agentOverrides?.["explorer"]).toBe(
           "sonnet",
         );
-        expect(config.modelRouting?.agentOverrides?.["code-reviewer"]).toBe(
+        expect(config.modelRouting?.agentOverrides?.["plan-validator"]).toBe(
           "opus",
         );
       });

@@ -40,21 +40,21 @@ describe("generateClaudeMdSection()", () => {
     const result = generateClaudeMdSection({
       agents: [
         {
-          name: "code-explorer",
+          name: "explorer",
           model: "haiku",
           categories: ["exploration", "research"],
         },
         {
-          name: "code-architect",
-          model: "sonnet",
+          name: "strategic-planner",
+          model: "opus",
           categories: ["architecture"],
         },
       ],
     });
 
     expect(result).toContain("### Model Routing");
-    expect(result).toContain("| `code-explorer` | **haiku** | cheap |");
-    expect(result).toContain("| `code-architect` | **sonnet** | standard |");
+    expect(result).toContain("| `explorer` | **haiku** | cheap |");
+    expect(result).toContain("| `strategic-planner` | **opus** | expensive |");
   });
 
   it("should handle agents without optional fields", () => {

@@ -1098,10 +1098,8 @@ ${template.outputFormat}
     const allAgents = this.getAgentTemplates();
     if (allAgents.length === 0) return "";
 
-    const custom = allAgents.filter(
-      (a) =>
-        !["code-explorer", "code-architect", "code-reviewer"].includes(a.name),
-    );
+    const builtInNames = new Set(Object.keys(BUILT_IN_TEMPLATES));
+    const custom = allAgents.filter((a) => !builtInNames.has(a.name));
 
     const lines: string[] = [];
     lines.push("## Agent Orchestration");
@@ -1111,7 +1109,6 @@ ${template.outputFormat}
     );
     lines.push("");
 
-    // Critical rule section
     lines.push("### Critical Rule: Agents Write Code, You Orchestrate");
     lines.push("");
     lines.push(
@@ -1122,31 +1119,42 @@ ${template.outputFormat}
     lines.push("- Review agent outputs");
     lines.push("- Communicate with the user");
     lines.push("");
-    lines.push("**Agents write ALL code.** Delegate implementation to:");
-    lines.push(
-      "- Built-in agents (code-explorer, code-architect, code-reviewer)",
-    );
-    lines.push("- Custom agents in `.claude/agents/` directory");
-    lines.push("");
-    lines.push(
-      "**Exception**: You may write code ONLY if no agents are available (e.g., no built-in agents accessible, no custom agents in `.claude/agents/`).",
-    );
-    lines.push("");
 
-    lines.push("### Built-in Agents");
-    lines.push("");
-    lines.push("| Agent | When to Use |");
-    lines.push("|-------|-------------|");
-    lines.push(
-      "| `code-explorer` | Before implementing features - explore codebase patterns, trace execution paths |",
+    // Built-in agents table grouped by mode
+    const primaryAgents = Object.values(BUILT_IN_TEMPLATES).filter(
+      (a) => a.mode === "primary",
     );
-    lines.push(
-      "| `code-architect` | Before complex changes - design solutions, create implementation plans |",
+    const subagents = Object.values(BUILT_IN_TEMPLATES).filter(
+      (a) => a.mode === "subagent",
     );
-    lines.push(
-      "| `code-reviewer` | After writing code - review for bugs, security issues, adherence to patterns |",
-    );
-    lines.push("");
+
+    if (primaryAgents.length > 0) {
+      lines.push("### Primary Agents");
+      lines.push("");
+      lines.push("| Agent | Model | Purpose |");
+      lines.push("|-------|-------|---------|");
+      for (const agent of primaryAgents) {
+        const firstLine = agent.mission.split("\n")[0]?.split(".")[0] ?? "";
+        lines.push(
+          `| \`${agent.name}\` | ${agent.model ?? "sonnet"} | ${firstLine} |`,
+        );
+      }
+      lines.push("");
+    }
+
+    if (subagents.length > 0) {
+      lines.push("### Subagents");
+      lines.push("");
+      lines.push("| Agent | Model | Purpose |");
+      lines.push("|-------|-------|---------|");
+      for (const agent of subagents) {
+        const firstLine = agent.mission.split("\n")[0]?.split(".")[0] ?? "";
+        lines.push(
+          `| \`${agent.name}\` | ${agent.model ?? "sonnet"} | ${firstLine} |`,
+        );
+      }
+      lines.push("");
+    }
 
     if (custom.length > 0) {
       lines.push("### Custom Project Agents");
@@ -1169,17 +1177,17 @@ ${template.outputFormat}
     lines.push("For ALL coding tasks, follow this workflow:");
     lines.push("");
     lines.push(
-      "1. **Explore**: Launch `code-explorer` agents to understand existing patterns",
+      "1. **Explore**: Launch `explorer` agents to understand existing patterns",
     );
     lines.push("2. **Clarify**: Ask user questions about unclear requirements");
     lines.push(
-      "3. **Design**: Launch `code-architect` agents to create implementation plans",
+      "3. **Plan**: Launch `strategic-planner` for complex design decisions",
     );
     lines.push(
-      "4. **Implement**: Launch implementation agents to write code (NEVER write code yourself)",
+      "4. **Implement**: Delegate to `task-executor` or `deep-worker` (NEVER write code yourself)",
     );
     lines.push(
-      "5. **Review**: Launch `code-reviewer` agents to check the work",
+      "5. **Review**: Launch `plan-validator` or `advisor` agents to verify work",
     );
     lines.push("");
     lines.push(
@@ -1262,15 +1270,17 @@ export function generateClaudeMdSection(options: {
   lines.push("");
   lines.push("| Role | Agents |");
   lines.push("|------|--------|");
-  lines.push("| Explore | `code-explorer` (Explore agent) |");
-  lines.push("| Design | `code-architect` (Plan agent) |");
+  lines.push("| Explore | `explorer`, `researcher` |");
+  lines.push("| Plan | `strategic-planner`, `pre-analyzer` |");
   lines.push(
-    "| Implement | bloom-developer, frontend-engineer, or domain agents in `.claude/agents/` |",
+    "| Implement | `task-executor`, `deep-worker`, or domain agents in `.claude/agents/` |",
   );
-  lines.push("| Review | `code-reviewer`, security-code-reviewer |");
+  lines.push(
+    "| Review | `plan-validator`, `advisor`, security-code-reviewer |",
+  );
   lines.push("");
   lines.push(
-    "Workflow: Explore → Clarify → Design → Implement → Review. Launch multiple agents in parallel when possible. Only YOU access memory — agents get context from you.",
+    "Workflow: Explore → Clarify → Plan → Implement → Review. Launch multiple agents in parallel when possible. Only YOU access memory — agents get context from you.",
   );
   lines.push("");
 
