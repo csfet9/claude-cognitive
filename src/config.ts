@@ -77,7 +77,7 @@ const contextSchema = z.object({
 const geminiSchema = z.object({
   model: z.string(),
   timeout: z.number(),
-  maxConcurrentRequests: z.number(),
+  maxConcurrentRequests: z.number().default(1),
 });
 
 /** Full config schema — used for final validation. */
