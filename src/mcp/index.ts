@@ -11,10 +11,11 @@ export {
   TOOL_DEFINITIONS,
   recallInputSchema,
   reflectInputSchema,
+  retainInputSchema,
 } from "./tools.js";
 
 // Handlers
-export { handleRecall, handleReflect } from "./handlers.js";
+export { handleRecall, handleReflect, handleRetain } from "./handlers.js";
 
 // Types
 export type {
@@ -23,6 +24,7 @@ export type {
   McpTransportType,
   RecallToolInput,
   ReflectToolInput,
+  RetainToolInput,
   ToolResult,
   ToolResultContent,
 } from "./types.js";

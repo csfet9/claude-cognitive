@@ -82,3 +82,12 @@ export interface RecallToolInput {
 export interface ReflectToolInput {
   query: string;
 }
+
+/**
+ * Retain tool input schema type.
+ */
+export interface RetainToolInput {
+  content: string;
+  context?: string;
+  type?: "world" | "experience" | "opinion";
+}

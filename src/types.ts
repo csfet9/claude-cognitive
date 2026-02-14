@@ -369,6 +369,8 @@ export interface RetainFilterConfig {
   minSessionLength?: number;
   /** Skip sessions that are mostly tool outputs (default: true) */
   skipToolOnlySessions?: boolean;
+  /** Custom regex patterns - sessions matching any pattern will be skipped */
+  customSkipPatterns?: string[];
 }
 
 /**

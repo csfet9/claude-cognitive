@@ -214,8 +214,7 @@ export class SemanticMemory {
    * @returns Section content, or undefined if not found
    */
   get(section: string): string | undefined {
-    this.assertLoaded();
-    return this.sections!.get(section);
+    return this.loadedSections().get(section);
   }
 
   /**
@@ -227,13 +226,13 @@ export class SemanticMemory {
    * @param content - New content (without header)
    */
   set(section: string, content: string): void {
-    this.assertLoaded();
+    const sections = this.loadedSections();
 
-    if (!this.sections!.has(section)) {
+    if (!sections.has(section)) {
       this.sectionOrder.push(section);
     }
 
-    this.sections!.set(section, content);
+    sections.set(section, content);
     this.dirty = true;
   }
 
@@ -247,9 +246,7 @@ export class SemanticMemory {
    * @param item - Item to append (will be added on new line)
    */
   append(section: string, item: string): void {
-    this.assertLoaded();
-
-    const existing = this.sections!.get(section) ?? "";
+    const existing = this.loadedSections().get(section) ?? "";
     const trimmed = existing.trimEnd();
     const separator = trimmed.length > 0 ? "\n" : "";
 
@@ -263,8 +260,7 @@ export class SemanticMemory {
    * @returns True if section exists
    */
   has(section: string): boolean {
-    this.assertLoaded();
-    return this.sections!.has(section);
+    return this.loadedSections().has(section);
   }
 
   /**
@@ -273,7 +269,7 @@ export class SemanticMemory {
    * @returns Array of section names in order
    */
   getSectionNames(): string[] {
-    this.assertLoaded();
+    this.loadedSections(); // ensure loaded
     return [...this.sectionOrder];
   }
 
@@ -284,9 +280,7 @@ export class SemanticMemory {
    * @returns True if section was deleted
    */
   delete(section: string): boolean {
-    this.assertLoaded();
-
-    const deleted = this.sections!.delete(section);
+    const deleted = this.loadedSections().delete(section);
     if (deleted) {
       this.sectionOrder = this.sectionOrder.filter((s) => s !== section);
       this.dirty = true;
@@ -307,12 +301,12 @@ export class SemanticMemory {
    * @returns Formatted context string
    */
   toContext(): string {
-    this.assertLoaded();
+    const sections = this.loadedSections();
 
     const sectionParts: string[] = [];
 
     for (const section of this.sectionOrder) {
-      const content = this.sections!.get(section);
+      const content = sections.get(section);
       // Check if content has meaningful text (not just comments)
       if (content && this.hasNonCommentContent(content)) {
         sectionParts.push(`## ${section}`);
@@ -352,7 +346,7 @@ export class SemanticMemory {
     observation: Observation,
     autoSave: boolean = true,
   ): Promise<void> {
-    this.assertLoaded();
+    this.loadedSections(); // ensure loaded
 
     const timestamp = new Date().toISOString(); // Full ISO timestamp for ordering
     const entry = `- ${observation.text} (promoted: ${timestamp}, confidence: ${observation.confidence.toFixed(2)})`;
@@ -477,6 +471,7 @@ export class SemanticMemory {
    * @internal
    */
   private toMarkdown(): string {
+    const sections = this.loadedSections();
     const parts: string[] = [];
 
     // Include preamble if present
@@ -487,7 +482,7 @@ export class SemanticMemory {
 
     // Add sections in order
     for (const section of this.sectionOrder) {
-      const content = this.sections!.get(section) ?? "";
+      const content = sections.get(section) ?? "";
       parts.push(`## ${section}`);
       parts.push(content);
     }
@@ -506,13 +501,15 @@ export class SemanticMemory {
   }
 
   /**
-   * Assert that sections are loaded.
+   * Assert that sections are loaded and return them.
+   * Replaces `assertLoaded()` + `this.sections!` pattern with a single safe call.
    * @internal
    */
-  private assertLoaded(): void {
+  private loadedSections(): Map<string, string> {
     if (!this.sections) {
       throw new Error("SemanticMemory not loaded. Call load() first.");
     }
+    return this.sections;
   }
 
   /**

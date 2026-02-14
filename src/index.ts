@@ -36,6 +36,9 @@ export { HindsightClient } from "./client.js";
 // Mind orchestrator
 export { Mind } from "./mind.js";
 
+// Degradation controller
+export { DegradationController } from "./degradation.js";
+
 // Event system
 export { TypedEventEmitter } from "./events.js";
 export type { MindEventMap, MindEventName, Observation } from "./events.js";
@@ -61,12 +64,6 @@ export type { PromotionOptions, PromotionResult } from "./promotion.js";
 export { learn } from "./learn/index.js";
 
 // Agent templates
-export {
-  BUILT_IN_TEMPLATES,
-  getBuiltInTemplate,
-  getAllBuiltInTemplates,
-  isBuiltInAgent,
-} from "./agents/index.js";
 export { loadCustomAgents, parseAgentMarkdown } from "./agents/index.js";
 export { getAgentContext, formatAgentPrompt } from "./agents/index.js";
 
@@ -133,7 +130,6 @@ export type {
 export type {
   AgentTemplate,
   AgentContext,
-  BuiltInAgentType,
   GetAgentContextOptions,
 } from "./agents/index.js";
 

@@ -301,10 +301,9 @@ CONTEXT_OUTPUT=$(claude-cognitive inject-context --project "$PROJECT_DIR" 2>/dev
 # Write context to rules file
 if [ -n "$CONTEXT_OUTPUT" ]; then
   cat > "$CONTEXT_FILE" << CONTEXT_EOF
-# Session Context (Auto-Recalled)
+# Hindsight Memory (Auto-Recalled)
 
-This context was automatically recalled from memory at session start.
-Use this background to inform your work on this project.
+Recent activity recalled from Hindsight memory at session start.
 
 ---
 
@@ -317,10 +316,11 @@ CONTEXT_EOF
 else
   # No memories - create minimal placeholder
   cat > "$CONTEXT_FILE" << CONTEXT_EOF
-# Session Context
+# Hindsight Memory
 
 No prior memories found for this project yet.
 Memory will be stored automatically when the session ends.
+Use memory_recall, memory_reflect, and memory_retain MCP tools to interact with memory.
 
 *Generated at $(date -Iseconds)*
 CONTEXT_EOF
@@ -906,7 +906,7 @@ export function registerInstallCommand(cli: CAC): void {
           context: {
             recentMemoryLimit: 3,
           },
-          retain: {
+          retainFilter: {
             maxTranscriptLength: 25000,
             filterToolResults: true,
             filterFileContents: true,
@@ -1060,7 +1060,12 @@ export function registerInstallCommand(cli: CAC): void {
         print("");
         print("Next steps:");
         print(color("  1. Restart Claude Code to load the MCP server", "dim"));
-        print(color("  2. Ask Claude to use memory_recall to verify", "dim"));
+        print(
+          color(
+            "  2. Ask Claude to use memory_recall, memory_reflect, or memory_retain",
+            "dim",
+          ),
+        );
         if (!hindsightConnected) {
           print(
             color(
@@ -1072,7 +1077,7 @@ export function registerInstallCommand(cli: CAC): void {
         print("");
         print(
           color(
-            "Tip: Session memory syncs automatically when session ends.",
+            "Tip: Session memory syncs automatically. Custom agents in .claude/agents/ enable orchestration.",
             "dim",
           ),
         );

@@ -10,11 +10,12 @@ import type { Server } from "node:http";
 import { randomUUID } from "node:crypto";
 import type { Mind } from "../mind.js";
 import { loadConfig } from "../config.js";
-import { handleRecall, handleReflect } from "./handlers.js";
+import { handleRecall, handleReflect, handleRetain } from "./handlers.js";
 import {
   TOOL_DEFINITIONS,
   recallInputSchema,
   reflectInputSchema,
+  retainInputSchema,
 } from "./tools.js";
 import type {
   HttpTransportConfig,
@@ -259,6 +260,55 @@ export class ClaudeMindMcpServer {
         };
       },
     );
+
+    // Register memory_retain
+    this.mcpServer.tool(
+      TOOL_DEFINITIONS.memory_retain.name,
+      TOOL_DEFINITIONS.memory_retain.description,
+      {
+        content: retainInputSchema.shape.content,
+        context: retainInputSchema.shape.context,
+        type: retainInputSchema.shape.type,
+      },
+      async (args) => {
+        // Validate input with Zod for type safety
+        const parsed = retainInputSchema.safeParse({
+          content: args.content,
+          ...(args.context ? { context: args.context } : {}),
+          ...(args.type ? { type: args.type } : {}),
+        });
+
+        if (!parsed.success) {
+          return {
+            content: [
+              { type: "text", text: `Invalid input: ${parsed.error.message}` },
+            ],
+            isError: true,
+          };
+        }
+
+        // Build input without undefined values (exactOptionalPropertyTypes compliance)
+        const input: {
+          content: string;
+          context?: string;
+          type?: "world" | "experience" | "opinion";
+        } = {
+          content: parsed.data.content,
+        };
+        if (parsed.data.context) {
+          input.context = parsed.data.context;
+        }
+        if (parsed.data.type) {
+          input.type = parsed.data.type;
+        }
+
+        const result = await handleRetain(this.mind, input);
+        return {
+          content: result.content,
+          ...(result.isError ? { isError: result.isError } : {}),
+        };
+      },
+    );
   }
 
   /**
@@ -336,6 +386,10 @@ export class ClaudeMindMcpServer {
             name: TOOL_DEFINITIONS.memory_reflect.name,
             description: TOOL_DEFINITIONS.memory_reflect.description,
           },
+          {
+            name: TOOL_DEFINITIONS.memory_retain.name,
+            description: TOOL_DEFINITIONS.memory_retain.description,
+          },
         ],
       });
     });
@@ -374,6 +428,22 @@ export class ClaudeMindMcpServer {
               return;
             }
             const result = await handleReflect(this.mind, parsed.data);
+            res.json({ sessionId, ...result });
+          } else if (toolName === "memory_retain") {
+            const parsed = retainInputSchema.safeParse(req.body);
+            if (!parsed.success) {
+              res.status(400).json({
+                error: "Invalid input",
+                details: parsed.error.errors,
+              });
+              return;
+            }
+            const input = {
+              content: parsed.data.content,
+              ...(parsed.data.context ? { context: parsed.data.context } : {}),
+              ...(parsed.data.type ? { type: parsed.data.type } : {}),
+            };
+            const result = await handleRetain(this.mind, input);
             res.json({ sessionId, ...result });
           } else {
             res.status(404).json({ error: `Unknown tool: ${toolName}` });

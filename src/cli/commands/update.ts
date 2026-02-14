@@ -66,7 +66,7 @@ const DEFAULT_CONFIG = {
   context: {
     recentMemoryLimit: 3,
   },
-  retain: {
+  retainFilter: {
     maxTranscriptLength: 25000,
     filterToolResults: true,
     filterFileContents: true,
@@ -508,16 +508,22 @@ fi
           projectUpdates.push("Remove obsolete 'semantic' config");
         }
 
+        // Check for old 'retain' key (renamed to 'retainFilter')
+        if ("retain" in projectConfig && !("retainFilter" in projectConfig)) {
+          projectUpdatesNeeded++;
+          projectUpdates.push("Rename 'retain' to 'retainFilter'");
+        }
+
         // Check for missing context config
         if (!("context" in projectConfig)) {
           projectUpdatesNeeded++;
           projectUpdates.push("Add 'context' config");
         }
 
-        // Check for missing retain config
-        if (!("retain" in projectConfig)) {
+        // Check for missing retainFilter config
+        if (!("retainFilter" in projectConfig) && !("retain" in projectConfig)) {
           projectUpdatesNeeded++;
-          projectUpdates.push("Add 'retain' config");
+          projectUpdates.push("Add 'retainFilter' config");
         }
 
         // Check for missing gemini config
@@ -550,13 +556,22 @@ fi
               delete projectConfig.semantic;
             }
 
+            // Migrate 'retain' → 'retainFilter'
+            if (
+              "retain" in projectConfig &&
+              !("retainFilter" in projectConfig)
+            ) {
+              projectConfig.retainFilter = projectConfig.retain;
+              delete projectConfig.retain;
+            }
+
             // Add missing configs with defaults
             if (!("context" in projectConfig)) {
               projectConfig.context = DEFAULT_CONFIG.context;
             }
 
-            if (!("retain" in projectConfig)) {
-              projectConfig.retain = DEFAULT_CONFIG.retain;
+            if (!("retainFilter" in projectConfig)) {
+              projectConfig.retainFilter = DEFAULT_CONFIG.retainFilter;
             }
 
             // Remove obsolete feedback config

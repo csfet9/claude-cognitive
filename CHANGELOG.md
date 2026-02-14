@@ -6,6 +6,68 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-02-14
+
+### Added
+
+- **`memory_retain` MCP tool** — Claude can now proactively store important
+  learnings mid-session via MCP, not just at session end. Accepts `content`,
+  optional `context` description, and `type` (world/experience/opinion).
+
+- **`DegradationController` class** — Extracted graceful degradation logic from
+  Mind into a focused `src/degradation.ts` module. Manages online/offline state
+  transitions, recovery attempts, and offline memory syncing.
+
+- **Session processing modules** — Extracted filters and transcript parsing from
+  the 538-line `process-session.ts` monolith into focused modules:
+  - `src/hooks/filters.ts` — Content filter patterns and application logic
+  - `src/hooks/transcript.ts` — JSONL transcript parsing and extraction
+  - `process-session.ts` reduced to 168-line orchestrator
+
+- **Configurable skip patterns** — Added `customSkipPatterns` to
+  `RetainFilterConfig` for user-defined regex patterns to skip sessions.
+
+### Changed
+
+- **Context injection reworked** — Agent orchestration instructions are now
+  only injected when custom project agents exist in `.claude/agents/`. The
+  orchestrator can handle small fixes directly; delegation is for multi-file
+  features and domain-specific work matching a custom agent's specialty.
+
+- **Config simplified with Zod** — Replaced ~200 lines of manual field-by-field
+  merging/cloning/env-application with Zod schema validation, generic
+  `deepMerge()`, and `structuredClone()`. Adding new config fields now requires
+  changes in 1 place instead of 3+.
+
+- **SemanticMemory type safety** — Replaced all `!` null assertions with a
+  `loadedSections()` private method that returns non-nullable `Map<string, string>`,
+  giving TypeScript proper narrowing without assertion hacks.
+
+- **Install/update scripts updated**:
+  - Config template uses correct `retainFilter` field name (was `retain`)
+  - Start hook header changed to "Hindsight Memory (Auto-Recalled)"
+  - `update` command migrates old `retain` → `retainFilter` field name
+  - Next steps messaging references all 3 MCP tools
+  - Zod schema includes `customSkipPatterns` field
+
+### Removed
+
+- **Built-in agent templates** — Removed `code-explorer`, `code-architect`, and
+  `code-reviewer` templates (`src/agents/templates.ts` deleted). These duplicated
+  Claude Code's native Explore, Plan, and general-purpose agents. Custom agents
+  in `.claude/agents/` are now the sole agent mechanism.
+
+- **Removed exports**: `BUILT_IN_TEMPLATES`, `getBuiltInTemplate`,
+  `getAllBuiltInTemplates`, `isBuiltInAgent`, `BuiltInAgentType`. These are
+  breaking changes for consumers importing them.
+
+### Fixed
+
+- **Documentation drift** — Aligned CLAUDE.md and README.md with current
+  codebase: removed references to deleted feedback signals system, added missing
+  CLI commands (`retain`, `sync-session`, `update-bank`), added `memory_retain`
+  tool documentation.
+
 ## [0.6.3] - 2026-01-13
 
 ### Added
@@ -439,6 +501,7 @@ and this project adheres to
   - Unit, integration, and E2E tests
   - Performance benchmarks
 
+[0.11.0]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.11.0
 [0.4.0]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.4.0
 [0.3.4]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.3.4
 [0.3.2]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.3.2

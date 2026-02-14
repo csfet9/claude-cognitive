@@ -17,6 +17,8 @@ npm run build
 # Test
 npm test                        # watch mode
 npm run test:run                # run once
+npm run test:unit               # unit tests only
+npm run test:integration        # integration tests only
 npm run test:coverage           # with coverage
 vitest run tests/unit/core/client.test.ts  # single file
 
@@ -31,8 +33,14 @@ npm run type-check              # tsc --noEmit
 claude-cognitive serve          # start MCP server
 claude-cognitive status         # check connection
 claude-cognitive learn          # bootstrap from codebase
-claude-cognitive sync           # regenerate memory.md from Hindsight
+claude-cognitive sync           # (deprecated) regenerate memory.md from Hindsight
 ```
+
+## TypeScript & Module System
+
+- **ESM-only** (`"type": "module"` in package.json). All internal imports use `.js` extensions (e.g., `import { Mind } from "./mind.js"`).
+- **Strict TypeScript** — `tsconfig.json` enables aggressive checks: `exactOptionalPropertyTypes`, `noUncheckedIndexedAccess`, `noUnusedLocals`, `noUnusedParameters`. Expect compiler errors if you add unused variables or access arrays/objects without narrowing.
+- Module resolution is `NodeNext`.
 
 ## Architecture
 
@@ -42,25 +50,30 @@ claude-cognitive sync           # regenerate memory.md from Hindsight
 │  - Session lifecycle management      │
 │  - Graceful degradation + offline    │
 │  - Agent context preparation         │
+│  - Observation promotion             │
 ├──────────────────────────────────────┤
 │         HindsightClient              │
 │  retain() | recall() | reflect()     │
 │  4-way retrieval: semantic + BM25    │
 │               + graph + temporal     │
 ├──────────────────────────────────────┤
-│       OfflineMemoryStore             │
-│  .claude/offline-memories.json       │
-│  Local storage when Hindsight down   │
+│  SemanticMemory    OfflineMemoryStore │
+│  .claude/memory.md  offline-memories │
+│  Section-based      Local JSON when  │
+│  persistent store   Hindsight down   │
 └──────────────────────────────────────┘
 ```
 
 ### Key Classes
 
-| Class                | File             | Purpose                                                                                |
-| -------------------- | ---------------- | -------------------------------------------------------------------------------------- |
-| `Mind`               | `src/mind.ts`    | Orchestrator wrapping HindsightClient with session management and graceful degradation |
-| `HindsightClient`    | `src/client.ts`  | HTTP client for Hindsight API (retain/recall/reflect/learn)                            |
-| `OfflineMemoryStore` | `src/offline.ts` | Local JSON storage for offline mode, auto-syncs to Hindsight on reconnect              |
+| Class              | File              | Purpose                                                                               |
+| ------------------ | ----------------- | ------------------------------------------------------------------------------------- |
+| `Mind`             | `src/mind.ts`     | Orchestrator wrapping HindsightClient with session management and graceful degradation |
+| `HindsightClient`  | `src/client.ts`   | HTTP client for Hindsight API (retain/recall/reflect/learn)                           |
+| `OfflineMemoryStore` | `src/offline.ts` | Local JSON storage for offline mode, auto-syncs to Hindsight on reconnect            |
+| `SemanticMemory`   | `src/semantic.ts` | Manages `.claude/memory.md` — section-based persistent store for promoted observations |
+| `PromotionManager` | `src/promotion.ts` | Auto-promotes high-confidence observations (>=0.9) from Hindsight to semantic memory |
+| `GeminiWrapper`    | `src/gemini/wrapper.ts` | TypeScript wrapper around Gemini CLI for code analysis during `learn`           |
 
 ### Memory Networks
 
@@ -71,43 +84,23 @@ claude-cognitive sync           # regenerate memory.md from Hindsight
 | `opinion`     | Beliefs with confidence 0.0-1.0 ("This codebase prefers explicit patterns") |
 | `observation` | Synthesized cross-session insights                                          |
 
+### Data Flow: Observation Promotion
+
+High-confidence opinions from `reflect()` become observations. `PromotionManager` listens for observation events on `Mind` and auto-appends them to `SemanticMemory` (`.claude/memory.md`) when confidence >= 0.9. This is how persistent knowledge accumulates without manual intervention.
+
 ### MCP Tools (exposed to Claude)
 
-- `memory_recall` - Search memories with 4-way retrieval
-- `memory_reflect` - Reason about knowledge, form opinions
+- `memory_recall` — Search memories with 4-way retrieval
+- `memory_reflect` — Reason about knowledge, form opinions
+- `memory_retain` — Store important information in memory for future sessions
 
 Defined in `src/mcp/tools.ts`, handled in `src/mcp/handlers.ts`.
 
-## Project Structure
+### Hooks
 
-```
-src/
-├── mind.ts              # Mind orchestrator
-├── client.ts            # HindsightClient HTTP client
-├── offline.ts           # OfflineMemoryStore (local JSON storage)
-├── events.ts            # TypedEventEmitter for Mind events
-├── config.ts            # Config loading (.claudemindrc)
-├── types.ts             # All TypeScript types
-├── errors.ts            # HindsightError class
-├── retry.ts             # Retry utilities with exponential backoff
-├── mcp/                 # MCP server implementation
-│   ├── server.ts        # ClaudeMindMcpServer class
-│   ├── tools.ts         # Tool definitions with Zod schemas
-│   └── handlers.ts      # Tool execution handlers
-├── cli/                 # CLI commands
-│   └── commands/        # Individual command implementations
-├── learn/               # Learn operation (cold start)
-│   ├── index.ts         # Main learn() function
-│   ├── extractor.ts     # Fact extraction from analysis
-│   └── analyzers/       # Codebase analyzers (git, package, readme, source, structure)
-├── agents/              # Agent templates
-│   ├── templates.ts     # Built-in: code-explorer, code-architect, code-reviewer
-│   ├── loader.ts        # Custom agent loading from .claude/agents/
-│   └── context.ts       # Agent context preparation with memory
-└── hooks/               # Claude Code hooks
-    ├── inject-context.ts   # Session start hook
-    └── process-session.ts  # Session end hook
-```
+- `src/hooks/inject-context.ts` — Session start: injects recalled memories as context
+- `src/hooks/process-session.ts` — Session end: extracts and retains learnings
+- `src/hooks/buffer-message.ts` — Buffers messages during session for manual sync via `sync-session` CLI command
 
 ## Configuration
 
@@ -135,13 +128,13 @@ src/
 
 Tests mirror source structure under `tests/`:
 
-- `tests/unit/` - Unit tests
-- `tests/integration/` - Integration tests (not excluded from default run)
-- `tests/e2e/` - E2E tests (excluded, run with `npm run test:e2e`)
-- `tests/perf/` - Benchmarks (`npm run bench`)
-- `tests/helpers/` - Mocks and fixtures
+- `tests/unit/` — Unit tests
+- `tests/integration/` — Integration tests (included in default run)
+- `tests/e2e/` — E2E tests (excluded, run with `npm run test:e2e`)
+- `tests/perf/` — Benchmarks (`npm run bench`)
+- `tests/helpers/` — Mocks and fixtures
 
-Vitest globals are enabled. Coverage thresholds: 80% statements/functions/lines, 75% branches.
+Vitest globals are enabled. Coverage thresholds: 80% statements/functions/lines, 75% branches. Coverage excludes `*.d.ts`, `types.ts`, and `index.ts` (re-export) files.
 
 ## Git Workflow
 

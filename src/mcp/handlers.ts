@@ -5,7 +5,12 @@
 
 import type { Mind } from "../mind.js";
 import type { Memory, ReflectResult } from "../types.js";
-import type { RecallToolInput, ReflectToolInput, ToolResult } from "./types.js";
+import type {
+  RecallToolInput,
+  ReflectToolInput,
+  RetainToolInput,
+  ToolResult,
+} from "./types.js";
 
 // ============================================
 // Formatters
@@ -151,6 +156,38 @@ export async function handleReflect(
 
     return {
       content: [{ type: "text", text: `Error reflecting: ${message}` }],
+      isError: true,
+    };
+  }
+}
+
+/**
+ * Handle memory_retain tool invocation.
+ *
+ * @param mind - Mind instance to use for retaining
+ * @param input - Tool input with content, optional context and type
+ * @returns Tool result with confirmation message
+ */
+export async function handleRetain(
+  mind: Mind,
+  input: RetainToolInput,
+): Promise<ToolResult> {
+  try {
+    const factType = input.type ?? "experience";
+    await mind.retain(input.content, input.context, factType);
+
+    const text = `Memory stored successfully.\n\nType: ${factType}\nContent: ${input.content}${input.context ? `\nContext: ${input.context}` : ""}`;
+
+    return {
+      content: [{ type: "text", text }],
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unknown error occurred";
+    return {
+      content: [
+        { type: "text", text: `Error storing memory: ${message}` },
+      ],
       isError: true,
     };
   }

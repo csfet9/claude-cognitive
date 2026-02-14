@@ -1,17 +1,101 @@
 /**
  * Configuration loading for claude-cognitive.
+ * Uses Zod schemas for validation and deep merging.
  * @module config
  */
 
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { z } from "zod";
 import type {
   ClaudeMindConfig,
-  Disposition,
   RetainFilterConfig,
   SecurityReviewConfig,
 } from "./types.js";
 import { DEFAULT_GEMINI_CONFIG, type GeminiModel } from "./gemini/types.js";
+
+// ============================================
+// Zod Schemas
+// ============================================
+
+const traitValueSchema = z.union([
+  z.literal(1),
+  z.literal(2),
+  z.literal(3),
+  z.literal(4),
+  z.literal(5),
+]);
+
+const dispositionSchema = z.object({
+  skepticism: traitValueSchema,
+  literalism: traitValueSchema,
+  empathy: traitValueSchema,
+});
+
+const timeoutConfigSchema = z.object({
+  default: z.number(),
+  health: z.number(),
+  recall: z.number(),
+  reflect: z.number(),
+  retain: z.number(),
+});
+
+const hindsightSchema = z.object({
+  host: z.string(),
+  port: z.number().int().min(1).max(65535),
+  apiKey: z.string().optional(),
+  timeout: z.number().optional(),
+  timeouts: timeoutConfigSchema.partial().optional(),
+});
+
+const semanticSchema = z.object({
+  path: z.string(),
+});
+
+const retainFilterSchema = z.object({
+  maxTranscriptLength: z.number().optional(),
+  filterToolResults: z.boolean().optional(),
+  filterFileContents: z.boolean().optional(),
+  maxCodeBlockLines: z.number().optional(),
+  maxLineLength: z.number().optional(),
+  minSessionLength: z.number().optional(),
+  skipToolOnlySessions: z.boolean().optional(),
+  customSkipPatterns: z.array(z.string()).optional(),
+});
+
+const securityReviewSchema = z.object({
+  enabled: z.boolean(),
+  model: z.enum(["opus", "sonnet", "haiku"]).optional(),
+  blockOnCritical: z.boolean().optional(),
+  codeExtensions: z.array(z.string()).optional(),
+});
+
+const contextSchema = z.object({
+  recentMemoryLimit: z.number().optional(),
+});
+
+const geminiSchema = z.object({
+  model: z.string(),
+  timeout: z.number(),
+  maxConcurrentRequests: z.number(),
+});
+
+/** Full config schema — used for final validation. */
+const configSchema = z.object({
+  hindsight: hindsightSchema,
+  bankId: z.string().optional(),
+  disposition: dispositionSchema.optional(),
+  background: z.string().optional(),
+  semantic: semanticSchema.optional(),
+  retainFilter: retainFilterSchema.optional(),
+  context: contextSchema.optional(),
+  securityReview: securityReviewSchema.optional(),
+  gemini: geminiSchema.optional(),
+});
+
+// ============================================
+// Defaults
+// ============================================
 
 /**
  * Default retain filter configuration.
@@ -67,14 +151,19 @@ const DEFAULT_CONFIG: ClaudeMindConfig = {
   securityReview: DEFAULT_SECURITY_REVIEW_CONFIG,
 };
 
-/**
- * Partial configuration for merging.
- */
+// ============================================
+// Partial Config Type
+// ============================================
+
 type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
 
 export type PartialConfig = DeepPartial<ClaudeMindConfig>;
+
+// ============================================
+// Deep Merge Utility
+// ============================================
 
 /**
  * Check if a value is a plain object (not array, null, etc.).
@@ -85,120 +174,33 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Deep merge configuration objects.
+ * Deep merge two plain objects. Source values override target values.
+ * Arrays are replaced, not merged.
  * @internal
  */
-function mergeConfig(
-  target: ClaudeMindConfig,
-  source: PartialConfig,
-): ClaudeMindConfig {
-  const result: ClaudeMindConfig = {
-    hindsight: { ...target.hindsight },
-  };
+function deepMerge(
+  target: Record<string, unknown>,
+  source: Record<string, unknown>,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = { ...target };
 
-  // Copy optional fields from target only if defined
-  if (target.semantic !== undefined) {
-    result.semantic = { ...target.semantic };
-  }
-  if (target.bankId !== undefined) {
-    result.bankId = target.bankId;
-  }
-  if (target.disposition !== undefined) {
-    result.disposition = target.disposition;
-  }
-  if (target.background !== undefined) {
-    result.background = target.background;
-  }
-  if (target.retainFilter !== undefined) {
-    result.retainFilter = { ...target.retainFilter };
-  }
-  if (target.context !== undefined) {
-    result.context = { ...target.context };
-  }
-  if (target.securityReview !== undefined) {
-    result.securityReview = { ...target.securityReview };
-  }
-  if (target.gemini !== undefined) {
-    result.gemini = { ...target.gemini };
-  }
+  for (const key of Object.keys(source)) {
+    const sourceVal = source[key];
+    const targetVal = result[key];
 
-  // Merge hindsight settings
-  if (source.hindsight) {
-    if (source.hindsight.host !== undefined) {
-      result.hindsight.host = source.hindsight.host;
+    if (isPlainObject(sourceVal) && isPlainObject(targetVal)) {
+      result[key] = deepMerge(targetVal, sourceVal);
+    } else if (sourceVal !== undefined) {
+      result[key] = sourceVal;
     }
-    if (source.hindsight.port !== undefined) {
-      result.hindsight.port = source.hindsight.port;
-    }
-    if (source.hindsight.apiKey !== undefined) {
-      result.hindsight.apiKey = source.hindsight.apiKey;
-    }
-    if (source.hindsight.timeout !== undefined) {
-      result.hindsight.timeout = source.hindsight.timeout;
-    }
-    if (source.hindsight.timeouts !== undefined) {
-      result.hindsight.timeouts = {
-        ...result.hindsight.timeouts,
-        ...source.hindsight.timeouts,
-      };
-    }
-  }
-
-  // Merge semantic settings
-  if (source.semantic) {
-    if (!result.semantic) {
-      result.semantic = { path: ".claude/memory.md" };
-    }
-    if (source.semantic.path !== undefined) {
-      result.semantic.path = source.semantic.path;
-    }
-  }
-
-  // Merge top-level optional fields
-  if (source.bankId !== undefined) {
-    result.bankId = source.bankId;
-  }
-  if (source.disposition !== undefined) {
-    result.disposition = source.disposition;
-  }
-  if (source.background !== undefined) {
-    result.background = source.background;
-  }
-
-  // Merge retainFilter settings
-  if (source.retainFilter !== undefined) {
-    result.retainFilter = {
-      ...result.retainFilter,
-      ...source.retainFilter,
-    };
-  }
-
-  // Merge context settings
-  if (source.context !== undefined) {
-    result.context = {
-      ...result.context,
-      ...source.context,
-    };
-  }
-
-  // Merge securityReview settings
-  if (source.securityReview !== undefined) {
-    result.securityReview = {
-      ...result.securityReview,
-      ...source.securityReview,
-    };
-  }
-
-  // Merge gemini settings
-  if (source.gemini !== undefined) {
-    result.gemini = {
-      ...result.gemini,
-      ...source.gemini,
-    };
   }
 
   return result;
 }
+
+// ============================================
+// File Loaders
+// ============================================
 
 /**
  * Safely read and parse a JSON file.
@@ -248,139 +250,57 @@ async function loadRcConfig(
   return undefined;
 }
 
+// ============================================
+// Environment Variables
+// ============================================
+
 /**
- * Apply environment variable overrides to config.
+ * Build a partial config from environment variables.
  * @internal
  */
-function applyEnvConfig(config: ClaudeMindConfig): ClaudeMindConfig {
-  const result: ClaudeMindConfig = {
-    hindsight: { ...config.hindsight },
-  };
-
-  // Copy optional fields from config only if defined
-  if (config.semantic !== undefined) {
-    result.semantic = { ...config.semantic };
-  }
-  if (config.bankId !== undefined) {
-    result.bankId = config.bankId;
-  }
-  if (config.disposition !== undefined) {
-    result.disposition = config.disposition;
-  }
-  if (config.background !== undefined) {
-    result.background = config.background;
-  }
-  if (config.retainFilter !== undefined) {
-    result.retainFilter = { ...config.retainFilter };
-  }
-  if (config.context !== undefined) {
-    result.context = { ...config.context };
-  }
-  if (config.securityReview !== undefined) {
-    result.securityReview = { ...config.securityReview };
-  }
-  if (config.gemini !== undefined) {
-    result.gemini = { ...config.gemini };
-  }
+function getEnvConfig(): PartialConfig {
+  const partial: PartialConfig = {};
 
   // Hindsight connection settings
   const host = process.env["HINDSIGHT_HOST"];
   if (host) {
-    result.hindsight.host = host;
+    partial.hindsight = { ...partial.hindsight, host };
   }
 
   const port = process.env["HINDSIGHT_PORT"];
   if (port) {
     const parsed = parseInt(port, 10);
     if (!isNaN(parsed) && parsed > 0 && parsed < 65536) {
-      result.hindsight.port = parsed;
+      partial.hindsight = { ...partial.hindsight, port: parsed };
     }
   }
 
   const apiKey = process.env["HINDSIGHT_API_KEY"];
   if (apiKey) {
-    result.hindsight.apiKey = apiKey;
+    partial.hindsight = { ...partial.hindsight, apiKey };
   }
 
   // Bank settings
   const bankId = process.env["CLAUDEMIND_BANK_ID"];
   if (bankId) {
-    result.bankId = bankId;
+    partial.bankId = bankId;
   }
 
   // Gemini settings
   const geminiModel = process.env["GEMINI_MODEL"];
   if (geminiModel) {
-    if (!result.gemini) {
-      result.gemini = { ...DEFAULT_GEMINI_CONFIG };
-    }
-    result.gemini.model = geminiModel as GeminiModel;
+    partial.gemini = {
+      ...DEFAULT_GEMINI_CONFIG,
+      model: geminiModel as GeminiModel,
+    };
   }
 
-  return result;
+  return partial;
 }
 
-/**
- * Validate disposition values are in valid range.
- * @internal
- */
-function validateDisposition(disposition: unknown): disposition is Disposition {
-  if (!isPlainObject(disposition)) {
-    return false;
-  }
-
-  const traits = ["skepticism", "literalism", "empathy"] as const;
-  for (const trait of traits) {
-    const value = disposition[trait];
-    if (
-      typeof value !== "number" ||
-      !Number.isInteger(value) ||
-      value < 1 ||
-      value > 5
-    ) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-/**
- * Clone a configuration object.
- * @internal
- */
-function cloneConfig(config: ClaudeMindConfig): ClaudeMindConfig {
-  const result: ClaudeMindConfig = {
-    hindsight: { ...config.hindsight },
-  };
-
-  if (config.semantic !== undefined) {
-    result.semantic = { ...config.semantic };
-  }
-  if (config.bankId !== undefined) {
-    result.bankId = config.bankId;
-  }
-  if (config.disposition !== undefined) {
-    result.disposition = { ...config.disposition };
-  }
-  if (config.background !== undefined) {
-    result.background = config.background;
-  }
-  if (config.retainFilter !== undefined) {
-    result.retainFilter = { ...config.retainFilter };
-  }
-  if (config.context !== undefined) {
-    result.context = { ...config.context };
-  }
-  if (config.securityReview !== undefined) {
-    result.securityReview = { ...config.securityReview };
-  }
-  if (config.gemini !== undefined) {
-    result.gemini = { ...config.gemini };
-  }
-
-  return result;
-}
+// ============================================
+// Public API
+// ============================================
 
 /**
  * Load configuration from multiple sources with priority order:
@@ -410,37 +330,55 @@ export async function loadConfig(
   projectPath: string = process.cwd(),
   overrides?: PartialConfig,
 ): Promise<ClaudeMindConfig> {
-  // Start with defaults
-  let config: ClaudeMindConfig = cloneConfig(DEFAULT_CONFIG);
+  // Collect all config sources (lowest to highest priority)
+  const sources: PartialConfig[] = [];
 
-  // Load from package.json "claudemind" key (lowest priority file config)
   const pkgConfig = await loadPackageJsonConfig(projectPath);
   if (pkgConfig) {
-    config = mergeConfig(config, pkgConfig);
+    sources.push(pkgConfig);
   }
 
-  // Load from .claudemindrc (higher priority than package.json)
   const rcConfig = await loadRcConfig(projectPath);
   if (rcConfig) {
-    config = mergeConfig(config, rcConfig);
+    sources.push(rcConfig);
   }
 
-  // Apply environment variables (higher priority than files)
-  config = applyEnvConfig(config);
+  const envConfig = getEnvConfig();
+  if (Object.keys(envConfig).length > 0) {
+    sources.push(envConfig);
+  }
 
-  // Apply explicit overrides (highest priority)
   if (overrides) {
-    config = mergeConfig(config, overrides);
+    sources.push(overrides);
   }
 
-  // Validate disposition if present
-  if (config.disposition && !validateDisposition(config.disposition)) {
+  // Start with defaults and merge all sources in priority order
+  let merged: Record<string, unknown> = structuredClone(
+    DEFAULT_CONFIG,
+  ) as unknown as Record<string, unknown>;
+  for (const source of sources) {
+    merged = deepMerge(merged, source as unknown as Record<string, unknown>);
+  }
+
+  // Validate the final merged config with Zod
+  const parseResult = configSchema.safeParse(merged);
+
+  if (!parseResult.success) {
+    // Check for disposition errors specifically to preserve error message
+    const dispositionError = parseResult.error.issues.find((issue) =>
+      issue.path.includes("disposition"),
+    );
+    if (dispositionError) {
+      throw new Error(
+        "Invalid disposition in configuration: values must be integers between 1 and 5",
+      );
+    }
     throw new Error(
-      "Invalid disposition in configuration: values must be integers between 1 and 5",
+      `Invalid configuration: ${parseResult.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join(", ")}`,
     );
   }
 
-  return config;
+  return parseResult.data as ClaudeMindConfig;
 }
 
 /**
@@ -448,5 +386,5 @@ export async function loadConfig(
  * Useful for testing or when you want explicit control.
  */
 export function getDefaultConfig(): ClaudeMindConfig {
-  return cloneConfig(DEFAULT_CONFIG);
+  return structuredClone(DEFAULT_CONFIG);
 }

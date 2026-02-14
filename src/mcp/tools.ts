@@ -31,6 +31,26 @@ export const reflectInputSchema = z.object({
     .describe("What to think about or reason through"),
 });
 
+/**
+ * Zod schema for memory_retain tool input.
+ */
+export const retainInputSchema = z.object({
+  content: z
+    .string()
+    .min(1)
+    .max(10000)
+    .describe("The information to store in memory"),
+  context: z
+    .string()
+    .max(1000)
+    .optional()
+    .describe("Optional description providing additional context"),
+  type: z
+    .enum(["world", "experience", "opinion"])
+    .optional()
+    .describe("Type of memory to store (default: experience)"),
+});
+
 // ============================================
 // Tool Definitions
 // ============================================
@@ -50,5 +70,11 @@ export const TOOL_DEFINITIONS = {
     description:
       "Reason about what you know and form opinions. Use when you want to think about patterns, make judgments based on experience, or synthesize accumulated knowledge. Returns reasoned insights with confidence scores.",
     inputSchema: reflectInputSchema,
+  },
+  memory_retain: {
+    name: "memory_retain",
+    description:
+      "Store important information in memory for future sessions. Use when you learn something significant about the project, discover a pattern, or want to remember a decision. Stored memories persist across sessions.",
+    inputSchema: retainInputSchema,
   },
 } as const;

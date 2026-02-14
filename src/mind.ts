@@ -8,14 +8,13 @@ import { basename, join } from "node:path";
 import {
   type AgentTemplate,
   type GetAgentContextOptions,
-  BUILT_IN_TEMPLATES,
   getAgentContext as prepareAgentContext,
   formatAgentPrompt,
   loadCustomAgents,
-  isBuiltInAgent,
 } from "./agents/index.js";
 import { HindsightClient } from "./client.js";
 import { loadConfig } from "./config.js";
+import { DegradationController } from "./degradation.js";
 import { HindsightError } from "./errors.js";
 import { TypedEventEmitter } from "./events.js";
 import { OfflineMemoryStore } from "./offline.js";
@@ -99,10 +98,12 @@ export class Mind extends TypedEventEmitter {
   // Offline memory store (always available)
   private offlineStore: OfflineMemoryStore | null = null;
 
+  // Degradation controller
+  private readonly degradation: DegradationController;
+
   // State
   private initialized = false;
   private initializing = false;
-  private degraded = false;
   private sessionActive = false;
   /** Session start time. Used for duration tracking. */
   private sessionStartTime: Date | null = null;
@@ -122,6 +123,7 @@ export class Mind extends TypedEventEmitter {
     super();
     this.projectPath = options.projectPath ?? process.cwd();
     this.pendingOptions = options;
+    this.degradation = new DegradationController(this);
   }
 
   // ============================================
@@ -212,7 +214,7 @@ export class Mind extends TypedEventEmitter {
       const health = await this.client.health();
 
       if (!health.healthy) {
-        this.enterDegradedMode(
+        this.degradation.enterDegradedMode(
           `Hindsight unavailable: ${health.error ?? "unknown"}`,
         );
       } else {
@@ -272,7 +274,7 @@ export class Mind extends TypedEventEmitter {
    * @internal
    */
   private async ensureBank(): Promise<void> {
-    if (!this.client || this.degraded) return;
+    if (!this.client || this.degradation.isDegraded) return;
 
     try {
       await this.client.getBank(this.bankId);
@@ -333,7 +335,7 @@ export class Mind extends TypedEventEmitter {
     // Recall recent experiences
     // Only fetch a small number (default 3) to keep context small
     if (this.recentMemoryLimit > 0) {
-      if (!this.degraded && this.client) {
+      if (!this.degradation.isDegraded && this.client) {
         // Online mode: fetch from Hindsight
         try {
           const recent = await this.client.recent(
@@ -345,13 +347,13 @@ export class Mind extends TypedEventEmitter {
             contextParts.push(this.formatRecentMemories(recent));
           }
         } catch (error) {
-          this.handleError(error, "onSessionStart recall");
+          this.degradation.handleError(error, "onSessionStart recall");
           // Fall through to offline on error
         }
       }
 
       // Offline/degraded mode: fetch from local storage
-      if (this.degraded && this.offlineStore) {
+      if (this.degradation.isDegraded && this.offlineStore) {
         try {
           const offlineRecent = await this.offlineStore.getRecent(
             this.recentMemoryLimit,
@@ -387,7 +389,7 @@ export class Mind extends TypedEventEmitter {
 
     // Retain transcript if provided
     if (transcript) {
-      if (!this.degraded && this.client) {
+      if (!this.degradation.isDegraded && this.client) {
         // Online mode: store to Hindsight
         try {
           await this.client.retain({
@@ -397,13 +399,13 @@ export class Mind extends TypedEventEmitter {
           });
           this.emit("memory:retained", transcript);
         } catch (error) {
-          this.handleError(error, "onSessionEnd retain");
+          this.degradation.handleError(error, "onSessionEnd retain");
           // Fall through to offline on error
         }
       }
 
       // Degraded/offline mode: store locally
-      if (this.degraded && this.offlineStore) {
+      if (this.degradation.isDegraded && this.offlineStore) {
         try {
           await this.offlineStore.retain(transcript, "experience", {
             context: "Session transcript",
@@ -448,7 +450,7 @@ export class Mind extends TypedEventEmitter {
     this.assertInitialized();
 
     // Online mode: use Hindsight
-    if (!this.degraded && this.client) {
+    if (!this.degradation.isDegraded && this.client) {
       try {
         // Build recall input, only including defined properties
         const recallInput: {
@@ -475,7 +477,7 @@ export class Mind extends TypedEventEmitter {
 
         return memories;
       } catch (error) {
-        this.handleError(error, "recall");
+        this.degradation.handleError(error, "recall");
         // Fall through to offline on error
       }
     }
@@ -520,7 +522,7 @@ export class Mind extends TypedEventEmitter {
     this.assertInitialized();
 
     // Degraded mode: throw (reflect requires Hindsight)
-    if (this.degraded || !this.client) {
+    if (this.degradation.isDegraded || !this.client) {
       throw new HindsightError(
         "reflect() requires Hindsight connection",
         "HINDSIGHT_UNAVAILABLE",
@@ -550,7 +552,7 @@ export class Mind extends TypedEventEmitter {
    * @returns The HindsightClient instance, or null if degraded
    */
   getClient(): HindsightClient | null {
-    return this.degraded ? null : this.client;
+    return this.degradation.isDegraded ? null : this.client;
   }
 
   /**
@@ -570,7 +572,7 @@ export class Mind extends TypedEventEmitter {
     this.assertInitialized();
 
     // Online mode: use Hindsight
-    if (!this.degraded && this.client) {
+    if (!this.degradation.isDegraded && this.client) {
       try {
         // Build retain input, only including defined properties
         const retainInput: {
@@ -587,7 +589,7 @@ export class Mind extends TypedEventEmitter {
         this.emit("memory:retained", content);
         return;
       } catch (error) {
-        this.handleError(error, "retain");
+        this.degradation.handleError(error, "retain");
         // Fall through to offline on error
       }
     }
@@ -629,7 +631,7 @@ export class Mind extends TypedEventEmitter {
     this.assertInitialized();
 
     // Degraded mode: throw (learn requires Hindsight)
-    if (this.degraded || !this.client) {
+    if (this.degradation.isDegraded || !this.client) {
       throw new HindsightError(
         "learn() requires Hindsight connection",
         "HINDSIGHT_UNAVAILABLE",
@@ -668,12 +670,12 @@ export class Mind extends TypedEventEmitter {
   // ============================================
 
   /**
-   * Get all available agent templates (built-in + custom).
+   * Get all available custom agent templates.
    *
-   * @returns Array of agent templates
+   * @returns Array of agent templates from .claude/agents/
    */
   getAgentTemplates(): AgentTemplate[] {
-    return [...Object.values(BUILT_IN_TEMPLATES), ...this.customAgents];
+    return [...this.customAgents];
   }
 
   /**
@@ -683,11 +685,6 @@ export class Mind extends TypedEventEmitter {
    * @returns Agent template, or undefined if not found
    */
   getAgentTemplate(name: string): AgentTemplate | undefined {
-    // Check built-in first
-    if (isBuiltInAgent(name)) {
-      return BUILT_IN_TEMPLATES[name];
-    }
-    // Then custom
     return this.customAgents.find((a) => a.name === name);
   }
 
@@ -717,7 +714,7 @@ export class Mind extends TypedEventEmitter {
     this.emit("agent:context-prepared", { agent: agentType, task });
 
     // If we're in degraded mode or no client, return minimal context
-    if (this.degraded || !this.client) {
+    if (this.degradation.isDegraded || !this.client) {
       return `# Agent: ${template.name}
 
 ## Mission
@@ -754,7 +751,7 @@ ${template.outputFormat}
    * Whether the Mind is in degraded mode (Hindsight unavailable).
    */
   get isDegraded(): boolean {
-    return this.degraded;
+    return this.degradation.isDegraded;
   }
 
   /**
@@ -764,22 +761,12 @@ ${template.outputFormat}
    * @returns True if recovery was successful
    */
   async attemptRecovery(): Promise<boolean> {
-    if (!this.degraded || !this.client) {
-      return !this.degraded;
-    }
-
-    const health = await this.client.health();
-    if (health.healthy) {
-      this.exitDegradedMode();
-      await this.ensureBank();
-
-      // Auto-sync offline memories
-      await this.syncOfflineMemories();
-
-      return true;
-    }
-
-    return false;
+    return this.degradation.attemptRecovery(
+      this.client,
+      () => this.ensureBank(),
+      this.offlineStore,
+      this.bankId,
+    );
   }
 
   /**
@@ -789,64 +776,11 @@ ${template.outputFormat}
    * @returns Number of memories synced
    */
   async syncOfflineMemories(): Promise<number> {
-    if (!this.client || this.degraded || !this.offlineStore) {
-      return 0;
-    }
-
-    try {
-      await this.offlineStore.recordSyncAttempt();
-      const unsynced = await this.offlineStore.getUnsynced();
-
-      if (unsynced.length === 0) {
-        return 0;
-      }
-
-      const syncedIds: string[] = [];
-
-      for (const memory of unsynced) {
-        try {
-          // Build retain input, only including defined properties
-          const retainInput: {
-            bankId: string;
-            content: string;
-            context?: string;
-          } = {
-            bankId: this.bankId,
-            content: memory.text,
-          };
-          if (memory.context !== undefined)
-            retainInput.context = memory.context;
-
-          await this.client.retain(retainInput);
-          syncedIds.push(memory.id);
-        } catch (error) {
-          // Stop on error - don't want to skip memories
-          this.emit(
-            "error",
-            error instanceof Error
-              ? error
-              : new Error(`Failed to sync memory ${memory.id}`),
-          );
-          break;
-        }
-      }
-
-      if (syncedIds.length > 0) {
-        await this.offlineStore.markSynced(syncedIds);
-        this.emit("offline:synced", { count: syncedIds.length });
-
-        // Clear synced memories to save space
-        await this.offlineStore.clearSynced();
-      }
-
-      return syncedIds.length;
-    } catch (error) {
-      this.emit(
-        "error",
-        error instanceof Error ? error : new Error(String(error)),
-      );
-      return 0;
-    }
+    return this.degradation.syncOfflineMemories(
+      this.client,
+      this.offlineStore,
+      this.bankId,
+    );
   }
 
   /**
@@ -854,44 +788,6 @@ ${template.outputFormat}
    */
   getOfflineStore(): OfflineMemoryStore | null {
     return this.offlineStore;
-  }
-
-  /**
-   * Enter degraded mode.
-   * @internal
-   */
-  private enterDegradedMode(reason: string): void {
-    if (!this.degraded) {
-      this.degraded = true;
-      this.emit("degraded:change", true);
-      this.emit("error", new Error(`Degraded mode: ${reason}`));
-    }
-  }
-
-  /**
-   * Exit degraded mode.
-   * @internal
-   */
-  private exitDegradedMode(): void {
-    if (this.degraded) {
-      this.degraded = false;
-      this.emit("degraded:change", false);
-    }
-  }
-
-  /**
-   * Handle an error, potentially entering degraded mode.
-   * @internal
-   */
-  private handleError(error: unknown, operation: string): void {
-    const err = error instanceof Error ? error : new Error(String(error));
-
-    // Check if this is a connection failure
-    if (HindsightError.isHindsightError(error) && error.isUnavailable) {
-      this.enterDegradedMode(`${operation}: ${err.message}`);
-    }
-
-    this.emit("error", err);
   }
 
   // ============================================
@@ -906,7 +802,7 @@ ${template.outputFormat}
   async getBank(): Promise<Bank | null> {
     this.assertInitialized();
 
-    if (this.degraded || !this.client) {
+    if (this.degradation.isDegraded || !this.client) {
       return null;
     }
 
@@ -1045,104 +941,71 @@ ${template.outputFormat}
 
   /**
    * Format agent orchestration instructions.
+   *
+   * Generates context-aware orchestration rules:
+   * - If custom agents exist: orchestrator delegates large tasks, handles small fixes directly
+   * - If only built-in agents: lightweight hint (Claude Code's native agents are preferred)
+   * - If no agents at all: no orchestration context
+   *
    * @internal
    */
   formatAgentInstructions(): string {
-    const allAgents = this.getAgentTemplates();
-    if (allAgents.length === 0) return "";
-
-    const custom = allAgents.filter(
-      (a) =>
-        !["code-explorer", "code-architect", "code-reviewer"].includes(a.name),
-    );
+    const agents = this.getAgentTemplates();
+    if (agents.length === 0) return "";
 
     const lines: string[] = [];
+
     lines.push("## Agent Orchestration");
     lines.push("");
     lines.push(
-      "You are the **orchestrator**. You do NOT write code directly. Delegate ALL coding tasks to specialized agents using the Task tool.",
+      "You are the **orchestrator** with access to specialized project agents. Your role is to preserve context across the session and delegate to the right specialist.",
     );
     lines.push("");
 
-    // Critical rule section
-    lines.push("### Critical Rule: Agents Write Code, You Orchestrate");
+    // When to delegate vs do directly
+    lines.push("### When to Delegate vs Write Code Directly");
     lines.push("");
-    lines.push(
-      "**YOU (the main Claude instance) MUST NOT write code directly.** Your role is to:",
-    );
-    lines.push("- Plan and coordinate work");
-    lines.push("- Provide context and requirements to agents");
-    lines.push("- Review agent outputs");
-    lines.push("- Communicate with the user");
+    lines.push("**Handle directly** (you have full context):");
+    lines.push("- Small bug fixes, typos, config changes");
+    lines.push("- Single-file edits under ~50 lines");
+    lines.push("- Quick refactors where you already understand the code");
+    lines.push("- Answering questions, explaining code");
     lines.push("");
-    lines.push("**Agents write ALL code.** Delegate implementation to:");
+    lines.push("**Delegate to specialized agents** (they have domain expertise):");
+    lines.push("- Multi-file features touching 3+ files");
     lines.push(
-      "- Built-in agents (code-explorer, code-architect, code-reviewer)",
+      "- Domain-specific work matching a custom agent's specialty",
     );
-    lines.push("- Custom agents in `.claude/agents/` directory");
-    lines.push("");
-    lines.push(
-      "**Exception**: You may write code ONLY if no agents are available (e.g., no built-in agents accessible, no custom agents in `.claude/agents/`).",
-    );
+    lines.push("- Tasks requiring deep knowledge of a subsystem");
+    lines.push("- Parallel workstreams that benefit from simultaneous execution");
     lines.push("");
 
-    lines.push("### Built-in Agents");
+    // Custom agents are the primary value
+    lines.push("### Project Agents");
     lines.push("");
-    lines.push("| Agent | When to Use |");
-    lines.push("|-------|-------------|");
     lines.push(
-      "| `code-explorer` | Before implementing features - explore codebase patterns, trace execution paths |",
-    );
-    lines.push(
-      "| `code-architect` | Before complex changes - design solutions, create implementation plans |",
-    );
-    lines.push(
-      "| `code-reviewer` | After writing code - review for bugs, security issues, adherence to patterns |",
+      "Specialized agents in `.claude/agents/` with deep project knowledge:",
     );
     lines.push("");
-
-    if (custom.length > 0) {
-      lines.push("### Custom Project Agents");
-      lines.push("");
-      lines.push(
-        "The following project-specific agents are available in `.claude/agents/`:",
-      );
-      lines.push("");
-      for (const agent of custom) {
-        const firstLine = agent.mission.split("\n")[0] ?? "";
-        const mission =
-          firstLine.slice(0, 80) + (firstLine.length > 80 ? "..." : "");
-        lines.push(`- **${agent.name}**: ${mission}`);
-      }
-      lines.push("");
+    for (const agent of agents) {
+      const firstLine = agent.mission.split("\n")[0] ?? "";
+      const mission =
+        firstLine.slice(0, 80) + (firstLine.length > 80 ? "..." : "");
+      lines.push(`- **${agent.name}**: ${mission}`);
     }
+    lines.push("");
 
-    lines.push("### Orchestration Workflow");
-    lines.push("");
-    lines.push("For ALL coding tasks, follow this workflow:");
-    lines.push("");
-    lines.push(
-      "1. **Explore**: Launch `code-explorer` agents to understand existing patterns",
-    );
-    lines.push("2. **Clarify**: Ask user questions about unclear requirements");
-    lines.push(
-      "3. **Design**: Launch `code-architect` agents to create implementation plans",
-    );
-    lines.push(
-      "4. **Implement**: Launch implementation agents to write code (NEVER write code yourself)",
-    );
-    lines.push(
-      "5. **Review**: Launch `code-reviewer` agents to check the work",
-    );
+    // Context ownership
+    lines.push("### Context Management");
     lines.push("");
     lines.push(
-      "**Parallelization**: Launch multiple agents with different focuses simultaneously.",
+      "- **You own memory**: Only you access `memory_recall`/`memory_reflect`/`memory_retain` — pass relevant context to agents when delegating",
     );
     lines.push(
-      "**Memory**: Only YOU (orchestrator) access memory - agents receive context from you.",
+      "- **You own coordination**: When multiple agents work in parallel, you review and integrate their outputs",
     );
     lines.push(
-      "**Code Ownership**: Agents own ALL code changes - you coordinate and review.",
+      "- **Agents own implementation**: When delegating, give agents clear requirements and let them execute",
     );
     lines.push("");
 
@@ -1171,6 +1034,6 @@ ${template.outputFormat}
     this.initialized = false;
     this.sessionActive = false;
     this.sessionStartTime = null;
-    this.degraded = false;
+    this.degradation.reset();
   }
 }

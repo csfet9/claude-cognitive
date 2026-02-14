@@ -262,7 +262,7 @@ describe("Mind", () => {
   });
 
   describe("onSessionStart()", () => {
-    it("should return agent orchestration context in degraded mode", async () => {
+    it("should return empty context in degraded mode without custom agents", async () => {
       mockHealth.mockResolvedValue({
         healthy: false,
         error: "Connection refused",
@@ -272,10 +272,9 @@ describe("Mind", () => {
       await mind.init();
 
       const result = await mind.onSessionStart();
-      // In degraded mode, still returns agent orchestration instructions
-      // (just no memories from Hindsight)
-      expect(result).toContain("Agent Orchestration");
-      expect(result).toContain("code-explorer");
+      // No custom agents loaded = no orchestration instructions injected
+      // (built-in agents alone don't trigger orchestration — Claude Code handles those natively)
+      expect(result).toBe("");
     });
   });
 
@@ -312,7 +311,7 @@ describe("Mind", () => {
   });
 
   describe("getAgentTemplates()", () => {
-    it("should return built-in templates", async () => {
+    it("should return empty array when no custom agents exist", async () => {
       mockHealth.mockResolvedValue({ healthy: false, error: "Test" });
 
       const mind = createMindWithErrorHandler();
@@ -320,26 +319,12 @@ describe("Mind", () => {
 
       const templates = mind.getAgentTemplates();
 
-      expect(templates.length).toBeGreaterThanOrEqual(3);
-      expect(templates.some((t) => t.name === "code-explorer")).toBe(true);
-      expect(templates.some((t) => t.name === "code-architect")).toBe(true);
-      expect(templates.some((t) => t.name === "code-reviewer")).toBe(true);
+      // No custom agents in test env = empty array
+      expect(templates).toEqual([]);
     });
   });
 
   describe("getAgentTemplate()", () => {
-    it("should return template by name", async () => {
-      mockHealth.mockResolvedValue({ healthy: false, error: "Test" });
-
-      const mind = createMindWithErrorHandler();
-      await mind.init();
-
-      const template = mind.getAgentTemplate("code-explorer");
-
-      expect(template).toBeDefined();
-      expect(template?.name).toBe("code-explorer");
-    });
-
     it("should return undefined for unknown template", async () => {
       mockHealth.mockResolvedValue({ healthy: false, error: "Test" });
 
