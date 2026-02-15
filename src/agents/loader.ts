@@ -33,6 +33,10 @@ import type { AgentTemplate } from "./types.js";
  * @returns Parsed AgentTemplate, or null if parsing failed
  */
 export function parseAgentMarkdown(content: string): AgentTemplate | null {
+  // Try YAML frontmatter format first
+  const frontmatterResult = parseFrontmatter(content);
+  if (frontmatterResult) return frontmatterResult;
+
   const lines = content.split("\n");
 
   // Extract name from # Agent: name
@@ -42,6 +46,79 @@ export function parseAgentMarkdown(content: string): AgentTemplate | null {
   if (!name) return null;
 
   // Parse sections
+  const sections = parseSections(lines);
+
+  // Build template
+  return {
+    name,
+    mission: sections["Mission"] || "",
+    tools: parseList(sections["Tools Available"] || ""),
+    outputFormat: sections["Output Format"] || "",
+    constraints: parseList(sections["Constraints"] || ""),
+  };
+}
+
+/**
+ * Parse YAML frontmatter format (--- delimited).
+ * @internal
+ */
+function parseFrontmatter(content: string): AgentTemplate | null {
+  if (!content.startsWith("---")) return null;
+
+  const endIndex = content.indexOf("---", 3);
+  if (endIndex === -1) return null;
+
+  const yamlBlock = content.slice(3, endIndex).trim();
+  const body = content.slice(endIndex + 3).trim();
+
+  // Parse simple key: value pairs from YAML block
+  const fields: Record<string, string> = {};
+  for (const line of yamlBlock.split("\n")) {
+    const colonIndex = line.indexOf(":");
+    if (colonIndex === -1) continue;
+    const key = line.slice(0, colonIndex).trim();
+    const value = line.slice(colonIndex + 1).trim();
+    if (key && value) {
+      fields[key] = value;
+    }
+  }
+
+  const name = fields["name"];
+  if (!name) return null;
+
+  // Parse sections from body
+  const sections = parseSections(body.split("\n"));
+
+  const template: AgentTemplate = {
+    name,
+    mission: sections["Mission"] || extractBodyPreamble(body),
+    tools: parseList(sections["Tools Available"] || ""),
+    outputFormat: sections["Output Format"] || "",
+    constraints: parseList(sections["Constraints"] || ""),
+  };
+
+  if (fields["description"]) {
+    template.systemPromptAdditions = fields["description"];
+  }
+
+  return template;
+}
+
+/**
+ * Extract body text before any ## sections.
+ * @internal
+ */
+function extractBodyPreamble(body: string): string {
+  const firstSectionIndex = body.indexOf("\n## ");
+  if (firstSectionIndex === -1) return body;
+  return body.slice(0, firstSectionIndex).trim();
+}
+
+/**
+ * Parse ## sections from lines.
+ * @internal
+ */
+function parseSections(lines: string[]): Record<string, string> {
   const sections: Record<string, string> = {};
   let currentSection = "";
   let currentContent: string[] = [];
@@ -62,14 +139,7 @@ export function parseAgentMarkdown(content: string): AgentTemplate | null {
     sections[currentSection] = currentContent.join("\n").trim();
   }
 
-  // Build template
-  return {
-    name,
-    mission: sections["Mission"] || "",
-    tools: parseList(sections["Tools Available"] || ""),
-    outputFormat: sections["Output Format"] || "",
-    constraints: parseList(sections["Constraints"] || ""),
-  };
+  return sections;
 }
 
 /**

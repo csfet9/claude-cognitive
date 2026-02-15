@@ -142,6 +142,73 @@ None.
       expect(result?.tools).toContain("Another emphasized item");
     });
 
+    it("should parse YAML frontmatter format with name and description", () => {
+      const content = `---
+name: security-code-reviewer
+description: Reviews code for security vulnerabilities
+model: opus
+---
+
+You are a security-focused code reviewer.
+
+Review all code changes for potential security issues.`;
+
+      const result = parseAgentMarkdown(content);
+
+      expect(result).not.toBeNull();
+      expect(result?.name).toBe("security-code-reviewer");
+      expect(result?.mission).toBe(
+        "You are a security-focused code reviewer.\n\nReview all code changes for potential security issues.",
+      );
+      expect(result?.systemPromptAdditions).toBe(
+        "Reviews code for security vulnerabilities",
+      );
+      expect(result?.tools).toEqual([]);
+      expect(result?.constraints).toEqual([]);
+    });
+
+    it("should return null for frontmatter with missing name", () => {
+      const content = `---
+description: Some agent without a name
+model: opus
+---
+
+Body content.`;
+
+      const result = parseAgentMarkdown(content);
+      expect(result).toBeNull();
+    });
+
+    it("should parse frontmatter with sections in body", () => {
+      const content = `---
+name: test-agent
+description: A test agent
+---
+
+## Mission
+Perform security reviews.
+
+## Tools Available
+- Read
+- Grep
+
+## Constraints
+- Do not modify files
+- Report findings only`;
+
+      const result = parseAgentMarkdown(content);
+
+      expect(result).not.toBeNull();
+      expect(result?.name).toBe("test-agent");
+      expect(result?.mission).toBe("Perform security reviews.");
+      expect(result?.tools).toEqual(["Read", "Grep"]);
+      expect(result?.constraints).toEqual([
+        "Do not modify files",
+        "Report findings only",
+      ]);
+      expect(result?.systemPromptAdditions).toBe("A test agent");
+    });
+
     it("should handle multi-line mission", () => {
       const content = `# Agent: test
 
@@ -286,6 +353,33 @@ Format.
 
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe("valid");
+    });
+
+    it("should load frontmatter-format agent files", async () => {
+      const agentsDir = join(tempDir, ".claude", "agents");
+      await mkdir(agentsDir, { recursive: true });
+
+      await writeFile(
+        join(agentsDir, "security-reviewer.md"),
+        `---
+name: security-code-reviewer
+description: Reviews code for security vulnerabilities
+model: opus
+---
+
+You are a security-focused code reviewer.`,
+      );
+
+      const result = await loadCustomAgents(tempDir);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe("security-code-reviewer");
+      expect(result[0].mission).toBe(
+        "You are a security-focused code reviewer.",
+      );
+      expect(result[0].systemPromptAdditions).toBe(
+        "Reviews code for security vulnerabilities",
+      );
     });
 
     it("should skip invalid markdown files", async () => {
