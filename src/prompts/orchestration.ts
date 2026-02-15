@@ -20,10 +20,11 @@ export function formatOrchestration(agents: AgentTemplate[]): string {
 
   const agentList = agents
     .map((agent) => {
-      const firstLine = agent.mission.split("\n")[0] ?? "";
-      const mission =
+      const summary = agent.systemPromptAdditions ?? agent.mission;
+      const firstLine = summary.split("\n")[0] ?? "";
+      const description =
         firstLine.slice(0, 80) + (firstLine.length > 80 ? "..." : "");
-      return `- **${agent.name}**: ${mission}`;
+      return `- **${agent.name}**: ${description}`;
     })
     .join("\n");
 

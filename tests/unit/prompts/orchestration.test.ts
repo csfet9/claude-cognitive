@@ -61,6 +61,21 @@ describe("formatOrchestration", () => {
     expect(result).not.toContain("Second line");
   });
 
+  it("prefers systemPromptAdditions over mission for description", () => {
+    const agent: AgentTemplate = {
+      name: "security-reviewer",
+      mission: "You are an elite security code reviewer with deep expertise...",
+      tools: ["Read"],
+      outputFormat: "markdown",
+      constraints: [],
+      systemPromptAdditions: "Reviews code for security vulnerabilities",
+    };
+    const result = formatOrchestration([agent]);
+
+    expect(result).toContain("**security-reviewer**: Reviews code for security vulnerabilities");
+    expect(result).not.toContain("elite security");
+  });
+
   it("includes all expected sections", () => {
     const agents = [makeAgent("agent", "Do things")];
     const result = formatOrchestration(agents);
