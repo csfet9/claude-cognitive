@@ -167,6 +167,24 @@ Review all code changes for potential security issues.`;
       expect(result?.constraints).toEqual([]);
     });
 
+    it("should strip quotes from frontmatter values", () => {
+      const content = `---
+name: "bloom-developer"
+description: "Use this agent when code needs to be written"
+model: opus
+---
+
+You are a senior full-stack developer.`;
+
+      const result = parseAgentMarkdown(content);
+
+      expect(result).not.toBeNull();
+      expect(result?.name).toBe("bloom-developer");
+      expect(result?.systemPromptAdditions).toBe(
+        "Use this agent when code needs to be written",
+      );
+    });
+
     it("should return null for frontmatter with missing name", () => {
       const content = `---
 description: Some agent without a name

@@ -77,7 +77,9 @@ function parseFrontmatter(content: string): AgentTemplate | null {
     const colonIndex = line.indexOf(":");
     if (colonIndex === -1) continue;
     const key = line.slice(0, colonIndex).trim();
-    const value = line.slice(colonIndex + 1).trim();
+    const raw = line.slice(colonIndex + 1).trim();
+    // Strip surrounding quotes (single or double)
+    const value = raw.replace(/^(["'])(.*)\1$/, "$2");
     if (key && value) {
       fields[key] = value;
     }
