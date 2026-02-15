@@ -18,6 +18,11 @@ import { DegradationController } from "./degradation.js";
 import { HindsightError } from "./errors.js";
 import { TypedEventEmitter } from "./events.js";
 import { OfflineMemoryStore } from "./offline.js";
+import {
+  formatOrchestration,
+  formatGeminiGuidance,
+  formatRecentMemories,
+} from "./prompts/index.js";
 import type {
   Bank,
   ClaudeMindConfig,
@@ -321,13 +326,13 @@ export class Mind extends TypedEventEmitter {
     const contextParts: string[] = [];
 
     // Add agent orchestration instructions
-    const agentInstructions = this.formatAgentInstructions();
+    const agentInstructions = formatOrchestration(this.getAgentTemplates());
     if (agentInstructions.trim().length > 0) {
       contextParts.push(agentInstructions);
     }
 
     // Add Gemini code exploration guidance (if configured)
-    const geminiGuidance = this.formatGeminiGuidance();
+    const geminiGuidance = formatGeminiGuidance(this.config?.gemini);
     if (geminiGuidance.trim().length > 0) {
       contextParts.push(geminiGuidance);
     }
@@ -344,7 +349,7 @@ export class Mind extends TypedEventEmitter {
           );
           if (recent.length > 0) {
             this.emit("memory:recalled", recent);
-            contextParts.push(this.formatRecentMemories(recent));
+            contextParts.push(formatRecentMemories(recent));
           }
         } catch (error) {
           this.degradation.handleError(error, "onSessionStart recall");
@@ -361,7 +366,7 @@ export class Mind extends TypedEventEmitter {
           if (offlineRecent.length > 0) {
             const memories = offlineRecent.map(OfflineMemoryStore.toMemory);
             this.emit("memory:recalled", memories);
-            contextParts.push(this.formatRecentMemories(memories));
+            contextParts.push(formatRecentMemories(memories));
           }
         } catch (error) {
           this.emit(
@@ -847,170 +852,6 @@ ${template.outputFormat}
     }
   }
 
-  /**
-   * Format recent memories as context string.
-   * Shows fuller context since we only fetch a few memories.
-   * @internal
-   */
-  private formatRecentMemories(memories: Memory[]): string {
-    if (memories.length === 0) return "";
-
-    const lines = ["## Recent Activity"];
-    for (const mem of memories) {
-      const date = new Date(mem.createdAt).toLocaleDateString();
-      // Show more text since we're fetching fewer memories
-      const maxLen = 200;
-      const text =
-        mem.text.length > maxLen ? `${mem.text.slice(0, maxLen)}...` : mem.text;
-      lines.push(`- ${date}: ${text}`);
-    }
-    return lines.join("\n");
-  }
-
-  /**
-   * Format Gemini code exploration guidance.
-   * Only included when Gemini is configured.
-   * @internal
-   */
-  formatGeminiGuidance(): string {
-    // Only include if gemini is configured
-    if (!this.config?.gemini) {
-      return "";
-    }
-
-    const lines: string[] = [];
-    lines.push("## Gemini CLI for Code Exploration");
-    lines.push("");
-    lines.push(
-      "The Gemini CLI is configured for this project. Use it directly via Bash for deep code analysis. Large context window = cost-effective for scanning many files.",
-    );
-    lines.push("");
-    lines.push("### CLI Usage Patterns");
-    lines.push("");
-    lines.push("```bash");
-    lines.push("# Quick summary");
-    lines.push(
-      'echo "Summarize this file in 3 bullets: $(cat path/to/file.py)" | gemini -y',
-    );
-    lines.push("");
-    lines.push("# Architecture analysis (let Gemini read files directly)");
-    lines.push(
-      'echo "Analyze the architecture in src/core/. Explain patterns and data flow." | gemini -y',
-    );
-    lines.push("");
-    lines.push("# Code review");
-    lines.push(
-      'echo "Review this code for bugs and security issues: $(cat path/to/file.ts)" | gemini -y',
-    );
-    lines.push("");
-    lines.push("# Multi-file research");
-    lines.push(
-      'echo "Read the files in src/auth/ and explain the authentication flow" | gemini -y',
-    );
-    lines.push("```");
-    lines.push("");
-    lines.push("### Guidelines");
-    lines.push("");
-    lines.push("- Use `-y` flag to auto-approve Gemini's tool calls");
-    lines.push(
-      "- Let Gemini read files directly for multi-file analysis (more reliable)",
-    );
-    lines.push("- Pipe file content for single-file analysis (faster)");
-    lines.push(
-      "- If Gemini fails, fall back to direct file reading with Glob/Grep/Read",
-    );
-    lines.push("");
-    lines.push("### IMPORTANT: Gemini findings require verification");
-    lines.push("");
-    lines.push(
-      "- Gemini is for **exploration and initial analysis**, not final authority",
-    );
-    lines.push(
-      "- Always **verify critical findings** by reading the actual code",
-    );
-    lines.push(
-      "- May produce false positives or miss context-specific patterns",
-    );
-    lines.push(
-      "- Use as a **starting point**, then confirm with targeted code review",
-    );
-    lines.push("");
-
-    return lines.join("\n");
-  }
-
-  /**
-   * Format agent orchestration instructions.
-   *
-   * Generates context-aware orchestration rules:
-   * - If custom agents exist: orchestrator delegates large tasks, handles small fixes directly
-   * - If only built-in agents: lightweight hint (Claude Code's native agents are preferred)
-   * - If no agents at all: no orchestration context
-   *
-   * @internal
-   */
-  formatAgentInstructions(): string {
-    const agents = this.getAgentTemplates();
-    if (agents.length === 0) return "";
-
-    const lines: string[] = [];
-
-    lines.push("## Agent Orchestration");
-    lines.push("");
-    lines.push(
-      "You are the **orchestrator** with access to specialized project agents. Your role is to preserve context across the session and delegate to the right specialist.",
-    );
-    lines.push("");
-
-    // When to delegate vs do directly
-    lines.push("### When to Delegate vs Write Code Directly");
-    lines.push("");
-    lines.push("**Handle directly** (you have full context):");
-    lines.push("- Small bug fixes, typos, config changes");
-    lines.push("- Single-file edits under ~50 lines");
-    lines.push("- Quick refactors where you already understand the code");
-    lines.push("- Answering questions, explaining code");
-    lines.push("");
-    lines.push("**Delegate to specialized agents** (they have domain expertise):");
-    lines.push("- Multi-file features touching 3+ files");
-    lines.push(
-      "- Domain-specific work matching a custom agent's specialty",
-    );
-    lines.push("- Tasks requiring deep knowledge of a subsystem");
-    lines.push("- Parallel workstreams that benefit from simultaneous execution");
-    lines.push("");
-
-    // Custom agents are the primary value
-    lines.push("### Project Agents");
-    lines.push("");
-    lines.push(
-      "Specialized agents in `.claude/agents/` with deep project knowledge:",
-    );
-    lines.push("");
-    for (const agent of agents) {
-      const firstLine = agent.mission.split("\n")[0] ?? "";
-      const mission =
-        firstLine.slice(0, 80) + (firstLine.length > 80 ? "..." : "");
-      lines.push(`- **${agent.name}**: ${mission}`);
-    }
-    lines.push("");
-
-    // Context ownership
-    lines.push("### Context Management");
-    lines.push("");
-    lines.push(
-      "- **You own memory**: Only you access `memory_recall`/`memory_reflect`/`memory_retain` — pass relevant context to agents when delegating",
-    );
-    lines.push(
-      "- **You own coordination**: When multiple agents work in parallel, you review and integrate their outputs",
-    );
-    lines.push(
-      "- **Agents own implementation**: When delegating, give agents clear requirements and let them execute",
-    );
-    lines.push("");
-
-    return lines.join("\n");
-  }
 
   // ============================================
   // Cleanup

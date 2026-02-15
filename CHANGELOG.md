@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.2] - 2026-02-15
+
+### Changed
+
+- **Extracted prompt templates from Mind** — Moved `formatAgentInstructions()`,
+  `formatGeminiGuidance()`, and `formatRecentMemories()` out of the Mind class
+  into pure functions in `src/prompts/` (`orchestration.ts`, `gemini.ts`,
+  `memories.ts`). Mind now imports and calls these with explicit arguments
+  instead of using `this` access. Template literals replace imperative
+  `lines.push()` calls.
+
+- **Deduplicated session-end hook script in update command** — Replaced ~80
+  lines of inline shell script in `src/cli/commands/update.ts` with a call to
+  the shared `createSessionEndHookScript()` from `install.ts`.
+
+### Added
+
+- **Prompt formatter tests** — `tests/unit/prompts/` with 15 tests covering
+  edge cases (empty inputs, truncation, multi-line missions, config
+  present/absent).
+
+- **Public API exports** — `formatOrchestration`, `formatGeminiGuidance`, and
+  `formatRecentMemories` are now exported from `src/index.ts`.
+
 ## [0.11.0] - 2026-02-14
 
 ### Added

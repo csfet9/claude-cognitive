@@ -3,7 +3,7 @@
  * @module cli/commands/update
  */
 
-import { mkdir, readFile, writeFile, access } from "node:fs/promises";
+import { mkdir, readFile, writeFile, access, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import type { CAC } from "cac";
@@ -365,107 +365,12 @@ export function registerUpdateCommand(cli: CAC): void {
               "Old stop-hook.sh found (will be replaced with session-end-hook.sh)",
             );
           } else {
-            // Create new simplified session-end-hook.sh
-            const {
-              mkdir: mkdirAsync,
-              writeFile: writeFileAsync,
-              unlink: unlinkAsync,
-            } = await import("node:fs/promises");
-            const scriptDir = join(projectPath, ".claude", "hooks");
-            await mkdirAsync(scriptDir, { recursive: true });
-
-            const scriptContent = `#!/bin/bash
-# Claude Code SessionEnd hook wrapper for claude-cognitive (project-local)
-# Only processes MAIN sessions in projects with .claudemindrc
-# Skips agent sessions and unconfigured projects
-#
-# NOTE: SessionEnd hook only fires when session truly ends, so we don't need
-# the /exit grep and marker file logic from the old Stop hook.
-
-# Read stdin
-INPUT=$(cat)
-
-# Extract fields using jq (or fallback to grep/sed)
-if command -v jq &> /dev/null; then
-  TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // empty')
-  PROJECT_DIR=$(echo "$INPUT" | jq -r '.cwd // empty')
-  SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
-  REASON=$(echo "$INPUT" | jq -r '.reason // empty')
-else
-  TRANSCRIPT_PATH=$(echo "$INPUT" | grep -o '"transcript_path":"[^"]*"' | cut -d'"' -f4)
-  PROJECT_DIR=$(echo "$INPUT" | grep -o '"cwd":"[^"]*"' | cut -d'"' -f4)
-  SESSION_ID=$(echo "$INPUT" | grep -o '"session_id":"[^"]*"' | cut -d'"' -f4)
-  REASON=$(echo "$INPUT" | grep -o '"reason":"[^"]*"' | cut -d'"' -f4)
-fi
-
-# Exit early if no transcript path
-if [ -z "$TRANSCRIPT_PATH" ] || [ ! -f "$TRANSCRIPT_PATH" ]; then
-  exit 0
-fi
-
-# FILTER 1: Skip agent sessions (filename starts with "agent-")
-FILENAME=$(basename "$TRANSCRIPT_PATH")
-if [[ "$FILENAME" == agent-* ]]; then
-  exit 0
-fi
-
-# FILTER 2: Skip projects without .claudemindrc
-if [ -z "$PROJECT_DIR" ] || [ ! -f "$PROJECT_DIR/.claudemindrc" ]; then
-  exit 0
-fi
-
-# Process main session (pass project dir to ensure correct context)
-# Use timeout to prevent hanging if Hindsight is slow (2 minute limit on Linux)
-# Note: timeout may not be available on macOS - script continues without timeout
-if command -v timeout &> /dev/null; then
-  timeout 120 claude-cognitive process-session --project "$PROJECT_DIR" --transcript "$TRANSCRIPT_PATH" || true
-elif command -v gtimeout &> /dev/null; then
-  gtimeout 120 claude-cognitive process-session --project "$PROJECT_DIR" --transcript "$TRANSCRIPT_PATH" || true
-else
-  claude-cognitive process-session --project "$PROJECT_DIR" --transcript "$TRANSCRIPT_PATH" || true
-fi
-
-# Clean up ONLY this session's entries from buffer (not other ongoing sessions)
-# Use flock to prevent race conditions when multiple sessions end simultaneously
-if [ -n "$SESSION_ID" ]; then
-  BUFFER_FILE="$PROJECT_DIR/.claude/.session-buffer.jsonl"
-  LOCK_FILE="$BUFFER_FILE.lock"
-  if [ -f "$BUFFER_FILE" ]; then
-    # Wrap cleanup in flock to ensure atomic read-filter-write
-    (
-      flock -x 200 2>/dev/null || true  # Acquire exclusive lock, continue if flock unavailable
-      if command -v jq &> /dev/null; then
-        # Filter out entries matching this session_id
-        TEMP_FILE=$(mktemp)
-        jq -c "select(.session_id != \\"$SESSION_ID\\")" "$BUFFER_FILE" > "$TEMP_FILE" 2>/dev/null || true
-        if [ -s "$TEMP_FILE" ]; then
-          mv "$TEMP_FILE" "$BUFFER_FILE"
-        else
-          rm -f "$BUFFER_FILE" "$TEMP_FILE"
-        fi
-      else
-        # Without jq, use grep to filter (less reliable but works)
-        TEMP_FILE=$(mktemp)
-        grep -v "\\"session_id\\":\\"$SESSION_ID\\"" "$BUFFER_FILE" > "$TEMP_FILE" 2>/dev/null || true
-        if [ -s "$TEMP_FILE" ]; then
-          mv "$TEMP_FILE" "$BUFFER_FILE"
-        else
-          rm -f "$BUFFER_FILE" "$TEMP_FILE"
-        fi
-      fi
-    ) 200>"$LOCK_FILE"
-    rm -f "$LOCK_FILE" 2>/dev/null || true
-  fi
-fi
-`;
-
-            await writeFileAsync(newSessionEndHookPath, scriptContent, {
-              mode: 0o755,
-            });
+            // Create new session-end-hook.sh using shared function
+            await createSessionEndHookScript(projectPath);
 
             // Remove old stop-hook.sh
             try {
-              await unlinkAsync(oldStopHookPath);
+              await unlink(oldStopHookPath);
             } catch {
               // Ignore if deletion fails
             }

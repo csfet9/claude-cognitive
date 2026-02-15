@@ -63,6 +63,13 @@ export type { PromotionOptions, PromotionResult } from "./promotion.js";
 // Learn operation
 export { learn } from "./learn/index.js";
 
+// Prompt templates
+export {
+  formatOrchestration,
+  formatGeminiGuidance,
+  formatRecentMemories,
+} from "./prompts/index.js";
+
 // Agent templates
 export { loadCustomAgents, parseAgentMarkdown } from "./agents/index.js";
 export { getAgentContext, formatAgentPrompt } from "./agents/index.js";
