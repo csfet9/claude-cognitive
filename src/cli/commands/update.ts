@@ -73,6 +73,12 @@ const DEFAULT_CONFIG = {
     maxCodeBlockLines: 30,
     minSessionLength: 500,
   },
+  securityReview: {
+    enabled: true,
+  },
+  changelog: {
+    enabled: true,
+  },
   gemini: {
     model: "auto",
     timeout: 120000,
@@ -431,6 +437,18 @@ export function registerUpdateCommand(cli: CAC): void {
           projectUpdates.push("Add 'retainFilter' config");
         }
 
+        // Check for missing securityReview config
+        if (!("securityReview" in projectConfig)) {
+          projectUpdatesNeeded++;
+          projectUpdates.push("Add 'securityReview' config");
+        }
+
+        // Check for missing changelog config
+        if (!("changelog" in projectConfig)) {
+          projectUpdatesNeeded++;
+          projectUpdates.push("Add 'changelog' config");
+        }
+
         // Check for missing gemini config
         if (!("gemini" in projectConfig)) {
           projectUpdatesNeeded++;
@@ -482,6 +500,14 @@ export function registerUpdateCommand(cli: CAC): void {
             // Remove obsolete feedback config
             if ("feedback" in projectConfig) {
               delete projectConfig.feedback;
+            }
+
+            if (!("securityReview" in projectConfig)) {
+              projectConfig.securityReview = DEFAULT_CONFIG.securityReview;
+            }
+
+            if (!("changelog" in projectConfig)) {
+              projectConfig.changelog = DEFAULT_CONFIG.changelog;
             }
 
             if (!("gemini" in projectConfig)) {

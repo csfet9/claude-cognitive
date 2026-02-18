@@ -16,6 +16,10 @@ and this project adheres to
   format, checks for existing date sections under `[Unreleased]` to avoid
   duplicates, and supports a custom changelog path.
 
+- **Update command adds `changelog` and `securityReview` configs** — Running
+  `claude-cognitive update` now adds missing `changelog` and `securityReview`
+  configurations to existing `.claudemindrc` files, both enabled by default.
+
 ## [0.11.2] - 2026-02-15
 
 ### Changed
