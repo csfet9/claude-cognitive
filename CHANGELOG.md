@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.6] - 2026-02-18
+
+### Added
+
+- **Changelog enforcement in context injection** — New opt-in `changelog` config
+  in `.claudemindrc` that injects a mandatory reminder to update `CHANGELOG.md`
+  before every commit. Follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
+  format, checks for existing date sections under `[Unreleased]` to avoid
+  duplicates, and supports a custom changelog path.
+
 ## [0.11.2] - 2026-02-15
 
 ### Changed

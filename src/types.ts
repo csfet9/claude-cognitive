@@ -388,6 +388,17 @@ export interface SecurityReviewConfig {
   codeExtensions?: string[];
 }
 
+/**
+ * Changelog enforcement configuration.
+ * Reminds Claude to update CHANGELOG.md before every commit.
+ */
+export interface ChangelogConfig {
+  /** Enable/disable changelog enforcement (default: false) */
+  enabled: boolean;
+  /** Path to the changelog file relative to project root (default: "CHANGELOG.md") */
+  path?: string;
+}
+
 /** Full configuration schema for claude-cognitive */
 export interface ClaudeMindConfig {
   /** Hindsight server connection settings */
@@ -419,6 +430,8 @@ export interface ClaudeMindConfig {
   };
   /** Security review configuration for pre-commit hooks */
   securityReview?: SecurityReviewConfig;
+  /** Changelog enforcement configuration for pre-commit reminders */
+  changelog?: ChangelogConfig;
   /** Gemini CLI integration configuration */
   gemini?: GeminiConfig;
 }

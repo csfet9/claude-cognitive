@@ -84,6 +84,19 @@ export function registerInjectContextCommand(cli: CAC): void {
 This policy is enforced for this project. Do not skip security review.`);
         }
 
+        if (config.changelog?.enabled === true) {
+          const changelogPath = config.changelog.path ?? "CHANGELOG.md";
+          outputParts.push(`## Changelog Required
+
+**MANDATORY**: Before ANY \`git commit\` command, you MUST:
+1. Update \`${changelogPath}\` with a summary of the changes being committed
+2. Check if a section for today's date already exists under \`[Unreleased]\` and append to it instead of creating a duplicate
+3. Follow [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format (Added, Changed, Fixed, Removed, etc.)
+4. Stage the changelog update together with your other changes
+
+This policy is enforced for this project. Do not skip the changelog update.`);
+        }
+
         if (context.trim().length > 0) {
           outputParts.push(context);
         }

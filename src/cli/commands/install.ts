@@ -916,6 +916,9 @@ export function registerInstallCommand(cli: CAC): void {
           securityReview: {
             enabled: true,
           },
+          changelog: {
+            enabled: true,
+          },
           gemini: {
             model: "auto",
             timeout: 0,

@@ -8,6 +8,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import type {
+  ChangelogConfig,
   ClaudeMindConfig,
   RetainFilterConfig,
   SecurityReviewConfig,
@@ -70,6 +71,11 @@ const securityReviewSchema = z.object({
   codeExtensions: z.array(z.string()).optional(),
 });
 
+const changelogSchema = z.object({
+  enabled: z.boolean(),
+  path: z.string().optional(),
+});
+
 const contextSchema = z.object({
   recentMemoryLimit: z.number().optional(),
 });
@@ -90,6 +96,7 @@ const configSchema = z.object({
   retainFilter: retainFilterSchema.optional(),
   context: contextSchema.optional(),
   securityReview: securityReviewSchema.optional(),
+  changelog: changelogSchema.optional(),
   gemini: geminiSchema.optional(),
 });
 
@@ -136,6 +143,15 @@ export const DEFAULT_SECURITY_REVIEW_CONFIG: SecurityReviewConfig = {
 };
 
 /**
+ * Default changelog configuration.
+ * Disabled by default (opt-in feature).
+ */
+export const DEFAULT_CHANGELOG_CONFIG: ChangelogConfig = {
+  enabled: false,
+  path: "CHANGELOG.md",
+};
+
+/**
  * Default configuration values.
  */
 const DEFAULT_CONFIG: ClaudeMindConfig = {
@@ -149,6 +165,7 @@ const DEFAULT_CONFIG: ClaudeMindConfig = {
   },
   retainFilter: DEFAULT_RETAIN_FILTER,
   securityReview: DEFAULT_SECURITY_REVIEW_CONFIG,
+  changelog: DEFAULT_CHANGELOG_CONFIG,
 };
 
 // ============================================
