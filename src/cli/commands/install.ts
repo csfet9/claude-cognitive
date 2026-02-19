@@ -1080,7 +1080,13 @@ export function registerInstallCommand(cli: CAC): void {
         print("");
         print(
           color(
-            "Tip: Session memory syncs automatically. Custom agents in .claude/agents/ enable orchestration.",
+            "Tip: Session memory syncs automatically. Team-first workflow is always active.",
+            "dim",
+          ),
+        );
+        print(
+          color(
+            "  Custom agents in .claude/agents/ add project-specific expertise.",
             "dim",
           ),
         );

@@ -238,8 +238,10 @@ Each project gets a memory bank with personality traits:
 
 ### Session Start
 
-1. Recall recent experiences from Hindsight (or offline store)
-2. Inject into Claude's context via `.claude/rules/session-context.md`
+1. Inject team-first workflow instructions (always)
+2. Inject agent orchestration (when custom agents exist)
+3. Recall recent experiences from Hindsight (or offline store)
+4. Write context to `.claude/rules/session-context.md`
 
 ### During Session
 
@@ -255,21 +257,45 @@ Each project gets a memory bank with personality traits:
 
 ---
 
-## Orchestrator Pattern
+## Team-First Workflow
 
-Claude operates as a **project manager**, delegating to specialized agents:
+Claude operates as a **team lead**, proactively creating teams for non-trivial tasks. Team workflow instructions are always injected at session start — no custom agents required.
 
-### Workflow
+### When to Create a Team
 
-```
-1. UNDERSTAND  → Clarify requirements
-2. RECALL      → memory_recall(topic) before delegating
-3. EXPLORE     → Delegate to code-explorer
-4. PLAN        → Delegate to code-architect
-5. IMPLEMENT   → Implement or delegate
-6. REVIEW      → Delegate to code-reviewer
-7. CONFIRM     → Get user approval
-```
+**Create a team** when the task involves:
+- Multi-file changes touching 3+ files
+- Parallel workstreams (e.g., frontend + backend)
+- Deep exploration of unfamiliar subsystems
+- Tasks that risk losing context during compaction
+
+**Handle directly** (no team needed):
+- Single-file edits under ~50 lines
+- Small bug fixes, typos, config changes
+- Quick refactors where context is already understood
+
+### Standard Team Patterns
+
+| Pattern      | Steps                                    |
+| ------------ | ---------------------------------------- |
+| **Feature**  | explore → plan → implement → test        |
+| **Bugfix**   | explore → fix → verify                   |
+| **Refactor** | map → plan → execute → verify            |
+
+### Model Routing
+
+| Model      | Use For                                                       |
+| ---------- | ------------------------------------------------------------- |
+| **haiku**  | Exploration, file search, simple lookups — fast and cheap     |
+| **sonnet** | Implementation, code review, test writing — best balance      |
+| **opus**   | Complex architecture, subtle bugs — use when quality critical |
+
+### Context Preservation
+
+The main session's context can be lost during compaction. Teams mitigate this:
+- **Delegate early** — spawn agents before context grows too large
+- **TaskList as shared state** — tasks persist across compaction
+- **Capture decisions in tasks** — include context in task descriptions
 
 ### Why Agents Don't Access Memory
 

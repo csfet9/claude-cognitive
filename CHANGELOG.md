@@ -6,6 +6,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-02-19
+
+### Added
+
+- **Team-first workflow prompt** — New `src/prompts/team-workflow.ts` module
+  (`formatTeamWorkflow()`) that injects team-based orchestration instructions at
+  every session start, regardless of whether custom agents exist in
+  `.claude/agents/`. Claude now proactively creates teams (TeamCreate +
+  TaskCreate) for non-trivial tasks without waiting for user suggestion.
+
+- **Standard team patterns** — Feature (explore→plan→implement→test), Bugfix
+  (explore→fix→verify), and Refactor (map→plan→execute→verify) workflows
+  injected as guidance.
+
+- **Context preservation strategy** — Instructions for delegating early, using
+  TaskList as shared state, and capturing decisions in task descriptions to
+  survive context compaction.
+
+- **Model routing guidance** — Always-available tier recommendations: haiku for
+  exploration, sonnet for implementation, opus for architecture.
+
+### Changed
+
+- **`Mind.onSessionStart()`** — Now always injects team workflow instructions
+  before the conditional agent orchestration section. Previously, no workflow
+  instructions were injected when no custom agents existed.
+
+- **Install command** — Updated tip to reflect that team-first workflow is
+  always active; custom agents add project-specific expertise.
+
+- **Update command** — Added info message confirming team-first workflow is
+  active without requiring custom agents.
+
+- **Documentation updated** — README, CLAUDE.md, AGENTS.md, and all docs
+  (concepts, api-reference, getting-started, configuration) updated to reflect
+  team-first workflow, correct hook configuration (SessionStart/SessionEnd
+  instead of legacy PreToolUse), and current install/update workflow.
+
 ## [0.11.6] - 2026-02-18
 
 ### Added
@@ -539,6 +577,7 @@ and this project adheres to
   - Unit, integration, and E2E tests
   - Performance benchmarks
 
+[0.12.0]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.12.0
 [0.11.0]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.11.0
 [0.4.0]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.4.0
 [0.3.4]: https://github.com/csfet9/claude-cognitive/releases/tag/v0.3.4

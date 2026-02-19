@@ -136,33 +136,24 @@ Alternative to `.claudemindrc`:
 
 ## Claude Code Integration
 
+### Automatic Setup
+
+Use the installer or updater to configure integration automatically:
+
+```bash
+claude-cognitive install          # Interactive setup
+claude-cognitive update           # Update existing installation
+```
+
+This configures:
+- **MCP server** in `.mcp.json` — provides memory_recall, memory_reflect, memory_retain tools
+- **SessionStart hook** in `.claude/settings.json` — injects memory context + team workflow
+- **SessionEnd hook** in `.claude/settings.json` — processes transcript and stores learnings
+- **Security reviewer agent** in `.claude/agents/` — pre-commit security review
+
 ### .claude/settings.json
 
-Full integration configuration:
-
-```json
-{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Task",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "claude-cognitive inject-context"
-          }
-        ]
-      }
-    ]
-  },
-  "mcpServers": {
-    "claude-cognitive": {
-      "command": "claude-cognitive",
-      "args": ["serve", "--project", "."]
-    }
-  }
-}
-```
+Hooks are configured project-locally in `.claude/settings.json`. The installer creates wrapper scripts in `.claude/hooks/` that handle filtering (skip agent sessions, skip unconfigured projects).
 
 ### MCP Server Options
 

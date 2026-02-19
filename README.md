@@ -226,6 +226,30 @@ When Hindsight becomes available again, offline memories are automatically synce
 
 ---
 
+## Team-First Workflow
+
+claude-cognitive always injects team-first workflow instructions at session start. Claude proactively creates teams (TeamCreate + TaskCreate) for non-trivial tasks, without waiting for the user to suggest it.
+
+### Standard Patterns
+
+| Pattern      | Steps                                    |
+| ------------ | ---------------------------------------- |
+| **Feature**  | explore → plan → implement → test        |
+| **Bugfix**   | explore → fix → verify                   |
+| **Refactor** | map → plan → execute → verify            |
+
+### Model Routing
+
+| Model      | Use For                                                       |
+| ---------- | ------------------------------------------------------------- |
+| **haiku**  | Exploration, file search, simple lookups — fast and cheap     |
+| **sonnet** | Implementation, code review, test writing — best balance      |
+| **opus**   | Complex architecture, subtle bugs — use when quality critical |
+
+Custom agents in `.claude/agents/` add project-specific expertise on top of the always-available team workflow.
+
+---
+
 ## API Usage
 
 ```typescript

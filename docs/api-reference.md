@@ -337,9 +337,10 @@ Called at session start. Returns context to inject.
 ```typescript
 const context = await mind.onSessionStart();
 // Returns formatted context combining:
-// - Semantic memory (.claude/memory.md)
-// - Recent experiences
-// - Relevant opinions
+// - Team-first workflow instructions (always injected)
+// - Agent orchestration (when custom agents exist in .claude/agents/)
+// - Gemini guidance (when configured)
+// - Recent experiences from Hindsight (or offline store)
 ```
 
 Returns: `Promise<string>`

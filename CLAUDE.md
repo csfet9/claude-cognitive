@@ -88,6 +88,17 @@ claude-cognitive sync           # (deprecated) regenerate memory.md from Hindsig
 
 High-confidence opinions from `reflect()` become observations. `PromotionManager` listens for observation events on `Mind` and auto-appends them to `SemanticMemory` (`.claude/memory.md`) when confidence >= 0.9. This is how persistent knowledge accumulates without manual intervention.
 
+### Prompt Templates
+
+| Module                        | File                          | Purpose                                                              |
+| ----------------------------- | ----------------------------- | -------------------------------------------------------------------- |
+| `formatTeamWorkflow()`        | `src/prompts/team-workflow.ts` | Always-injected team-first workflow instructions (teams, patterns, model routing) |
+| `formatOrchestration(agents)` | `src/prompts/orchestration.ts` | Project-specific agent list (only when custom agents exist in `.claude/agents/`) |
+| `formatRecentMemories()`      | `src/prompts/memories.ts`     | Formats recent memories for session context                          |
+| `formatGeminiGuidance()`      | `src/prompts/gemini.ts`       | Gemini CLI usage guidance (when configured)                          |
+
+**Team workflow** is always injected at session start via `Mind.onSessionStart()`, regardless of whether custom agents exist. This enables Claude to proactively create teams (TeamCreate + TaskCreate) for non-trivial tasks.
+
 ### MCP Tools (exposed to Claude)
 
 - `memory_recall` — Search memories with 4-way retrieval

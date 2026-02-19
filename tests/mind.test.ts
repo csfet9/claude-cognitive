@@ -262,7 +262,7 @@ describe("Mind", () => {
   });
 
   describe("onSessionStart()", () => {
-    it("should return empty context in degraded mode without custom agents", async () => {
+    it("should return team workflow context in degraded mode without custom agents", async () => {
       mockHealth.mockResolvedValue({
         healthy: false,
         error: "Connection refused",
@@ -272,9 +272,10 @@ describe("Mind", () => {
       await mind.init();
 
       const result = await mind.onSessionStart();
-      // No custom agents loaded = no orchestration instructions injected
-      // (built-in agents alone don't trigger orchestration — Claude Code handles those natively)
-      expect(result).toBe("");
+      // Team workflow is always injected, even without custom agents
+      expect(result).toContain("## Team-First Workflow");
+      // No orchestration section since no custom agents
+      expect(result).not.toContain("## Agent Orchestration");
     });
   });
 

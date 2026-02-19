@@ -551,16 +551,19 @@ export function registerUpdateCommand(cli: CAC): void {
           await createSessionEndHookScript(projectPath);
           await createSecurityReviewerAgent(projectPath);
 
-          printSuccess("Regenerated hook scripts with latest security fixes");
+          printSuccess("Regenerated hook scripts with latest updates");
           printInfo(`  ${hooksDir}/start-hook.sh`);
           printInfo(`  ${hooksDir}/session-end-hook.sh`);
           printSuccess("Created security-code-reviewer agent");
           printInfo(
             `  ${join(projectPath, ".claude", "agents", "security-code-reviewer.md")}`,
           );
+          printInfo(
+            "Team-first workflow is always active (no custom agents required)",
+          );
         } else {
           printInfo(
-            "Hook scripts will be regenerated (with latest security fixes)",
+            "Hook scripts will be regenerated (with latest updates)",
           );
         }
       } else {

@@ -20,6 +20,7 @@ import { TypedEventEmitter } from "./events.js";
 import { OfflineMemoryStore } from "./offline.js";
 import {
   formatOrchestration,
+  formatTeamWorkflow,
   formatGeminiGuidance,
   formatRecentMemories,
 } from "./prompts/index.js";
@@ -325,7 +326,10 @@ export class Mind extends TypedEventEmitter {
 
     const contextParts: string[] = [];
 
-    // Add agent orchestration instructions
+    // Add team-first workflow instructions (always injected)
+    contextParts.push(formatTeamWorkflow());
+
+    // Add agent orchestration instructions (only when custom agents exist)
     const agentInstructions = formatOrchestration(this.getAgentTemplates());
     if (agentInstructions.trim().length > 0) {
       contextParts.push(agentInstructions);

@@ -95,33 +95,24 @@ claude-cognitive learn --depth full
 
 ### 3. Configure Claude Code
 
-Add to `.claude/settings.json`:
+The recommended way is to use the interactive installer, which configures everything automatically:
 
-```json
-{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Task",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "claude-cognitive inject-context"
-          }
-        ]
-      }
-    ]
-  },
-  "mcpServers": {
-    "claude-cognitive": {
-      "command": "claude-cognitive",
-      "args": ["serve", "--project", "."]
-    }
-  }
-}
+```bash
+claude-cognitive install
 ```
 
-For global configuration, use `~/.claude/settings.json`.
+This sets up:
+- **MCP server** in `.mcp.json` (project-local)
+- **SessionStart hook** — injects memory context at session start
+- **SessionEnd hook** — processes transcript and stores learnings
+- **Security reviewer agent** in `.claude/agents/`
+
+For manual setup or to update an existing installation:
+
+```bash
+claude-cognitive update          # Apply latest configuration
+claude-cognitive update --check  # Preview changes first
+```
 
 ---
 
