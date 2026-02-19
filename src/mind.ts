@@ -18,15 +18,9 @@ import { DegradationController } from "./degradation.js";
 import { HindsightError } from "./errors.js";
 import { TypedEventEmitter } from "./events.js";
 import { OfflineMemoryStore } from "./offline.js";
-import {
-  formatOrchestration,
-  formatTeamWorkflow,
-  formatGeminiGuidance,
-  formatRecentMemories,
-} from "./prompts/index.js";
+import { formatRecentMemories } from "./prompts/index.js";
 import type {
   Bank,
-  ClaudeMindConfig,
   Disposition,
   FactType,
   LearnOptions,
@@ -96,7 +90,6 @@ export class Mind extends TypedEventEmitter {
   private bankId: string = "";
   private disposition: Disposition = DEFAULT_DISPOSITION;
   private background?: string;
-  private config: ClaudeMindConfig | null = null;
 
   // Client (nullable for graceful degradation)
   private client: HindsightClient | null = null;
@@ -186,9 +179,6 @@ export class Mind extends TypedEventEmitter {
       }
       // Load config with pending options as overrides
       const config = await loadConfig(this.projectPath, overrides);
-
-      // Store full config for later access
-      this.config = config;
 
       // Resolve configuration
       this.bankId = config.bankId ?? (await this.deriveBankId());
@@ -326,20 +316,10 @@ export class Mind extends TypedEventEmitter {
 
     const contextParts: string[] = [];
 
-    // Add team-first workflow instructions (always injected)
-    contextParts.push(formatTeamWorkflow());
-
-    // Add agent orchestration instructions (only when custom agents exist)
-    const agentInstructions = formatOrchestration(this.getAgentTemplates());
-    if (agentInstructions.trim().length > 0) {
-      contextParts.push(agentInstructions);
-    }
-
-    // Add Gemini code exploration guidance (if configured)
-    const geminiGuidance = formatGeminiGuidance(this.config?.gemini);
-    if (geminiGuidance.trim().length > 0) {
-      contextParts.push(geminiGuidance);
-    }
+    // Static instructions (team workflow, orchestration, gemini, security review,
+    // changelog) now live in the project's CLAUDE.md managed section, which
+    // persists across plan mode and context compaction. Only dynamic content
+    // (recalled memories) is injected here.
 
     // Recall recent experiences
     // Only fetch a small number (default 3) to keep context small

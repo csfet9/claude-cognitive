@@ -7,6 +7,7 @@ import { readFile, writeFile, unlink, access, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import type { CAC } from "cac";
+import { removeClaudeMdSection } from "../../claudemd.js";
 import { loadConfig } from "../../config.js";
 import { HindsightClient } from "../../client.js";
 
@@ -384,31 +385,34 @@ export function registerUninstallCommand(cli: CAC): void {
           printInfo("Keeping .claudemindrc (--keep-config)");
         }
 
-        // 4. Remove memory section from CLAUDE.md
+        // 4. Remove managed section from CLAUDE.md
         if (!options.keepClaudeMd) {
-          const claudeMdPath = join(projectPath, "CLAUDE.md");
-          if (await fileExists(claudeMdPath)) {
-            try {
-              let content = await readFile(claudeMdPath, "utf-8");
-
-              // Remove the memory section (handles both old and new titles)
-              const memoryRegex =
-                /\n?## 🧠 MEMORY[^\n]*[\s\S]*?(?=\n## |\n---\n|$)/;
-              if (memoryRegex.test(content)) {
-                content = content.replace(memoryRegex, "");
-                // Clean up double newlines
-                content = content.replace(/\n{3,}/g, "\n\n");
-                await writeFile(claudeMdPath, content);
-                printSuccess("Removed memory section from CLAUDE.md");
-              } else {
-                printInfo("CLAUDE.md: no memory section found");
+          try {
+            const removed = await removeClaudeMdSection(projectPath);
+            if (removed) {
+              printSuccess("Removed managed section from CLAUDE.md");
+            } else {
+              // Also try legacy memory section pattern
+              const claudeMdPath = join(projectPath, "CLAUDE.md");
+              if (await fileExists(claudeMdPath)) {
+                let content = await readFile(claudeMdPath, "utf-8");
+                const memoryRegex =
+                  /\n?## 🧠 MEMORY[^\n]*[\s\S]*?(?=\n## |\n---\n|$)/;
+                if (memoryRegex.test(content)) {
+                  content = content.replace(memoryRegex, "");
+                  content = content.replace(/\n{3,}/g, "\n\n");
+                  await writeFile(claudeMdPath, content);
+                  printSuccess("Removed legacy memory section from CLAUDE.md");
+                } else {
+                  printInfo("CLAUDE.md: no managed section found");
+                }
               }
-            } catch {
-              printWarn("Could not update CLAUDE.md");
             }
+          } catch {
+            printWarn("Could not update CLAUDE.md");
           }
         } else {
-          printInfo("Keeping CLAUDE.md memory section (--keep-claude-md)");
+          printInfo("Keeping CLAUDE.md managed section (--keep-claude-md)");
         }
 
         // 5. Optionally remove .claude/memory.md

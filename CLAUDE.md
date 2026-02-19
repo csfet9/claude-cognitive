@@ -88,16 +88,19 @@ claude-cognitive sync           # (deprecated) regenerate memory.md from Hindsig
 
 High-confidence opinions from `reflect()` become observations. `PromotionManager` listens for observation events on `Mind` and auto-appends them to `SemanticMemory` (`.claude/memory.md`) when confidence >= 0.9. This is how persistent knowledge accumulates without manual intervention.
 
-### Prompt Templates
+### Prompt Templates & CLAUDE.md Injection
 
-| Module                        | File                          | Purpose                                                              |
-| ----------------------------- | ----------------------------- | -------------------------------------------------------------------- |
-| `formatTeamWorkflow()`        | `src/prompts/team-workflow.ts` | Always-injected team-first workflow instructions (teams, patterns, model routing) |
-| `formatOrchestration(agents)` | `src/prompts/orchestration.ts` | Project-specific agent list (only when custom agents exist in `.claude/agents/`) |
-| `formatRecentMemories()`      | `src/prompts/memories.ts`     | Formats recent memories for session context                          |
-| `formatGeminiGuidance()`      | `src/prompts/gemini.ts`       | Gemini CLI usage guidance (when configured)                          |
+Static instructions are written to the project's CLAUDE.md (in a `<!-- claude-cognitive:start/end -->` managed section) during `install` and `update`. This ensures they persist across plan mode and context compaction. Session injection (`inject-context.ts`) only handles dynamic content (recalled memories).
 
-**Team workflow** is always injected at session start via `Mind.onSessionStart()`, regardless of whether custom agents exist. This enables Claude to proactively create teams (TeamCreate + TaskCreate) for non-trivial tasks.
+| Module                        | File                          | Destination    | Purpose                                                              |
+| ----------------------------- | ----------------------------- | -------------- | -------------------------------------------------------------------- |
+| `formatTeamWorkflow()`        | `src/prompts/team-workflow.ts` | CLAUDE.md      | Team-first workflow instructions (teams, patterns, model routing) |
+| `formatOrchestration(agents)` | `src/prompts/orchestration.ts` | CLAUDE.md      | Project-specific agent list (only when custom agents exist) |
+| `formatGeminiGuidance()`      | `src/prompts/gemini.ts`       | CLAUDE.md      | Gemini CLI usage guidance (when configured)                          |
+| `formatRecentMemories()`      | `src/prompts/memories.ts`     | Session inject | Formats recent memories for session context                          |
+| Security review / Changelog   | `src/claudemd.ts`             | CLAUDE.md      | Pre-commit policy enforcement (when enabled in config)               |
+
+The `ClaudeMdWriter` (`src/claudemd.ts`) manages the `<!-- claude-cognitive:start -->` / `<!-- claude-cognitive:end -->` delimited section. It is called by `install` and `update` commands.
 
 ### MCP Tools (exposed to Claude)
 
@@ -109,7 +112,7 @@ Defined in `src/mcp/tools.ts`, handled in `src/mcp/handlers.ts`.
 
 ### Hooks
 
-- `src/hooks/inject-context.ts` — Session start: injects recalled memories as context
+- `src/hooks/inject-context.ts` — Session start: injects recalled memories only (static instructions are in CLAUDE.md)
 - `src/hooks/process-session.ts` — Session end: extracts and retains learnings
 - `src/hooks/buffer-message.ts` — Buffers messages during session for manual sync via `sync-session` CLI command
 

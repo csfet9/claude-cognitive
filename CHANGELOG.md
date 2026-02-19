@@ -6,6 +6,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.1] - 2026-02-19
+
+### Changed
+
+- **Static instructions moved to CLAUDE.md** — Team workflow, agent
+  orchestration, Gemini guidance, security review, and changelog enforcement are
+  now written to a `<!-- claude-cognitive:start/end -->` managed section in the
+  project's CLAUDE.md instead of being injected via session context. CLAUDE.md
+  persists across plan mode and context compaction; session-injected content does
+  not.
+
+- **`Mind.onSessionStart()`** — Now returns only recalled memories (dynamic
+  content). Static instructions removed since they live in CLAUDE.md.
+
+- **`inject-context.ts` hook** — Stripped security review and changelog sections
+  from output. Hook now outputs only recalled memories.
+
+- **Start hook script** — Updated header comments and placeholder text to
+  reflect memory-only purpose.
+
+### Added
+
+- **`src/claudemd.ts`** — New module to manage the CLAUDE.md delimited section:
+  `generateClaudeMdSection()`, `updateClaudeMd()`, `removeClaudeMdSection()`.
+
+- **Install command** — Now calls `updateClaudeMd()` to write static
+  instructions to the project's CLAUDE.md after hook configuration.
+
+- **Update command** — Now regenerates the CLAUDE.md managed section on upgrade,
+  picking up new or changed instructions.
+
+- **Uninstall command** — Uses `removeClaudeMdSection()` for cleanup with
+  fallback to legacy `## 🧠 MEMORY` pattern.
+
+- **Tests** — 15 new tests for `src/claudemd.ts` covering generation, update,
+  and removal of the managed section.
+
 ## [0.12.0] - 2026-02-19
 
 ### Added

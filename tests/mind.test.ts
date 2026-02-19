@@ -262,7 +262,7 @@ describe("Mind", () => {
   });
 
   describe("onSessionStart()", () => {
-    it("should return team workflow context in degraded mode without custom agents", async () => {
+    it("should return only memories (no static instructions) in degraded mode", async () => {
       mockHealth.mockResolvedValue({
         healthy: false,
         error: "Connection refused",
@@ -272,10 +272,11 @@ describe("Mind", () => {
       await mind.init();
 
       const result = await mind.onSessionStart();
-      // Team workflow is always injected, even without custom agents
-      expect(result).toContain("## Team-First Workflow");
-      // No orchestration section since no custom agents
+      // Static instructions now live in CLAUDE.md, not session context
+      expect(result).not.toContain("## Team-First Workflow");
       expect(result).not.toContain("## Agent Orchestration");
+      // No memories in degraded mode with no offline store content
+      expect(result.trim()).toBe("");
     });
   });
 

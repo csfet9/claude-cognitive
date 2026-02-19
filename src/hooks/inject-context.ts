@@ -4,7 +4,6 @@
  */
 
 import type { CAC } from "cac";
-import { loadConfig } from "../config.js";
 import { Mind } from "../mind.js";
 
 interface InjectContextOptions {
@@ -59,51 +58,19 @@ export function registerInjectContextCommand(cli: CAC): void {
       const timeout = options.timeout ?? DEFAULT_TIMEOUT;
 
       try {
-        // Load config to check for security review settings
-        const config = await loadConfig(projectPath);
-        const securityReviewEnabled = config.securityReview?.enabled === true;
+        // Static instructions (security review, changelog, team workflow, etc.)
+        // now live in the project's CLAUDE.md managed section. This hook only
+        // outputs dynamic content (recalled memories).
 
         // Initialize Mind with timeout
         const mind = await initWithTimeout(projectPath, timeout);
 
-        // Get session context
+        // Get session context (memories only)
         const context = await mind.onSessionStart();
 
-        // Build output with optional security review section at TOP
-        const outputParts: string[] = [];
-
-        if (securityReviewEnabled) {
-          outputParts.push(`## Security Review Required
-
-**MANDATORY**: Before ANY \`git commit\` command, you MUST:
-1. Launch the \`security-code-reviewer\` agent to review all staged changes
-2. Wait for the security review to complete
-3. Address any critical/high issues found
-4. Only then proceed with the commit
-
-This policy is enforced for this project. Do not skip security review.`);
-        }
-
-        if (config.changelog?.enabled === true) {
-          const changelogPath = config.changelog.path ?? "CHANGELOG.md";
-          outputParts.push(`## Changelog Required
-
-**MANDATORY**: Before ANY \`git commit\` command, you MUST:
-1. Update \`${changelogPath}\` with a summary of the changes being committed
-2. Check if a section for today's date already exists under \`[Unreleased]\` and append to it instead of creating a duplicate
-3. Follow [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format (Added, Changed, Fixed, Removed, etc.)
-4. Stage the changelog update together with your other changes
-
-This policy is enforced for this project. Do not skip the changelog update.`);
-        }
-
+        // Output recalled memories to stdout
         if (context.trim().length > 0) {
-          outputParts.push(context);
-        }
-
-        // Output combined context to stdout
-        if (outputParts.length > 0) {
-          console.log(outputParts.join("\n\n"));
+          console.log(context);
         }
 
         process.exit(0);

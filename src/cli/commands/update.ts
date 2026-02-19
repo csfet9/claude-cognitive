@@ -7,6 +7,8 @@ import { mkdir, readFile, writeFile, access, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import type { CAC } from "cac";
+import { updateClaudeMd } from "../../claudemd.js";
+import { loadConfig } from "../../config.js";
 import {
   createStartHookScript,
   createSessionEndHookScript,
@@ -551,6 +553,10 @@ export function registerUpdateCommand(cli: CAC): void {
           await createSessionEndHookScript(projectPath);
           await createSecurityReviewerAgent(projectPath);
 
+          // Regenerate CLAUDE.md managed section with latest instructions
+          const currentConfig = await loadConfig(projectPath);
+          await updateClaudeMd(projectPath, currentConfig);
+
           printSuccess("Regenerated hook scripts with latest updates");
           printInfo(`  ${hooksDir}/start-hook.sh`);
           printInfo(`  ${hooksDir}/session-end-hook.sh`);
@@ -558,6 +564,7 @@ export function registerUpdateCommand(cli: CAC): void {
           printInfo(
             `  ${join(projectPath, ".claude", "agents", "security-code-reviewer.md")}`,
           );
+          printSuccess("Updated CLAUDE.md with static instructions");
           printInfo(
             "Team-first workflow is always active (no custom agents required)",
           );

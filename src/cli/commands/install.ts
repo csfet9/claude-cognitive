@@ -8,6 +8,8 @@ import { mkdir, writeFile, readFile, access } from "node:fs/promises";
 import { join, basename } from "node:path";
 import { homedir } from "node:os";
 import type { CAC } from "cac";
+import { updateClaudeMd } from "../../claudemd.js";
+import { loadConfig } from "../../config.js";
 import { Mind } from "../../mind.js";
 import type { Disposition, TraitValue } from "../../types.js";
 import { GeminiExecutor } from "../../gemini/executor.js";
@@ -259,7 +261,8 @@ export async function createStartHookScript(
 
   const scriptContent = `#!/bin/bash
 # Claude Code SessionStart hook wrapper for claude-cognitive (project-local)
-# Injects context from Hindsight at session start
+# Injects recalled memories from Hindsight at session start
+# Static instructions (team workflow, security review, etc.) live in CLAUDE.md
 # Writes to .claude/rules/ which Claude Code auto-loads
 # Skips projects without .claudemindrc
 
@@ -301,9 +304,10 @@ CONTEXT_OUTPUT=$(claude-cognitive inject-context --project "$PROJECT_DIR" 2>/dev
 # Write context to rules file
 if [ -n "$CONTEXT_OUTPUT" ]; then
   cat > "$CONTEXT_FILE" << CONTEXT_EOF
-# Hindsight Memory (Auto-Recalled)
+# Recalled Memories
 
 Recent activity recalled from Hindsight memory at session start.
+Static instructions (team workflow, security review, etc.) are in CLAUDE.md.
 
 ---
 
@@ -316,7 +320,7 @@ CONTEXT_EOF
 else
   # No memories - create minimal placeholder
   cat > "$CONTEXT_FILE" << CONTEXT_EOF
-# Hindsight Memory
+# Recalled Memories
 
 No prior memories found for this project yet.
 Memory will be stored automatically when the session ends.
@@ -974,6 +978,11 @@ export function registerInstallCommand(cli: CAC): void {
             "Configured session hooks: project (.claude/settings.json)",
           );
           printInfo(hooksPath);
+
+          // Write static instructions to project CLAUDE.md
+          const installedConfig = await loadConfig(answers.projectPath);
+          await updateClaudeMd(answers.projectPath, installedConfig);
+          printSuccess("Updated CLAUDE.md with static instructions");
 
           // Warn about legacy global hook if it exists
           if (legacyGlobalHookExists) {
